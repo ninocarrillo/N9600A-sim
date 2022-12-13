@@ -2,6 +2,7 @@ import sys
 import struct
 import scipy.io.wavfile
 import numpy as np
+import os
 
 
 def SliceData(samples, rate, oversample):
@@ -199,6 +200,30 @@ def PeakDetect(signal_value, detector):
 	detector['SustainCount'] = detector['SustainCount'] + 1
 	return detector
 
+def FilterDecimate(filter):
+	output_buffer = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid') / pow(2, (16 + filter['FilterShift'])))
+	filter['DataBuffer'] = np.array([])
+	for data in output_buffer:
+		filter['DecimationCounter'] = filter['DecimationCounter'] + 1
+		if filter['DecimationCounter'] >= filter['DecimationRate']:
+			filter['DecimationCounter'] = 0
+			filter['DataBuffer'] = np.append(filter['DataBuffer'], np.array([data]))
+			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
+	return filter
+
+def DemodulateAFSK(demodulator):
+	return demodulator
+
 if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
 	sys.exit(-1)
@@ -224,18 +249,24 @@ period = 3500
 attack = 3
 decay = 2
 
-#create a dictionary for the input signal peak detector
+Input_Fs = 28800.0
+decimation = 2
+Fs = Input_Fs / decimation
+correlator_taps = 12
+
+#create some dictionaries for the processing objects
 InputPeakDetector = {'AttackRate':5000, 'SustainPeriod':7200, 'DecayRate':3, 'SustainCount':0, 'Envelope':0}
+FilterDecimator = {'Filter':input_filter, 'DecimationRate':decimation, 'FilterBuffer':input_filter_buffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'FilterShift':0, 'DecimationCounter':0}
+
 MarkPeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
 SpacePeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
 
-decimation = 2
 
 #set up the correlators
-correlator_taps = 12
+
 mark_amp = 10000
 f = 2200.0
-Fs = 28800.0 / decimation
+
 tstep = 1.0 / Fs
 space_phase = 0
 time = np.arange(0, tstep * correlator_taps, tstep)
@@ -257,10 +288,8 @@ square_scale = 2.0**square_scale
 square_output_scale = 2.0
 square_coef = 4096.0
 square_clip = square_coef - 1.0
-space_sig_gain = 1.0
-space_sig_gain_p = 0.0002
 
-correlator_energy_filter = np.ones(correlator_taps)
+
 
 index1 = 0
 index2 = 0
@@ -291,31 +320,16 @@ for sample in audio:
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
 		print(f'{index3}, {space_ratio:.2f}')
 		space_ratio_sum = space_ratio_sum + space_ratio
-	input_filter_buffer = input_filter_buffer[1:]
-	input_filter_buffer = np.append(input_filter_buffer, np.array([sample]))
-	if index1 == decimation:
-		index1 = 0
-		filtered_signal = np.rint(np.convolve(input_filter_buffer, input_filter, 'valid') / pow(2, (16 + input_filter_gain)))
-		InputPeakDetector = PeakDetect(filtered_signal[0], InputPeakDetector)
-		filtered_signal_buffer[envelope_index] = filtered_signal[0]
-		envelope[envelope_index] = InputPeakDetector['Envelope']
-		if InputPeakDetector['Envelope'] > 24576:
-			input_filter_gain = input_filter_gain + 1
-			print('going down', input_filter_gain)
-			InputPeakDetector['Envelope'] = InputPeakDetector['Envelope'] / 2
-			if input_filter_gain > 16:
-				input_filter_gain = 16
-		if InputPeakDetector['Envelope'] < 8192:
-			input_filter_gain = input_filter_gain - 1
-			InputPeakDetector['Envelope'] = InputPeakDetector['Envelope'] * 2
-			print('going up', input_filter_gain)
-			if input_filter_gain < -16:
-				input_filter_gain = -16
+
+	FilterDecimator['FilterBuffer'] = FilterDecimator['FilterBuffer'][1:]
+	FilterDecimator['FilterBuffer'] = np.append(FilterDecimator['FilterBuffer'], np.array([sample]))
+	FilterDecimator = FilterDecimate(FilterDecimator)
+	for filtered_signal in FilterDecimator['DataBuffer']:
 
 		# perform mark and space correlation
 		# update correlator memory output_buffer
 		correlator_buffer = correlator_buffer[1:]
-		correlator_buffer = np.append(correlator_buffer, np.array([filtered_signal[0]]))
+		correlator_buffer = np.append(correlator_buffer, np.array([filtered_signal]))
 		mark_cos_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, mark_cos, 'valid')) / 65536)
 		mark_sin_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, mark_sin, 'valid')) / 65536)
 
@@ -326,7 +340,6 @@ for sample in audio:
 		mark_sig = np.rint(square_output_scale * np.sqrt(square_coef * mark_sig))
 		if mark_sig > 8190:
 			print('mark clip')
-
 
 		space_cos_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, space_cos, 'valid')) / 65536)
 		space_sin_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, space_sin, 'valid')) / 65536)
@@ -339,15 +352,6 @@ for sample in audio:
 		if space_sig > 8190:
 			print('space clip')
 
-		#moving average mark and space signals for energy measurement
-		# mark_energy_buffer = mark_energy_buffer[1:]
-		# mark_energy_buffer = np.append(mark_energy_buffer, np.array([mark_sig]))
-		# mark_energy = np.rint(np.convolve(mark_energy_buffer, correlator_energy_filter, 'valid') / 4)
-		# space_energy_buffer = space_energy_buffer[1:]
-		# space_energy_buffer = np.append(space_energy_buffer, np.array([space_sig]))
-		# space_energy = np.rint(np.convolve(space_energy_buffer, correlator_energy_filter, 'valid') / 4)
-		# MarkPeakDetector = PeakDetect(mark_energy, MarkPeakDetector)
-		# SpacePeakDetector = PeakDetect(space_energy, SpacePeakDetector)
 		MarkPeakDetector = PeakDetect(mark_sig, MarkPeakDetector)
 		SpacePeakDetector = PeakDetect(space_sig, SpacePeakDetector)
 		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
@@ -358,23 +362,8 @@ for sample in audio:
 		else:
 			space_ratio = 1.0
 
-		# space_gain = 1.0
-		# if space_ratio < 0.9:
-		# 	space_gain = 1.3
-		# elif space_ratio < 0.7:
-		# 	space_gain = 1.5
-		# elif space_ratio < 0.5:
-		# 	space_gain = 2.0
-		# elif space_ratio < 0.35:
-		# 	space_gain = 2.2
-		if (space_ratio > 0.05 and space_ratio < 4.0):
-			space_ratio = np.sqrt(space_ratio)
-			space_gain = 1 / space_ratio
-			space_gain = space_gain - 1.0
-			space_gain = space_gain * 0.66
-			space_gain = 1.0 + space_gain
-		else:
-			space_gain = space_gain
+		space_gain = 1.0
+
 		space_gain_buffer[envelope_index] = space_gain * 16384
 
 		space_sig = space_sig * space_gain
@@ -388,19 +377,30 @@ for sample in audio:
 
 		envelope_index = envelope_index + 1
 
-scipy.io.wavfile.write("PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
-scipy.io.wavfile.write("FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
+#generate a new directory for the reports
+run_number = 0
+print('trying to make a new directory')
+while True:
+	run_number = run_number + 1
+	dirname = f'./run{run_number}/'
+	try:
+		os.mkdir(dirname)
+	except:
+		print(dirname + ' exists')
+		continue
+	break
+scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
+scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
 
-scipy.io.wavfile.write("MarkCorrelatorSignal.wav", round(samplerate / decimation), mark_correlator_buffer.astype(np.int16))
-scipy.io.wavfile.write("SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
-scipy.io.wavfile.write("DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"MarkCorrelatorSignal.wav", round(samplerate / decimation), mark_correlator_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
 
-scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
 
+scipy.io.wavfile.write(dirname+"SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
 
-scipy.io.wavfile.write("SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
-
-scipy.io.wavfile.write("MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
 
 data = SliceData(demod_sig_buffer, 0.7, 12)
 print("Length of sliced data:", len(data))
@@ -413,5 +413,5 @@ print("Decoded packet count:", count)
 
 space_ratio_sum = space_ratio_sum / 99
 print("Average Space Ratio: ", f'{space_ratio_sum:.2f}')
-
+print('made new directory: ', dirname)
 print('done')
