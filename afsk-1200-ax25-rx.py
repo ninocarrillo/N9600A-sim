@@ -186,14 +186,11 @@ def HighLowDetect(signal_value, detector):
 
 def PeakDetect(signal_value, detector):
 	signal_value = abs(signal_value)
-	if signal_value > detector['LastValue']:
-		if signal_value > detector['Envelope']:
+	if signal_value > detector['Envelope']:
+		detector['Envelope'] = detector['Envelope'] + detector['AttackRate']
+		if detector['Envelope'] > signal_value:
 			detector['Envelope'] = signal_value
-			detector['SustainCount'] = 0
-			detector['DecayRate'] = np.rint(detector['Envelope'] / detector['DecayPeriod'])
-			if detector['DecayRate'] < 1:
-				detector['DecayRate'] = 1
-	detector['LastValue'] = signal_value
+		detector['SustainCount'] = 0
 	if detector['SustainCount'] >= detector['SustainPeriod']:
 		detector['Envelope'] = detector['Envelope'] - detector['DecayRate']
 		if detector['Envelope'] < 0:
@@ -223,12 +220,12 @@ output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767,
 output_filter_buffer = np.zeros(len(output_filter))
 output_filter_shift = -3
 
-period = 1000
+period = 4000
 
 #create a dictionary for the input signal peak detector
-InputPeakDetector = {'AttackPeriod':1, 'SustainPeriod':7200, 'DecayPeriod':7200, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
-MarkPeakDetector = {'AttackPeriod':1, 'SustainPeriod':period, 'DecayPeriod':period, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
-SpacePeakDetector = {'AttackPeriod':1, 'SustainPeriod':period, 'DecayPeriod':period, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
+InputPeakDetector = {'AttackRate':5000, 'SustainPeriod':7200, 'DecayRate':3, 'SustainCount':0, 'Envelope':0}
+MarkPeakDetector = {'AttackRate':1, 'SustainPeriod':period, 'DecayRate':1, 'SustainCount':0, 'Envelope':0}
+SpacePeakDetector = {'AttackRate':1, 'SustainPeriod':period, 'DecayRate':1, 'SustainCount':0, 'Envelope':0}
 
 decimation = 2
 
@@ -268,6 +265,8 @@ index2 = 0
 index3 = 0
 envelope_index = 0
 
+space_ratio_sum = 0
+
 input_filter_gain = 0
 
 envelope = np.zeros(round(len(audio) / decimation))
@@ -288,7 +287,8 @@ for sample in audio:
 		index2 = 0
 		index3 = index3 + 1
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}')
+		print(f'{index3}, {space_ratio:.2f}')
+		space_ratio_sum = space_ratio_sum + space_ratio
 	input_filter_buffer = input_filter_buffer[1:]
 	input_filter_buffer = np.append(input_filter_buffer, np.array([sample]))
 	if index1 == decimation:
@@ -338,37 +338,43 @@ for sample in audio:
 			print('space clip')
 
 		#moving average mark and space signals for energy measurement
-		mark_energy_buffer = mark_energy_buffer[1:]
-		mark_energy_buffer = np.append(mark_energy_buffer, np.array([mark_sig]))
-		mark_energy = np.rint(np.convolve(mark_energy_buffer, correlator_energy_filter, 'valid') / 4)
-		space_energy_buffer = space_energy_buffer[1:]
-		space_energy_buffer = np.append(space_energy_buffer, np.array([space_sig]))
-		space_energy = np.rint(np.convolve(space_energy_buffer, correlator_energy_filter, 'valid') / 4)
-		MarkPeakDetector = PeakDetect(mark_energy, MarkPeakDetector)
-		SpacePeakDetector = PeakDetect(space_energy, SpacePeakDetector)
+		# mark_energy_buffer = mark_energy_buffer[1:]
+		# mark_energy_buffer = np.append(mark_energy_buffer, np.array([mark_sig]))
+		# mark_energy = np.rint(np.convolve(mark_energy_buffer, correlator_energy_filter, 'valid') / 4)
+		# space_energy_buffer = space_energy_buffer[1:]
+		# space_energy_buffer = np.append(space_energy_buffer, np.array([space_sig]))
+		# space_energy = np.rint(np.convolve(space_energy_buffer, correlator_energy_filter, 'valid') / 4)
+		# MarkPeakDetector = PeakDetect(mark_energy, MarkPeakDetector)
+		# SpacePeakDetector = PeakDetect(space_energy, SpacePeakDetector)
+		MarkPeakDetector = PeakDetect(mark_sig, MarkPeakDetector)
+		SpacePeakDetector = PeakDetect(space_sig, SpacePeakDetector)
 		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
 		space_envelope_buffer[envelope_index] = SpacePeakDetector['Envelope']
 
 		if MarkPeakDetector['Envelope'] > 0:
 			space_ratio = SpacePeakDetector['Envelope'] / MarkPeakDetector['Envelope']
 		else:
-			space_ratio = 1
-
-		if space_ratio > 0.7 and space_ratio < 1.4:
 			space_ratio = 1.0
-		elif space_ratio > 0.4 and space_ratio <= 0.7:
-			space_ratio = 1.36
-		elif space_ratio <= 0.4:
-			space_ratio = 1.8
-		elif space_ratio >= 1.4:
-			space_ratio = 0.8
 
+		# space_gain = 1.0
+		# if space_ratio < 0.9:
+		# 	space_gain = 1.3
+		# elif space_ratio < 0.7:
+		# 	space_gain = 1.5
+		# elif space_ratio < 0.5:
+		# 	space_gain = 2.0
+		# elif space_ratio < 0.35:
+		# 	space_gain = 2.2
+		if (space_ratio > 0.15 and space_ratio < 2.0):
+			space_gain = 1 / space_ratio
+			space_gain = space_gain - 1.0
+			space_gain = space_gain * 0.35
+			space_gain = 1.0 + space_gain
+		else:
+			space_gain = space_gain
+		space_gain_buffer[envelope_index] = space_gain * 16384
 
-		space_ratio = 1
-
-		space_gain_buffer[envelope_index] = space_ratio * 8192
-
-		space_sig = space_sig * space_ratio
+		space_sig = space_sig * space_gain
 
 		mark_correlator_buffer[envelope_index] = mark_sig
 		space_correlator_buffer[envelope_index] = space_sig
@@ -402,5 +408,7 @@ data = DifferentialDecode(data)
 count = DecodeAX25(data, 1)
 print("Decoded packet count:", count)
 
+space_ratio_sum = space_ratio_sum / 99
+print("Average Space Ratio: ", f'{space_ratio_sum:.2f}')
 
 print('done')
