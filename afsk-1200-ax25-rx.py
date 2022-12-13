@@ -220,12 +220,14 @@ output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767,
 output_filter_buffer = np.zeros(len(output_filter))
 output_filter_shift = -3
 
-period = 4000
+period = 3500
+attack = 3
+decay = 2
 
 #create a dictionary for the input signal peak detector
 InputPeakDetector = {'AttackRate':5000, 'SustainPeriod':7200, 'DecayRate':3, 'SustainCount':0, 'Envelope':0}
-MarkPeakDetector = {'AttackRate':1, 'SustainPeriod':period, 'DecayRate':1, 'SustainCount':0, 'Envelope':0}
-SpacePeakDetector = {'AttackRate':1, 'SustainPeriod':period, 'DecayRate':1, 'SustainCount':0, 'Envelope':0}
+MarkPeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
+SpacePeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
 
 decimation = 2
 
