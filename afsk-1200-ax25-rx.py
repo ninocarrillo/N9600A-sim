@@ -367,10 +367,11 @@ for sample in audio:
 		# 	space_gain = 2.0
 		# elif space_ratio < 0.35:
 		# 	space_gain = 2.2
-		if (space_ratio > 0.15 and space_ratio < 2.0):
+		if (space_ratio > 0.05 and space_ratio < 4.0):
+			space_ratio = np.sqrt(space_ratio)
 			space_gain = 1 / space_ratio
 			space_gain = space_gain - 1.0
-			space_gain = space_gain * 0.35
+			space_gain = space_gain * 0.66
 			space_gain = 1.0 + space_gain
 		else:
 			space_gain = space_gain
