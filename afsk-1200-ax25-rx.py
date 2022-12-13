@@ -106,9 +106,12 @@ def DecodeAX25(bitstream, verbose):
 					#	print(chr(working_byte), end=' ')
 					# else:
 					#	print(hex(working_byte), end=' ')
-
-					output_buffer[byte_count] = working_byte
-					byte_count += 1
+					try:
+						output_buffer[byte_count] = working_byte
+					except:
+						pass
+					else:
+						byte_count += 1
 				else:
 					working_byte = np.right_shift(working_byte, 1)
 			elif ones == 5:
@@ -220,10 +223,12 @@ output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767,
 output_filter_buffer = np.zeros(len(output_filter))
 output_filter_shift = -3
 
+period = 800
+
 #create a dictionary for the input signal peak detector
 InputPeakDetector = {'AttackPeriod':1, 'SustainPeriod':7200, 'DecayPeriod':7200, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
-MarkPeakDetector = {'AttackPeriod':1, 'SustainPeriod':1200, 'DecayPeriod':120, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
-SpacePeakDetector = {'AttackPeriod':1, 'SustainPeriod':1200, 'DecayPeriod':120, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
+MarkPeakDetector = {'AttackPeriod':1, 'SustainPeriod':period, 'DecayPeriod':period, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
+SpacePeakDetector = {'AttackPeriod':1, 'SustainPeriod':period, 'DecayPeriod':period, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
 
 decimation = 2
 
@@ -256,6 +261,7 @@ square_clip = square_coef - 1.0
 space_sig_gain = 1.0
 space_sig_gain_p = 0.0002
 
+correlator_energy_filter = np.ones(correlator_taps)
 
 index1 = 0
 index2 = 0
@@ -267,6 +273,8 @@ input_filter_gain = 0
 envelope = np.zeros(round(len(audio) / decimation))
 filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
 correlator_buffer = np.zeros(correlator_taps)
+mark_energy_buffer = np.zeros(correlator_taps)
+space_energy_buffer = np.zeros(correlator_taps)
 mark_correlator_buffer = np.zeros(round(len(audio) / decimation))
 space_correlator_buffer = np.zeros(round(len(audio) / decimation))
 demod_sig_buffer = np.zeros(round(len(audio) / decimation))
@@ -280,7 +288,7 @@ for sample in audio:
 		index2 = 0
 		index3 = index3 + 1
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}, {space_sig_gain:.2f}')
+		print(f'{index3}')
 	input_filter_buffer = input_filter_buffer[1:]
 	input_filter_buffer = np.append(input_filter_buffer, np.array([sample]))
 	if index1 == decimation:
@@ -329,21 +337,26 @@ for sample in audio:
 		if space_sig > 8190:
 			print('space clip')
 
-		MarkPeakDetector = PeakDetect(mark_sig, MarkPeakDetector)
-		SpacePeakDetector = PeakDetect(space_sig, SpacePeakDetector)
+		#moving average mark and space signals for energy measurement
+		mark_energy_buffer = mark_energy_buffer[1:]
+		mark_energy_buffer = np.append(mark_energy_buffer, np.array([mark_sig]))
+		mark_energy = np.rint(np.convolve(mark_energy_buffer, correlator_energy_filter, 'valid') / 4)
+		space_energy_buffer = space_energy_buffer[1:]
+		space_energy_buffer = np.append(space_energy_buffer, np.array([space_sig]))
+		space_energy = np.rint(np.convolve(space_energy_buffer, correlator_energy_filter, 'valid') / 4)
+		MarkPeakDetector = PeakDetect(mark_energy, MarkPeakDetector)
+		SpacePeakDetector = PeakDetect(space_energy, SpacePeakDetector)
 		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
 		space_envelope_buffer[envelope_index] = SpacePeakDetector['Envelope']
 
 		if SpacePeakDetector['Envelope'] > 0:
-			space_sig_gain = MarkPeakDetector['Envelope'] / SpacePeakDetector['Envelope']
+			space_sig = np.rint(space_sig * 16384 / SpacePeakDetector['Envelope'])
 		else:
-			space_sig_gain = 1
-
-		space_sig_gain = 1
-
-		space_sig = space_sig * space_sig_gain
-
-		space_gain_buffer[envelope_index] = np.rint(space_sig_gain * 4096)
+			space_sig = 0
+		if MarkPeakDetector['Envelope'] > 0:
+			mark_sig = np.rint(mark_sig * 16384 / MarkPeakDetector['Envelope'])
+		else:
+			mark_sig = 0
 
 		mark_correlator_buffer[envelope_index] = mark_sig
 		space_correlator_buffer[envelope_index] = space_sig
@@ -361,7 +374,7 @@ scipy.io.wavfile.write("MarkCorrelatorSignal.wav", round(samplerate / decimation
 scipy.io.wavfile.write("SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
 scipy.io.wavfile.write("DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
 
-scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
+#scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
 
 
 scipy.io.wavfile.write("SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
