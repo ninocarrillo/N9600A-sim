@@ -223,7 +223,7 @@ output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767,
 output_filter_buffer = np.zeros(len(output_filter))
 output_filter_shift = -3
 
-period = 800
+period = 1000
 
 #create a dictionary for the input signal peak detector
 InputPeakDetector = {'AttackPeriod':1, 'SustainPeriod':7200, 'DecayPeriod':7200, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
@@ -349,14 +349,26 @@ for sample in audio:
 		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
 		space_envelope_buffer[envelope_index] = SpacePeakDetector['Envelope']
 
-		if SpacePeakDetector['Envelope'] > 0:
-			space_sig = np.rint(space_sig * 16384 / SpacePeakDetector['Envelope'])
-		else:
-			space_sig = 0
 		if MarkPeakDetector['Envelope'] > 0:
-			mark_sig = np.rint(mark_sig * 16384 / MarkPeakDetector['Envelope'])
+			space_ratio = SpacePeakDetector['Envelope'] / MarkPeakDetector['Envelope']
 		else:
-			mark_sig = 0
+			space_ratio = 1
+
+		if space_ratio > 0.7 and space_ratio < 1.4:
+			space_ratio = 1.0
+		elif space_ratio > 0.4 and space_ratio <= 0.7:
+			space_ratio = 1.36
+		elif space_ratio <= 0.4:
+			space_ratio = 1.8
+		elif space_ratio >= 1.4:
+			space_ratio = 0.8
+
+
+		space_ratio = 1
+
+		space_gain_buffer[envelope_index] = space_ratio * 8192
+
+		space_sig = space_sig * space_ratio
 
 		mark_correlator_buffer[envelope_index] = mark_sig
 		space_correlator_buffer[envelope_index] = space_sig
@@ -374,7 +386,7 @@ scipy.io.wavfile.write("MarkCorrelatorSignal.wav", round(samplerate / decimation
 scipy.io.wavfile.write("SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
 scipy.io.wavfile.write("DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
 
-#scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
+scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
 
 
 scipy.io.wavfile.write("SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
