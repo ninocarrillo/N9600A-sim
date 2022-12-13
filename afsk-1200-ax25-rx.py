@@ -216,13 +216,14 @@ input_filter = np.array([77, 53, 58, 53, 39, 18, -4, -23, -38, -49, -61, -79, -1
 input_filter_buffer = np.zeros(len(input_filter))
 
 output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767, -580, -219, 309, 975, 1727, 2494, 3201, 3771, 4142, 4270, 4142, 3771, 3201, 2494, 1727, 975, 309, -219, -580, -767, -796, -701, -525, -316, -113, 51, 157, 201, 583])
-output_filter = np.ones(5) * 5000
+#output_filter = np.ones(5) * 5000
 output_filter_buffer = np.zeros(len(output_filter))
 output_filter_shift = -3
 
 #create a dictionary for the input signal peak detector
-InputPeakDetector = {'AttackPeriod':1,'SustainPeriod':7200,'DecayPeriod':7200, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
-OutputHighLowDetector = {'High':1, 'Low':-1, 'HighSustainCount':0, 'LowSustainCount':0, 'DecayRate':10, 'AttackRate':10, 'SustainPeriod':800, 'LastValue':0}
+InputPeakDetector = {'AttackPeriod':1, 'SustainPeriod':7200, 'DecayPeriod':7200, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
+MarkPeakDetector = {'AttackPeriod':1, 'SustainPeriod':1200, 'DecayPeriod':120, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
+SpacePeakDetector = {'AttackPeriod':1, 'SustainPeriod':1200, 'DecayPeriod':120, 'AttackCount':0, 'SustainCount':0, 'DecayCount':0, 'LastValue':0, 'Envelope':0, 'DecayRate':1}
 
 decimation = 2
 
@@ -270,8 +271,8 @@ mark_correlator_buffer = np.zeros(round(len(audio) / decimation))
 space_correlator_buffer = np.zeros(round(len(audio) / decimation))
 demod_sig_buffer = np.zeros(round(len(audio) / decimation))
 space_gain_buffer = np.zeros(round(len(audio) / decimation))
-high_envelope_buffer = np.zeros(round(len(audio) / decimation))
-low_envelope_buffer = np.zeros(round(len(audio) / decimation))
+mark_envelope_buffer = np.zeros(round(len(audio) / decimation))
+space_envelope_buffer = np.zeros(round(len(audio) / decimation))
 for sample in audio:
 	index1 = index1 + 1
 	index2 = index2 + 1
@@ -279,7 +280,7 @@ for sample in audio:
 		index2 = 0
 		index3 = index3 + 1
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}, {space_sig_ratio:.2f}, {space_sig_gain_error:.2f}')
+		print(f'{index3}, {space_sig_gain:.2f}')
 	input_filter_buffer = input_filter_buffer[1:]
 	input_filter_buffer = np.append(input_filter_buffer, np.array([sample]))
 	if index1 == decimation:
@@ -328,6 +329,18 @@ for sample in audio:
 		if space_sig > 8190:
 			print('space clip')
 
+		MarkPeakDetector = PeakDetect(mark_sig, MarkPeakDetector)
+		SpacePeakDetector = PeakDetect(space_sig, SpacePeakDetector)
+		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
+		space_envelope_buffer[envelope_index] = SpacePeakDetector['Envelope']
+
+		if SpacePeakDetector['Envelope'] > 0:
+			space_sig_gain = MarkPeakDetector['Envelope'] / SpacePeakDetector['Envelope']
+		else:
+			space_sig_gain = 1
+
+		space_sig_gain = 1
+
 		space_sig = space_sig * space_sig_gain
 
 		space_gain_buffer[envelope_index] = np.rint(space_sig_gain * 4096)
@@ -338,32 +351,7 @@ for sample in audio:
 		output_filter_buffer = output_filter_buffer[1:]
 		output_filter_buffer = np.append(output_filter_buffer, np.array([mark_sig - space_sig]))
 		demod_sig_buffer[envelope_index] = np.rint(np.convolve(output_filter_buffer, output_filter, 'valid') / pow(2, (16 + output_filter_shift)))
-		OutputHighLowDetector = HighLowDetect(demod_sig_buffer[envelope_index], OutputHighLowDetector)
-		# if OutputHighLowDetector['High'] > 8192 or OutputHighLowDetector['Low'] < -8192:
-		# 	OutputHighLowDetector['High'] = OutputHighLowDetector['High'] / 2
-		# 	OutputHighLowDetector['Low'] = OutputHighLowDetector['Low'] / 2
-		# 	OutputHighLowDetector['LastValue'] = OutputHighLowDetector['LastValue'] / 2
-		# 	output_filter_shift = output_filter_shift + 1
-		# 	#print('output going down', output_filter_shift)
-		# 	if output_filter_shift > 16:
-		# 		output_filter_shift = 16
-		# if OutputHighLowDetector['High'] < 2048 or OutputHighLowDetector['Low'] > -2048:
-		# 	OutputHighLowDetector['High'] = OutputHighLowDetector['High'] * 2
-		# 	OutputHighLowDetector['Low'] = OutputHighLowDetector['Low'] * 2
-		# 	OutputHighLowDetector['LastValue'] = OutputHighLowDetector['LastValue'] * 2
-		# 	output_filter_shift = output_filter_shift - 1
-		# 	#print('output going up', output_filter_shift)
-		# 	if output_filter_shift < -16:
-		# 		output_filter_shift = -16
-		high_envelope_buffer[envelope_index] = OutputHighLowDetector['High']
-		low_envelope_buffer[envelope_index] = OutputHighLowDetector['Low']
-		space_sig_ratio = -(OutputHighLowDetector['High'] / OutputHighLowDetector['Low']);
-		space_sig_gain_error = space_sig_ratio - 1
-		space_sig_gain = space_sig_gain + (space_sig_gain_p * space_sig_gain_error)
-		if space_sig_gain > 4:
-			space_sig_gain = 4
-		if space_sig_gain < 0.25:
-			space_sig_gain = 0.25
+
 		envelope_index = envelope_index + 1
 
 scipy.io.wavfile.write("PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
@@ -376,9 +364,9 @@ scipy.io.wavfile.write("DemodSignal.wav", round(samplerate / decimation), demod_
 scipy.io.wavfile.write("SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
 
 
-scipy.io.wavfile.write("HighEnvelope.wav", round(samplerate / decimation), high_envelope_buffer.astype(np.int16))
+scipy.io.wavfile.write("SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
 
-scipy.io.wavfile.write("LowEnvelope.wav", round(samplerate / decimation), low_envelope_buffer.astype(np.int16))
+scipy.io.wavfile.write("MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
 
 data = SliceData(demod_sig_buffer, 0.7, 12)
 print("Length of sliced data:", len(data))
