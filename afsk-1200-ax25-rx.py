@@ -201,6 +201,8 @@ def PeakDetect(signal_value, detector):
 	return detector
 
 def FilterDecimate(filter):
+	filter['FilterBuffer'] = filter['FilterBuffer'][1:]
+	filter['FilterBuffer'] = np.append(filter['FilterBuffer'], np.array([filter['NewSample']]))
 	output_buffer = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid') / pow(2, (16 + filter['FilterShift'])))
 	filter['DataBuffer'] = np.array([])
 	for data in output_buffer:
@@ -222,6 +224,32 @@ def FilterDecimate(filter):
 	return filter
 
 def DemodulateAFSK(demodulator):
+	demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
+	demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
+
+	mark_cos_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	mark_sin_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+
+	mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
+	mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
+	mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
+
+	mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
+
+	space_cos_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	space_sin_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+
+	space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
+	space_sig = np.rint(space_sig / demodulator['SquareScale'])
+	space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
+
+	space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
+
+	demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][1:]
+	demodulator['OutputFilterBuffer'] = np.append(demodulator['OutputFilterBuffer'], np.array([mark_sig - space_sig]))
+
+	demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
+
 	return demodulator
 
 if len(sys.argv) < 2:
@@ -256,7 +284,7 @@ correlator_taps = 12
 
 #create some dictionaries for the processing objects
 InputPeakDetector = {'AttackRate':5000, 'SustainPeriod':7200, 'DecayRate':3, 'SustainCount':0, 'Envelope':0}
-FilterDecimator = {'Filter':input_filter, 'DecimationRate':decimation, 'FilterBuffer':input_filter_buffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'FilterShift':0, 'DecimationCounter':0}
+FilterDecimator = {'Filter':input_filter, 'DecimationRate':decimation, 'FilterBuffer':input_filter_buffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'FilterShift':0, 'DecimationCounter':0, 'NewSample':0}
 
 MarkPeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
 SpacePeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
@@ -289,7 +317,8 @@ square_output_scale = 2.0
 square_coef = 4096.0
 square_clip = square_coef - 1.0
 
-
+correlator_buffer = np.zeros(correlator_taps)
+AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
 
 index1 = 0
 index2 = 0
@@ -300,17 +329,9 @@ space_ratio_sum = 0
 
 input_filter_gain = 0
 
-envelope = np.zeros(round(len(audio) / decimation))
 filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
-correlator_buffer = np.zeros(correlator_taps)
-mark_energy_buffer = np.zeros(correlator_taps)
-space_energy_buffer = np.zeros(correlator_taps)
-mark_correlator_buffer = np.zeros(round(len(audio) / decimation))
-space_correlator_buffer = np.zeros(round(len(audio) / decimation))
 demod_sig_buffer = np.zeros(round(len(audio) / decimation))
-space_gain_buffer = np.zeros(round(len(audio) / decimation))
-mark_envelope_buffer = np.zeros(round(len(audio) / decimation))
-space_envelope_buffer = np.zeros(round(len(audio) / decimation))
+
 for sample in audio:
 	index1 = index1 + 1
 	index2 = index2 + 1
@@ -318,64 +339,15 @@ for sample in audio:
 		index2 = 0
 		index3 = index3 + 1
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}, {space_ratio:.2f}')
-		space_ratio_sum = space_ratio_sum + space_ratio
-
-	FilterDecimator['FilterBuffer'] = FilterDecimator['FilterBuffer'][1:]
-	FilterDecimator['FilterBuffer'] = np.append(FilterDecimator['FilterBuffer'], np.array([sample]))
+		print(f'{index3}')
+	FilterDecimator['NewSample'] = sample
 	FilterDecimator = FilterDecimate(FilterDecimator)
 	for filtered_signal in FilterDecimator['DataBuffer']:
-
-		# perform mark and space correlation
-		# update correlator memory output_buffer
-		correlator_buffer = correlator_buffer[1:]
-		correlator_buffer = np.append(correlator_buffer, np.array([filtered_signal]))
-		mark_cos_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, mark_cos, 'valid')) / 65536)
-		mark_sin_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, mark_sin, 'valid')) / 65536)
-
-		mark_sig = np.add(np.square(mark_cos_sig[0]), np.square(mark_sin_sig[0]))
-		mark_sig = np.rint(mark_sig / square_scale)
-		mark_sig = np.clip(mark_sig, 0, square_clip)
-
-		mark_sig = np.rint(square_output_scale * np.sqrt(square_coef * mark_sig))
-		if mark_sig > 8190:
-			print('mark clip')
-
-		space_cos_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, space_cos, 'valid')) / 65536)
-		space_sin_sig = np.rint((correlator_shift * np.convolve(correlator_buffer, space_sin, 'valid')) / 65536)
-
-		space_sig = np.add(np.square(space_cos_sig[0]), np.square(space_sin_sig[0]))
-		space_sig = np.rint(space_sig / square_scale)
-		space_sig = np.clip(space_sig, 0, square_clip)
-
-		space_sig = np.rint(square_output_scale * np.sqrt(square_coef * space_sig))
-		if space_sig > 8190:
-			print('space clip')
-
-		MarkPeakDetector = PeakDetect(mark_sig, MarkPeakDetector)
-		SpacePeakDetector = PeakDetect(space_sig, SpacePeakDetector)
-		mark_envelope_buffer[envelope_index] = MarkPeakDetector['Envelope']
-		space_envelope_buffer[envelope_index] = SpacePeakDetector['Envelope']
-
-		if MarkPeakDetector['Envelope'] > 0:
-			space_ratio = SpacePeakDetector['Envelope'] / MarkPeakDetector['Envelope']
-		else:
-			space_ratio = 1.0
-
-		space_gain = 1.0
-
-		space_gain_buffer[envelope_index] = space_gain * 16384
-
-		space_sig = space_sig * space_gain
-
-		mark_correlator_buffer[envelope_index] = mark_sig
-		space_correlator_buffer[envelope_index] = space_sig
-
-		output_filter_buffer = output_filter_buffer[1:]
-		output_filter_buffer = np.append(output_filter_buffer, np.array([mark_sig - space_sig]))
-		demod_sig_buffer[envelope_index] = np.rint(np.convolve(output_filter_buffer, output_filter, 'valid') / pow(2, (16 + output_filter_shift)))
-
-		envelope_index = envelope_index + 1
+		AFSKDemodulator1['NewSample'] = filtered_signal
+		AFSKDemodulator1 = DemodulateAFSK(AFSKDemodulator1)
+		for demodulated_signal in AFSKDemodulator1['Result']:
+			demod_sig_buffer[envelope_index] = demodulated_signal
+			envelope_index = envelope_index + 1
 
 #generate a new directory for the reports
 run_number = 0
@@ -389,18 +361,18 @@ while True:
 		print(dirname + ' exists')
 		continue
 	break
-scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
-scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"MarkCorrelatorSignal.wav", round(samplerate / decimation), mark_correlator_buffer.astype(np.int16))
-scipy.io.wavfile.write(dirname+"SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"MarkCorrelatorSignal.wav", round(samplerate / decimation), mark_correlator_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"SpaceCorrelatorSignal.wav", round(samplerate / decimation), space_correlator_buffer.astype(np.int16))
 scipy.io.wavfile.write(dirname+"DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"SpaceGain.wav", round(samplerate / decimation), space_gain_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"SpaceEnvelope.wav", round(samplerate / decimation), space_envelope_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
 
 data = SliceData(demod_sig_buffer, 0.7, 12)
 print("Length of sliced data:", len(data))
