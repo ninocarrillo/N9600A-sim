@@ -5,6 +5,26 @@ import numpy as np
 import os
 
 
+def ProgSliceData(slicer):
+	slicer['Result'] = np.array([])
+	slicer['PLLClock'] += slicer['PLLStep']
+	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+		slicer['PLLClock'] -= slicer['PLLPeriod']
+		if slicer['NewSample'] > 0.0:
+			slicer['Result'] = np.array([1])
+		else:
+			slicer['Result'] = np.array([0])
+	if slicer['LastSample'] > 0.0:
+		if slicer['NewSample'] <= 0.0:
+			# Zero Crossing
+			slicer['PLLClock'] *= slicer['Rate']
+	else:
+		if slicer['NewSample'] > 0.0:
+			# Zero Crossing
+			slicer['PLLClock'] *= slicer['Rate']
+	slicer['LastSample'] = slicer['NewSample']
+	return slicer
+
 def SliceData(samples, rate, oversample):
 	LockRate = rate
 	length = len(samples) / oversample;
@@ -252,25 +272,6 @@ def DemodulateAFSK(demodulator):
 
 	return demodulator
 
-def ProgSliceData(slicer):
-	slicer['Result'] = np.array([])
-	slicer['PLLClock'] += slicer['PLLStep']
-	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
-		slicer['PLLClock'] -= slicer['PLLPeriod']
-		if slicer['NewSample'] > 0.0:
-			slicer['Result'] = np.array([1])
-		else:
-			slicer['Result'] = np.array([0])
-		if slicer['LastSample'] > 0.0:
-			if slicer['NewSample'] <= 0.0:
-				# Zero Crossing
-				slicer['PLLClock'] *= slicer['Rate']
-		else:
-			if slicer['NewSample'] > 0.0:
-				# Zero Crossing
-				slicer['PLLClock'] *= slicer['Rate']
-		slicer['LastSample'] = slicer['NewSample']
-	return slicer
 
 def ProgDifferentialDecode(decoder):
 	if decoder['NewBit'] == decoder['LastBit']:
@@ -478,11 +479,11 @@ for sample in audio:
 			DataSlicer1['NewSample'] = demodulated_signal
 			DataSlicer1 = ProgSliceData(DataSlicer1)
 			for data_bit in DataSlicer1['Result']:
-				data = np.append(data, np.array([data_bit]))
-				# DifferentialDecoder1['NewBit'] = data_bit
-				# DifferentialDecoder1 = ProgDifferentialDecode(DifferentialDecoder1)
+				# data = np.append(data, np.array([data_bit]))
+				DifferentialDecoder1['NewBit'] = data_bit
+				DifferentialDecoder1 = ProgDifferentialDecode(DifferentialDecoder1)
 
-				#data = np.append(data, np.array([DifferentialDecoder1['Result']]))
+				data = np.append(data, np.array([DifferentialDecoder1['Result']]))
 # scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
 # scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
 
@@ -498,10 +499,11 @@ scipy.io.wavfile.write(dirname+"DemodSignal.wav", round(samplerate / decimation)
 
 #data = SliceData(demod_sig_buffer, 0.7, 12)
 #print("Length of sliced data:", len(data))
+#print(data[10000:10100])
 # file = open('demod_output.txt', 'w')
 # np.savetxt(file, data.astype(np.int16))
 # file.close()
-data = DifferentialDecode(data)
+#data = DifferentialDecode(data)
 count = DecodeAX25(data, 1)
 print("Decoded packet count:", count)
 
