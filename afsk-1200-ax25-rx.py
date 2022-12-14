@@ -252,8 +252,6 @@ def DemodulateAFSK(demodulator):
 
 	return demodulator
 
-Slicer1 = {'Rate':0.7, 'Clock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0}
-
 def ProgSliceData(slicer):
 	slicer['Result'] = np.array([])
 	slicer['PLLClock'] += slicer['PLLStep']
@@ -273,6 +271,90 @@ def ProgSliceData(slicer):
 				slicer['PLLClock'] *= slicer['Rate']
 		slicer['LastSample'] = slicer['NewSample']
 	return slicer
+
+def ProgDifferentialDecode(decoder):
+	if decoder['NewBit'] == decoder['LastBit']:
+		decoder['Result'] = 1
+	else:
+		decoder['Result'] = 0
+	decoder['LastBit'] = decoder['NewBit']
+	return decoder
+
+def ProgDecodeAX25(bitstream, verbose):
+	output_buffer = np.zeros(1024, np.uint16)
+	packet_count = 0
+	ones = 0
+	working_byte = np.uint16(0)
+	bit_index = 0
+	byte_count = 0
+	stream_index = 0
+	for bit in bitstream:
+		stream_index += 1
+		if bit == 1:
+			working_byte = np.bitwise_or(working_byte, 128)
+			ones += 1
+			bit_index += 1
+			if ones > 6:
+				# abort frame for invalid bit sequence
+				ones = 0
+				bit_index = 0
+				byte_count = 0
+				# print(" Frame Abort")
+			elif bit_index > 7:
+				# 8 valid bits received, record byte
+				bit_index = 0
+				# if working_byte > 31 and working_byte < 128:
+				#	print(chr(working_byte), end=' ')
+				# else:
+				#	print(hex(working_byte), end=' ')
+
+				output_buffer[byte_count] = working_byte
+				byte_count += 1
+			else:
+				working_byte = np.right_shift(working_byte, 1)
+		else:
+			if ones < 5:
+				working_byte = np.bitwise_and(working_byte, 127)
+				bit_index += 1
+				if bit_index > 7:
+					bit_index = 0
+					# if working_byte > 31 and working_byte < 128:
+					#	print(chr(working_byte), end=' ')
+					# else:
+					#	print(hex(working_byte), end=' ')
+					try:
+						output_buffer[byte_count] = working_byte
+					except:
+						pass
+					else:
+						byte_count += 1
+				else:
+					working_byte = np.right_shift(working_byte, 1)
+			elif ones == 5:
+				ones == 5
+				# ignore stuffed zero
+			elif ones == 6:
+				# Frame complete
+				if byte_count > 18:
+					CRC = CheckCRC(output_buffer, byte_count)
+					if CRC[1] == 1:
+						packet_count += 1
+						if verbose == 1:
+							print(stream_index, hex(CRC[0]), packet_count)
+							for i in range(byte_count - 2):
+								character = output_buffer[i]
+								if (character > 31) and (character < 128):
+									print(''.join(chr(character)), end='')
+							print("\r\n", end='')
+				byte_count = 0
+				bit_index = 0
+			else:
+				# Invalid frame
+				byte_count = 0
+				bit_index = 0
+			ones = 0
+	return packet_count
+
 
 if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
@@ -341,6 +423,8 @@ square_clip = square_coef - 1.0
 
 correlator_buffer = np.zeros(correlator_taps)
 AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
+DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0}
+DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
 
 index1 = 0
 index2 = 0
@@ -364,13 +448,14 @@ while True:
 		continue
 	break
 
+data = np.array([])
 filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
 demod_sig_buffer = np.zeros(round(len(audio) / decimation))
 chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
 chop_demodulated_audio_buffer = np.array([])
 for sample in audio:
-	chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
+	#chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
 	index1 = index1 + 1
 	index2 = index2 + 1
 	if index2 > len(audio) / 100:
@@ -381,20 +466,23 @@ for sample in audio:
 	FilterDecimator['NewSample'] = sample
 	FilterDecimator = FilterDecimate(FilterDecimator)
 	for filtered_signal in FilterDecimator['DataBuffer']:
-		chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
+		#chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
 		AFSKDemodulator1['NewSample'] = filtered_signal
 		AFSKDemodulator1 = DemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
-			chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
+			#chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
 			demod_sig_buffer[envelope_index] = demodulated_signal
 			envelope_index = envelope_index + 1
 
 			#slice the data
 			DataSlicer1['NewSample'] = demodulated_signal
-			DataSlicer1 = ProgSliceData(DataSlicer)
+			DataSlicer1 = ProgSliceData(DataSlicer1)
 			for data_bit in DataSlicer1['Result']:
-				# differential decode the data
+				data = np.append(data, np.array([data_bit]))
+				# DifferentialDecoder1['NewBit'] = data_bit
+				# DifferentialDecoder1 = ProgDifferentialDecode(DifferentialDecoder1)
 
+				#data = np.append(data, np.array([DifferentialDecoder1['Result']]))
 # scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
 # scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
 
@@ -408,8 +496,8 @@ scipy.io.wavfile.write(dirname+"DemodSignal.wav", round(samplerate / decimation)
 
 # scipy.io.wavfile.write(dirname+"MarkEnvelope.wav", round(samplerate / decimation), mark_envelope_buffer.astype(np.int16))
 
-data = SliceData(demod_sig_buffer, 0.7, 12)
-print("Length of sliced data:", len(data))
+#data = SliceData(demod_sig_buffer, 0.7, 12)
+#print("Length of sliced data:", len(data))
 # file = open('demod_output.txt', 'w')
 # np.savetxt(file, data.astype(np.int16))
 # file.close()
