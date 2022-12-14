@@ -296,7 +296,7 @@ def ProgDecodeAX25(decoder):
 		elif decoder['BitIndex'] >7:
 			# 8 valid bits received, record byte
 			decoder['BitIndex'] = 0
-			decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]))
+			decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]).astype('uint16'))
 			decoder['ByteCount'] += 1
 		else:
 			decoder['WorkingByte'] = np.right_shift(decoder['WorkingByte'], 1)
@@ -306,7 +306,7 @@ def ProgDecodeAX25(decoder):
 			decoder['BitIndex'] += 1
 			if decoder['BitIndex'] > 7:
 				decoder['BitIndex'] = 0
-				decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]))
+				decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]).astype('uint16'))
 				decoder['ByteCount'] += 1
 			else:
 				decoder['WorkingByte'] = np.right_shift(decoder['WorkingByte'], 1)
@@ -316,18 +316,20 @@ def ProgDecodeAX25(decoder):
 		elif decoder['Ones'] == 6:
 			# Frame complete
 			if decoder['ByteCount'] > 18:
-				decoder['CRC'] = CheckCRC(decoder['Result'].astype('uint16'), decoder['ByteCount'])
-				print(decoder['CRC'])
-				for character in decoder['Result']:
-					try:
-						print(''.join(chr(character)), end='')
-					except:
-						pass
+				decoder['CRC'] = CheckCRC(decoder['Result'].astype('uint16'), len(decoder['Result']))
 				if decoder['CRC'][1] == 1:
 					decoder['PacketCount'] += 1
+					decoder['Output'] = decoder['Result']
+					decoder['OutputTrigger'] = True
 					if decoder['Verbose'] == 1:
 						print(hex(decoder['CRC'][0]), decoder['PacketCount'])
+						for character in decoder['Result'][:-2]:
+							try:
+								print(''.join(chr(character)), end='')
+							except:
+								pass
 			decoder['ByteCount'] = 0
+			decoder['Result'] = np.array([]).astype('uint16')
 			decoder['BitIndex'] = 0
 		else:
 			decoder['ByteCount'] = 0
@@ -405,7 +407,7 @@ correlator_buffer = np.zeros(correlator_taps)
 AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
 DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
-AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([]), 'PacketCount':0, 'Verbose':1}
+AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False}
 
 
 index1 = 0
@@ -467,6 +469,10 @@ for sample in audio:
 				#data = np.append(data, np.array([DifferentialDecoder1['Result']]))
 				AX25Decoder1['NewBit'] = DifferentialDecoder1['Result']
 				AX25Decoder1 = ProgDecodeAX25(AX25Decoder1)
+				if AX25Decoder1['OutputTrigger'] == True:
+					AX25Decoder1['OutputTrigger'] = False
+					print('True')
+
 				# if AX25Decoder1['CRC'][1] == 1:
 				# 	print(AX25Decoder1[Result])
 # scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
