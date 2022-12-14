@@ -252,6 +252,28 @@ def DemodulateAFSK(demodulator):
 
 	return demodulator
 
+Slicer1 = {'Rate':0.7, 'Clock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0}
+
+def ProgSliceData(slicer):
+	slicer['Result'] = np.array([])
+	slicer['PLLClock'] += slicer['PLLStep']
+	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+		slicer['PLLClock'] -= slicer['PLLPeriod']
+		if slicer['NewSample'] > 0.0:
+			slicer['Result'] = np.array([1])
+		else:
+			slicer['Result'] = np.array([0])
+		if slicer['LastSample'] > 0.0:
+			if slicer['NewSample'] <= 0.0:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		else:
+			if slicer['NewSample'] > 0.0:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		slicer['LastSample'] = slicer['NewSample']
+	return slicer
+
 if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
 	sys.exit(-1)
@@ -329,26 +351,6 @@ space_ratio_sum = 0
 
 input_filter_gain = 0
 
-filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
-demod_sig_buffer = np.zeros(round(len(audio) / decimation))
-
-for sample in audio:
-	index1 = index1 + 1
-	index2 = index2 + 1
-	if index2 > len(audio) / 100:
-		index2 = 0
-		index3 = index3 + 1
-		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}')
-	FilterDecimator['NewSample'] = sample
-	FilterDecimator = FilterDecimate(FilterDecimator)
-	for filtered_signal in FilterDecimator['DataBuffer']:
-		AFSKDemodulator1['NewSample'] = filtered_signal
-		AFSKDemodulator1 = DemodulateAFSK(AFSKDemodulator1)
-		for demodulated_signal in AFSKDemodulator1['Result']:
-			demod_sig_buffer[envelope_index] = demodulated_signal
-			envelope_index = envelope_index + 1
-
 #generate a new directory for the reports
 run_number = 0
 print('trying to make a new directory')
@@ -361,6 +363,38 @@ while True:
 		print(dirname + ' exists')
 		continue
 	break
+
+filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
+demod_sig_buffer = np.zeros(round(len(audio) / decimation))
+chop_audio_buffer = np.array([])
+chop_filtered_audio_buffer = np.array([])
+chop_demodulated_audio_buffer = np.array([])
+for sample in audio:
+	chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
+	index1 = index1 + 1
+	index2 = index2 + 1
+	if index2 > len(audio) / 100:
+		index2 = 0
+		index3 = index3 + 1
+		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
+		print(f'{index3}')
+	FilterDecimator['NewSample'] = sample
+	FilterDecimator = FilterDecimate(FilterDecimator)
+	for filtered_signal in FilterDecimator['DataBuffer']:
+		chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
+		AFSKDemodulator1['NewSample'] = filtered_signal
+		AFSKDemodulator1 = DemodulateAFSK(AFSKDemodulator1)
+		for demodulated_signal in AFSKDemodulator1['Result']:
+			chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
+			demod_sig_buffer[envelope_index] = demodulated_signal
+			envelope_index = envelope_index + 1
+
+			#slice the data
+			DataSlicer1['NewSample'] = demodulated_signal
+			DataSlicer1 = ProgSliceData(DataSlicer)
+			for data_bit in DataSlicer1['Result']:
+				# differential decode the data
+
 # scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
 # scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
 
@@ -383,7 +417,5 @@ data = DifferentialDecode(data)
 count = DecodeAX25(data, 1)
 print("Decoded packet count:", count)
 
-space_ratio_sum = space_ratio_sum / 99
-print("Average Space Ratio: ", f'{space_ratio_sum:.2f}')
 print('made new directory: ', dirname)
 print('done')
