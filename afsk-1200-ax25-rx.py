@@ -321,7 +321,8 @@ def ProgDecodeAX25(decoder):
 
 
 def ProgSliceData(slicer):
-	slicer['EnvelopeDetector'] = HighLowDetect[slicer['NewSample']]
+	slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
+	slicer['Midpoint'] = ((slicer['EnvelopeDetector']['High'] - slicer['EnvelopeDetector']['Low']) // 2) + slicer['EnvelopeDetector']['Low']
 	slicer['Result'] = np.array([])
 	slicer['PLLClock'] += slicer['PLLStep']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
@@ -407,8 +408,10 @@ square_coef = 4096.0
 square_clip = square_coef - 1.0
 
 correlator_buffer = np.zeros(correlator_taps)
+
+SlicerEnvelope = {'AttackRate':8000, 'DecayRate':300, 'SustainPeriod':300, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0}
 AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
-DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0}
+DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'EnvelopeDetector':SlicerEnvelope}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
 AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False}
 
