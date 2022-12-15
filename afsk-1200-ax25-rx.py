@@ -5,25 +5,6 @@ import numpy as np
 import os
 
 
-def ProgSliceData(slicer):
-	slicer['Result'] = np.array([])
-	slicer['PLLClock'] += slicer['PLLStep']
-	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
-		slicer['PLLClock'] -= slicer['PLLPeriod']
-		if slicer['NewSample'] > 0.0:
-			slicer['Result'] = np.array([1])
-		else:
-			slicer['Result'] = np.array([0])
-	if slicer['LastSample'] > 0.0:
-		if slicer['NewSample'] <= 0.0:
-			# Zero Crossing
-			slicer['PLLClock'] *= slicer['Rate']
-	else:
-		if slicer['NewSample'] > 0.0:
-			# Zero Crossing
-			slicer['PLLClock'] *= slicer['Rate']
-	slicer['LastSample'] = slicer['NewSample']
-	return slicer
 
 def SliceData(samples, rate, oversample):
 	LockRate = rate
@@ -337,6 +318,28 @@ def ProgDecodeAX25(decoder):
 			decoder['Result'] = np.array([]).astype('uint16')
 		decoder['Ones'] = 0
 	return decoder
+
+
+def ProgSliceData(slicer):
+	slicer['EnvelopeDetector'] = HighLowDetect[slicer['NewSample']]
+	slicer['Result'] = np.array([])
+	slicer['PLLClock'] += slicer['PLLStep']
+	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+		slicer['PLLClock'] -= slicer['PLLPeriod']
+		if slicer['NewSample'] > 0.0:
+			slicer['Result'] = np.array([1])
+		else:
+			slicer['Result'] = np.array([0])
+	if slicer['LastSample'] > 0.0:
+		if slicer['NewSample'] <= 0.0:
+			# Zero Crossing
+			slicer['PLLClock'] *= slicer['Rate']
+	else:
+		if slicer['NewSample'] > 0.0:
+			# Zero Crossing
+			slicer['PLLClock'] *= slicer['Rate']
+	slicer['LastSample'] = slicer['NewSample']
+	return slicer
 
 if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
