@@ -409,7 +409,7 @@ square_clip = square_coef - 1.0
 
 correlator_buffer = np.zeros(correlator_taps)
 
-SlicerEnvelope = {'AttackRate':50, 'DecayRate':50, 'SustainPeriod':900, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0}
+SlicerEnvelope = {'AttackRate':50, 'DecayRate':1, 'SustainPeriod':120, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0}
 AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
 DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'EnvelopeDetector':SlicerEnvelope}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
@@ -451,8 +451,9 @@ for sample in audio:
 	if index2 > len(audio) / 100:
 		index2 = 0
 		index3 = index3 + 1
+		midpoint = ((SlicerEnvelope['High'] - SlicerEnvelope['Low']) // 2) + SlicerEnvelope['Low']
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
-		print(f'{index3}')
+		print(f'{index3} midpoint: {midpoint}')
 	FilterDecimator['NewSample'] = sample
 	FilterDecimator = FilterDecimate(FilterDecimator)
 	for filtered_signal in FilterDecimator['DataBuffer']:
