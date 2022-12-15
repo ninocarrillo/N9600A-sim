@@ -153,6 +153,7 @@ def HighLowDetect(signal_value, detector):
 		detector['High'] = detector['High'] + detector['AttackRate']
 		if detector['High'] > signal_value:
 			detector['High'] = signal_value
+		detector['Midpoint'] = ((detector['High'] - detector['Low']) // 2) + detector['Low']
 		detector['HighSustainCount'] = 0
 		#detector['HighDecayRate'] = np.rint(detector['High'] / detector['DecayPeriod'])
 		#if detector['HighDecayRate'] == 0:
@@ -167,6 +168,7 @@ def HighLowDetect(signal_value, detector):
 		detector['Low'] = detector['Low'] - detector['AttackRate']
 		if detector['Low'] < signal_value:
 			detector['Low'] = signal_value
+		detector['Midpoint'] = ((detector['High'] - detector['Low']) // 2) + detector['Low']
 		detector['LowSustainCount'] = 0
 		#detector['LowDecayRate'] = np.rint(detector['Low'] / detector['DecayPeriod'])
 		#if detector['LowDecayRate'] == 0:
@@ -177,11 +179,13 @@ def HighLowDetect(signal_value, detector):
 		if detector['High'] <= 0:
 			detector['High'] = 1
 			detector['HighSustainCount'] = 0
+		detector['Midpoint'] = ((detector['High'] - detector['Low']) // 2) + detector['Low']
 	if detector['LowSustainCount'] >= detector['SustainPeriod']:
 		detector['Low'] = detector['Low'] + detector['DecayRate']
 		if detector['Low'] >= 0:
 			detector['Low'] = -1
 			detector['LowSustainCount'] = 0
+		detector['Midpoint'] = ((detector['High'] - detector['Low']) // 2) + detector['Low']
 	detector['HighSustainCount'] = detector['HighSustainCount'] + 1
 	detector['LowSustainCount'] = detector['LowSustainCount'] + 1
 	return detector
@@ -212,12 +216,12 @@ def FilterDecimate(filter):
 			filter['DecimationCounter'] = 0
 			filter['DataBuffer'] = np.append(filter['DataBuffer'], np.array([data]))
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
-			if filter['PeakDetector']['Envelope'] > 24576:
+			if filter['PeakDetector']['Envelope'] > 29490:
 				filter['FilterShift'] = filter['FilterShift'] + 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
 				if filter['FilterShift'] > 16:
 					filter['FilterShift'] = 16
-			if filter['PeakDetector']['Envelope'] < 8192:
+			if filter['PeakDetector']['Envelope'] < 9011:
 				filter['FilterShift'] = filter['FilterShift'] - 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
 				if filter['FilterShift'] < -16:
@@ -322,21 +326,21 @@ def ProgDecodeAX25(decoder):
 
 def ProgSliceData(slicer):
 	slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
-	slicer['Midpoint'] = ((slicer['EnvelopeDetector']['High'] - slicer['EnvelopeDetector']['Low']) // 2) + slicer['EnvelopeDetector']['Low']
+	slicer['Midpoint'] = slicer['EnvelopeDetector']['Midpoint'] * 0.66
 	slicer['Result'] = np.array([])
 	slicer['PLLClock'] += slicer['PLLStep']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
-		if slicer['NewSample'] > 0.0:
+		if slicer['NewSample'] > slicer['Midpoint']:
 			slicer['Result'] = np.array([1])
 		else:
 			slicer['Result'] = np.array([0])
-	if slicer['LastSample'] > 0.0:
-		if slicer['NewSample'] <= 0.0:
+	if slicer['LastSample'] > slicer['Midpoint']:
+		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
 			slicer['PLLClock'] *= slicer['Rate']
 	else:
-		if slicer['NewSample'] > 0.0:
+		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
 			slicer['PLLClock'] *= slicer['Rate']
 	slicer['LastSample'] = slicer['NewSample']
@@ -373,12 +377,8 @@ Fs = Input_Fs // decimation
 correlator_taps = 12
 
 #create some dictionaries for the processing objects
-InputPeakDetector = {'AttackRate':5000, 'SustainPeriod':7200, 'DecayRate':3, 'SustainCount':0, 'Envelope':0}
+InputPeakDetector = {'AttackRate':50, 'SustainPeriod':3000, 'DecayRate':50, 'SustainCount':0, 'Envelope':0}
 FilterDecimator = {'Filter':input_filter, 'DecimationRate':decimation, 'FilterBuffer':input_filter_buffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'FilterShift':0, 'DecimationCounter':0, 'NewSample':0}
-
-MarkPeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
-SpacePeakDetector = {'AttackRate':attack, 'SustainPeriod':period, 'DecayRate':decay, 'SustainCount':0, 'Envelope':0}
-
 
 #set up the correlators
 
@@ -409,9 +409,9 @@ square_clip = square_coef - 1.0
 
 correlator_buffer = np.zeros(correlator_taps)
 
-SlicerEnvelope = {'AttackRate':50, 'DecayRate':1, 'SustainPeriod':120, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0}
+SlicerEnvelope = {'AttackRate':3, 'DecayRate':3, 'SustainPeriod':450, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
 AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift}
-DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'EnvelopeDetector':SlicerEnvelope}
+DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12.0 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'Midpoint':0, 'EnvelopeDetector':SlicerEnvelope}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
 AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False}
 
@@ -451,7 +451,7 @@ for sample in audio:
 	if index2 > len(audio) / 100:
 		index2 = 0
 		index3 = index3 + 1
-		midpoint = ((SlicerEnvelope['High'] - SlicerEnvelope['Low']) // 2) + SlicerEnvelope['Low']
+		midpoint = DataSlicer1['Midpoint']
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
 		print(f'{index3} midpoint: {midpoint}')
 	FilterDecimator['NewSample'] = sample
