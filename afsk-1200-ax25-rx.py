@@ -474,7 +474,7 @@ for sample in audio:
 
 					packet = AX25Decoder1['PacketCount']
 					CRC = AX25Decoder1['CRC'][0]
-					filename = f'Packet-{packet}_CRC-{format(CRC,"#04x")}_Index-{index1}'
+					filename = f'Packet-{packet}_CRC-{format(CRC,"#06x")}_Index-{index1}'
 					print(dirname+filename)
 					scipy.io.wavfile.write(dirname+filename+'-audio.wav', Input_Fs, chop_audio_buffer.astype(np.int16))
 					chop_audio_buffer = np.array([])
