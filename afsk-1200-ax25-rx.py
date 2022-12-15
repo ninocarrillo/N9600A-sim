@@ -363,9 +363,9 @@ period = 3500
 attack = 3
 decay = 2
 
-Input_Fs = 28800.0
+Input_Fs = 28800
 decimation = 2
-Fs = Input_Fs / decimation
+Fs = Input_Fs // decimation
 correlator_taps = 12
 
 #create some dictionaries for the processing objects
@@ -439,7 +439,7 @@ chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
 chop_demodulated_audio_buffer = np.array([])
 for sample in audio:
-	#chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
+	chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
 	index1 = index1 + 1
 	index2 = index2 + 1
 	if index2 > len(audio) / 100:
@@ -450,11 +450,11 @@ for sample in audio:
 	FilterDecimator['NewSample'] = sample
 	FilterDecimator = FilterDecimate(FilterDecimator)
 	for filtered_signal in FilterDecimator['DataBuffer']:
-		#chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
+		chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
 		AFSKDemodulator1['NewSample'] = filtered_signal
 		AFSKDemodulator1 = DemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
-			#chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
+			chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
 			demod_sig_buffer[envelope_index] = demodulated_signal
 			envelope_index = envelope_index + 1
 
@@ -471,8 +471,17 @@ for sample in audio:
 				AX25Decoder1 = ProgDecodeAX25(AX25Decoder1)
 				if AX25Decoder1['OutputTrigger'] == True:
 					AX25Decoder1['OutputTrigger'] = False
-					print('True')
 
+					packet = AX25Decoder1['PacketCount']
+					CRC = AX25Decoder1['CRC'][0]
+					filename = f'Packet-{packet}_CRC-{format(CRC,"#04x")}_Index-{index1}'
+					print(dirname+filename)
+					scipy.io.wavfile.write(dirname+filename+'-audio.wav', Input_Fs, chop_audio_buffer.astype(np.int16))
+					chop_audio_buffer = np.array([])
+					scipy.io.wavfile.write(dirname+filename+'-demod.wav', Fs, chop_demodulated_audio_buffer.astype(np.int16))
+					chop_demodulated_audio_buffer = np.array([])
+					scipy.io.wavfile.write(dirname+filename+'-filtered.wav', Fs, chop_filtered_audio_buffer.astype(np.int16))
+					chop_filtered_audio_buffer = np.array([])
 				# if AX25Decoder1['CRC'][1] == 1:
 				# 	print(AX25Decoder1[Result])
 # scipy.io.wavfile.write(dirname+"PeakDetect.wav", round(samplerate / decimation), envelope.astype(np.int16))
