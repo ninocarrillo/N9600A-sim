@@ -1,7 +1,6 @@
 import numpy as np
 import n9600a_crc as crc
 
-
 def HighLowDetect(signal_value, detector):
 	if signal_value > detector['High']:
 		detector['High'] = detector['High'] + detector['AttackRate']
