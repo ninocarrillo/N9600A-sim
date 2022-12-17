@@ -1,55 +1,75 @@
 import sys
+import configparser
 import struct
 import scipy.io.wavfile
 import numpy as np
 import os
-import progdemod as demod
+import n9600a_progdemod as demod
 
-if len(sys.argv) < 2:
-	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
+def StringToIntArray(input_string):
+	working_string = ''
+	result = np.array([])
+	for character in input_string:
+		if (character >= '0' and character <= '9') or (character == '-'):
+			working_string += character
+		else:
+			if working_string != '':
+				result = np.append(result, np.array([int(working_string)]))
+				working_string = ''
+	return result
+
+if len(sys.argv) < 3:
+	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
 	sys.exit(-1)
 
+# read demodulator description from ini file:
+config = configparser.ConfigParser()
 try:
-	samplerate, audio = scipy.io.wavfile.read(sys.argv[1])
+	config.read(sys.argv[1])
+except:
+	print(f'Unable to open ini file {sys.argv[1]}')
+	sys.exit(-2)
+
+# Get input filter taps
+print(f'Opened ini file {sys.argv[1]}')
+try:
+	input_filter = StringToIntArray(config['Input Filter']['taps'])
+except:
+	print(f'{sys.argv[1]} [Input Filter] \'taps\' is missing or invalid')
+	sys.exit(-2)
+
+# Get input filter Sample Rate:
+try:
+	Input_Fs = int(config['Input Filter']['sample rate'])
+except:
+	print(f'{sys.argv[1]} [Input Filter] \'sample rate\' is missing or invalid')
+	sys.exit(-2)
+
+print(f'Input_Fs {Input_Fs}')
+
+# Get input filter Decimation Rate:
+try:
+	decimation = int(config['Input Filter']['decimation'])
+except:
+	print(f'{sys.argv[1]} [Input Filter] \'decimation\' is missing or invalid')
+	sys.exit(-2)
+
+print(f'decimation: {decimation}')
+# Get input filter AGC option:
+try:
+	InputAGCEnabled = bool(config['Input Filter']['agc enabled'])
+except:
+	print(f'{sys.argv[1]} [Input Filter] \'agc enabled\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
 except:
 	print('Unable to open wave file.')
 	sys.exit(-2)
 
 print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
 
-# Filter and decimate the audio
-input_filter = np.array([77, 53, 58, 53, 39, 18, -4, -23, -38, -49, -61, -79, -106, -142, -180, -208, -215, -190, -130, -44, 52, 134, 181, 181, 137, 70, 11, -7, 39, 155, 317, 485, 604, 629, 534, 332, 67, -191, -368, -413, -315, -117, 94, 207, 124, -207, -765, -1451, -2099, -2516, -2534, -2058, -1096, 223, 1675, 2988, 3901, 4227, 3901, 2988, 1675, 223, -1096, -2058, -2534, -2516, -2099, -1451, -765, -207, 124, 207, 94, -117, -315, -413, -368, -191, 67, 332, 534, 629, 604, 485, 317, 155, 39, -7, 11, 70, 137, 181, 181, 134, 52, -44, -130, -190, -215, -208, -180, -142, -106, -79, -61, -49, -38, -23, -4, 18, 39, 53, 58, 53, 77])
-
-
-
-# /*
-#
-# FIR filter designed with
-# http://t-filter.appspot.com
-#
-# sampling frequency: 28800 Hz
-#
-# fixed point precision: 16 bits
-#
-# * 0 Hz - 300 Hz
-#   gain = 0
-#   desired attenuation = -70 dB
-#   actual attenuation = n/a
-#
-# * 1000 Hz - 2400 Hz
-#   gain = 1
-#   desired ripple = 2 dB
-#   actual ripple = n/a
-#
-# * 3600 Hz - 14400 Hz
-#   gain = 0
-#   desired attenuation = -70 dB
-#   actual attenuation = n/a
-#
-# */
-
-
-#input_filter = np.array([-20, -49, -93, -143, -184, -199, -171, -95, 20, 149, 262, 330, 340, 303, 247, 207, 213, 266, 338, 382, 347, 206, -22, -276, -471, -533, -441, -244, -62, -41, -294, -844, -1585, -2297, -2698, -2541, -1709, -272, 1507, 3229, 4476, 4931, 4476, 3229, 1507, -272, -1709, -2541, -2698, -2297, -1585, -844, -294, -41, -62, -244, -441, -533, -471, -276, -22, 206, 347, 382, 338, 266, 213, 207, 247, 303, 340, 330, 262, 149, 20, -95, -171, -199, -184, -143, -93, -49, -20])
 input_filter_buffer = np.zeros(len(input_filter))
 
 output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767, -580, -219, 309, 975, 1727, 2494, 3201, 3771, 4142, 4270, 4142, 3771, 3201, 2494, 1727, 975, 309, -219, -580, -767, -796, -701, -525, -316, -113, 51, 157, 201, 583])
@@ -62,14 +82,12 @@ period = 3500
 attack = 3
 decay = 2
 
-Input_Fs = 28800
-decimation = 3
 Fs = Input_Fs // decimation
-correlator_taps = 8
+correlator_taps = 12
 samplesperbit = Fs // 1200
 
 #create some dictionaries for the processing objects
-InputPeakDetector = {'AttackRate':50, 'SustainPeriod':2000, 'DecayRate':50, 'SustainCount':0, 'Envelope':0}
+InputPeakDetector = {'AttackRate':50, 'SustainPeriod':2000, 'DecayRate':50, 'SustainCount':0, 'Envelope':0, 'Enabled':InputAGCEnabled}
 FilterDecimator = {'Filter':input_filter, 'DecimationRate':decimation, 'FilterBuffer':input_filter_buffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'FilterShift':0, 'DecimationCounter':0, 'NewSample':0}
 
 #generate the correlator window fuunction
