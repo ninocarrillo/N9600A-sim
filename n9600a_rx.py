@@ -85,54 +85,81 @@ InputFilterBuffer = np.zeros(len(InputFilterTaps))
 InputPeakDetector = {'AttackRate':InputAGCAttackRate, 'SustainPeriod': InputAGCSustainPeriod, 'DecayRate':InputAGCDecayRate, 'SustainCount':0, 'Envelope':0}
 FilterDecimator = {'Filter':InputFilterTaps, 'DecimationRate':Decimation, 'FilterBuffer':InputFilterBuffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'InputAGCEnabled':InputAGCEnabled, 'FilterShift':0, 'DecimationCounter':0, 'NewSample':0}
 
-# Read the correlator parameters
+# Read settings for AFSK Demodulator 1
+AFSKDemodulator1 = {}
 try:
-	CorrelatorTaps1 = int(config['AFSK Demodulator 1']['correlator taps'])
+	AFSKDemodulator1['Enabled'] = bool(config['AFSK Demodulator 1']['enabled'])
 except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'correlator taps\' is missing or invalid')
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'enabled\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	SpaceGain1 = float(config['AFSK Demodulator 1']['space gain'])
+	AFSKDemodulator1['CorrelatorTapCount'] = int(config['AFSK Demodulator 1']['correlator tap count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'correlator tap count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['MarkAmplitude'] = float(config['AFSK Demodulator 1']['mark amplitude'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'mark amplitude\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['SpaceAmplitude'] = float(config['AFSK Demodulator 1']['space amplitude'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space amplitude\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['SpaceRatio'] = float(config['AFSK Demodulator 1']['space gain'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space gain\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	OffsetRemoval1 = bool(config['AFSK Demodulator 1']['offset removal'])
+	AFSKDemodulator1['OffsetRemovalEnabled'] = bool(config['AFSK Demodulator 1']['offset removal enabled'])
 except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal\' is missing or invalid')
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal enabled\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	MarkFreq1 = int(config['AFSK Demodulator 1']['mark frequency'])
+	AFSKDemodulator1['MarkFreq'] = int(config['AFSK Demodulator 1']['mark frequency'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'mark frequency\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	SpaceFreq1 = int(config['AFSK Demodulator 1']['space frequency'])
+	AFSKDemodulator1['SpaceFreq'] = int(config['AFSK Demodulator 1']['space frequency'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space frequency\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	OutputFilterTaps1 = StringToIntArray(config['AFSK Demodulator 1']['output filter taps'])
+	AFSKDemodulator1['OutputFilter'] = StringToIntArray(config['AFSK Demodulator 1']['output filter taps'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'output filter taps\' is missing or invalid')
 	sys.exit(-2)
 
 try:
-	OutputFilterShift1 = int(config['AFSK Demodulator 1']['output filter shift'])
+	AFSKDemodulator1['OutputFilterShift'] = int(config['AFSK Demodulator 1']['output filter shift'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'output filter shift\' is missing or invalid')
 	sys.exit(-2)
 
+DataSlicer1 = {}
 try:
-	SlicerBitRate1 = int(config['AFSK Demodulator 1']['slicer bit rate'])
+	DataSlicer1['BitRate'] = int(config['AFSK Demodulator 1']['slicer bit rate'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'slicer bit rate\' is missing or invalid')
 	sys.exit(-2)
+
+# Initialize AFSK Demodulator 1
+AFSKDemodulator1['InputSampleRate'] = InputFs // Decimation
+AFSKDemodulator1 = demod.InitAFSKDemod(AFSKDemodulator1)
+print(AFSKDemodulator1)
+
+
 
 try:
 	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
@@ -157,46 +184,23 @@ Fs = InputFs // Decimation
 
 samplesperbit = Fs // 1200
 
-mark_amp = 20000
-f = 2200.0
 
-tstep = 1.0 / Fs
-space_phase = 0
-time = np.arange(0, tstep * CorrelatorTaps1, tstep)
-time = np.add(time, space_phase)
-space_amp = mark_amp
-space_cos = np.rint(space_amp * (np.cos(2 * f * np.pi * time)))
-space_sin = np.rint(space_amp * (np.sin(2 * f * np.pi * time)))
-mark_phase = 0
-f = 1200.0
-time = np.arange(0, tstep * CorrelatorTaps1, tstep)
-time = np.add(time, mark_phase)
-mark_cos = np.rint(mark_amp * (np.cos(2 * f * np.pi * time)))
-mark_sin = np.rint(mark_amp * (np.sin(2 * f * np.pi * time)))
-correlator_shift = 0
-correlator_shift = 2.0**(-correlator_shift)
-square_scale = 18.0
-square_scale = 2.0**square_scale
-square_output_scale = 2.0
-square_coef = 4096.0
-square_clip = square_coef - 1.0
 
 # space_cos = np.rint(np.multiply(space_cos,window))
 # space_sin = np.rint(np.multiply(space_sin,window))
 # mark_cos = np.rint(np.multiply(mark_cos,window))
 # mark_sin = np.rint(np.multiply(mark_sin,window))
-print(mark_sin)
-print(space_sin)
-print(mark_cos)
-print(space_cos)
+# print(mark_sin)
+# print(space_sin)
+# print(mark_cos)
+# print(space_cos)
 # print(window)
 
-correlator_buffer = np.zeros(CorrelatorTaps1)
-correlator_buffer2 = np.zeros(CorrelatorTaps1)
 
 SlicerEnvelope = {'AttackRate':1, 'DecayRate':1, 'SustainPeriod':300, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
-AFSKDemodulator1 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'SpaceRatio':1.0, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift, 'EnvelopeDetector':SlicerEnvelope}
-AFSKDemodulator2 = {'MarkCOS':mark_cos, 'MarkSIN':mark_sin, 'SpaceCOS':space_cos, 'SpaceSIN':space_sin, 'SpaceRatio':1.39, 'OutputFilter':output_filter, 'OutputFilterBuffer':output_filter_buffer, 'NewSample':0, 'CorrelatorBuffer':correlator_buffer, 'CorrelatorShift':correlator_shift, 'SquareScale':square_scale, 'SquareClip':square_clip, 'SquareOutputScale':square_output_scale, 'SquareCoef':square_coef, 'Result':0, 'OutputFilterShift':output_filter_shift, 'EnvelopeDetector':SlicerEnvelope}
+AFSKDemodulator1['EnvelopeDetector'] = SlicerEnvelope
+
+AFSKDemodulator2 = AFSKDemodulator1
 DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': samplesperbit * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'Midpoint':0, 'EnvelopeDetector':SlicerEnvelope}
 DataSlicer2 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': samplesperbit * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'Midpoint':0, 'EnvelopeDetector':SlicerEnvelope}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}

@@ -1,6 +1,24 @@
 import numpy as np
 import n9600a_crc as crc
 
+def InitAFSKDemod(demodulator):
+	tstep = 1.0 / demodulator['InputSampleRate']
+	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
+	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
+	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
+	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq']* np.pi * time)))
+	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
+	demodulator['CorrelatorShift'] = 0
+	demodulator['SquareScale'] = 2.0**18.0
+	demodulator['SquareOutputScale'] = 2.0
+	demodulator['SquareCoef'] = 4096.0
+	demodulator['SquareClip'] = demodulator['SquareCoef'] - 1.0
+	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['CorrelatorTapCount'])
+	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
+	demodulator['Result'] = 0
+	demodulator['NewSample'] = 0
+	return demodulator
+
 def HighLowDetect(signal_value, detector):
 	if signal_value > detector['High']:
 		detector['High'] = detector['High'] + detector['AttackRate']
