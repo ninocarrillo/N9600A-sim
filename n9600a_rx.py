@@ -170,11 +170,11 @@ except:
 print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
 
 
-output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767, -580, -219, 309, 975, 1727, 2494, 3201, 3771, 4142, 4270, 4142, 3771, 3201, 2494, 1727, 975, 309, -219, -580, -767, -796, -701, -525, -316, -113, 51, 157, 201, 583])
-output_filter = np.ones(3) * 5000
-output_filter_buffer = np.zeros(len(output_filter))
-output_filter_buffer2 = np.zeros(len(output_filter))
-output_filter_shift = -3
+# output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767, -580, -219, 309, 975, 1727, 2494, 3201, 3771, 4142, 4270, 4142, 3771, 3201, 2494, 1727, 975, 309, -219, -580, -767, -796, -701, -525, -316, -113, 51, 157, 201, 583])
+# output_filter = np.ones(3) * 5000
+# output_filter_buffer = np.zeros(len(output_filter))
+# output_filter_buffer2 = np.zeros(len(output_filter))
+# output_filter_shift = -3
 
 period = 3500
 attack = 3
