@@ -153,6 +153,12 @@ except:
 	sys.exit(-2)
 
 try:
+	AFSKDemodulator1['OffsetRemovalRate'] = float(config['AFSK Demodulator 1']['offset removal rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal rate\' is missing or invalid')
+	sys.exit(-2)
+
+try:
 	AFSKDemodulator1['EnvelopeSustainPeriod'] = int(config['AFSK Demodulator 1']['envelope sustain period'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope sustain period\' is missing or invalid')
@@ -245,6 +251,12 @@ except:
 	sys.exit(-2)
 
 try:
+	AFSKDemodulator2['OffsetRemovalRate'] = float(config['AFSK Demodulator 2']['offset removal rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'offset removal rate\' is missing or invalid')
+	sys.exit(-2)
+
+try:
 	AFSKDemodulator2['EnvelopeAttackRate'] = int(config['AFSK Demodulator 2']['envelope attack rate'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope attack rate\' is missing or invalid')
@@ -282,6 +294,8 @@ DataSlicer2 = demod.InitDataSlicer(DataSlicer2)
 
 try:
 	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
+	# Take two bits of resolution away
+	audio = audio // 4
 except:
 	print('Unable to open wave file.')
 	sys.exit(-2)
@@ -331,14 +345,18 @@ total_packets = 0
 duplicate_packets = 0
 
 data = np.array([])
-filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
-demod_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
-mark_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
-space_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
+filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+demod_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+demod_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+mark_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+space_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+mark_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+space_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 
 chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
-chop_demodulated_audio_buffer = np.array([])
+chop_demodulated_audio_buffer1 = np.array([])
+chop_demodulated_audio_buffer2 = np.array([])
 for sample in audio:
 	chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
 	index1 = index1 + 1
@@ -358,10 +376,10 @@ for sample in audio:
 		AFSKDemodulator1['NewSample'] = filtered_signal
 		AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
-			chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
-			demod_sig_buffer[envelope_index] = demodulated_signal
-			mark_sig_buffer[envelope_index] = AFSKDemodulator1['MarkSig']
-			space_sig_buffer[envelope_index] = AFSKDemodulator1['SpaceSig']
+			chop_demodulated_audio_buffer1 = np.append(chop_demodulated_audio_buffer1, np.array([demodulated_signal]))
+			demod_sig_buffer1[envelope_index] = demodulated_signal
+			mark_sig_buffer1[envelope_index] = AFSKDemodulator1['MarkSig']
+			space_sig_buffer1[envelope_index] = AFSKDemodulator1['SpaceSig']
 			envelope_index = envelope_index + 1
 
 			#slice the data
@@ -386,10 +404,10 @@ for sample in audio:
 						print(dirname+filename)
 						scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
 						chop_audio_buffer = np.array([])
-						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer.astype(np.int16))
-						chop_demodulated_audio_buffer = np.array([])
 						scipy.io.wavfile.write(dirname+filename+'-filtered.wav', FilterDecimator['OutputSampleRate'], chop_filtered_audio_buffer.astype(np.int16))
 						chop_filtered_audio_buffer = np.array([])
+						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer1.astype(np.int16))
+						chop_demodulated_audio_buffer1 = np.array([])
 					else:
 						if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
 							duplicate_packets += 1
@@ -403,6 +421,10 @@ for sample in audio:
 		AFSKDemodulator2['NewSample'] = filtered_signal
 		AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
 		for demodulated_signal in AFSKDemodulator2['Result']:
+			chop_demodulated_audio_buffer2 = np.append(chop_demodulated_audio_buffer2, np.array([demodulated_signal]))
+			demod_sig_buffer2[envelope_index] = demodulated_signal
+			mark_sig_buffer2[envelope_index] = AFSKDemodulator2['MarkSig']
+			space_sig_buffer2[envelope_index] = AFSKDemodulator2['SpaceSig']
 			DataSlicer2['NewSample'] = demodulated_signal
 			DataSlicer2 = demod.ProgSliceData(DataSlicer2)
 			for data_bit in DataSlicer2['Result']:
@@ -415,16 +437,16 @@ for sample in audio:
 					# Check for uniqueness
 					if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
 						total_packets += 1
-						CRC = AX25Decoder1['CRC'][0]
+						CRC = AX25Decoder2['CRC'][0]
 						decodernum = '2'
 						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
 						print(dirname+filename)
 						scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
 						chop_audio_buffer = np.array([])
-						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer.astype(np.int16))
-						chop_demodulated_audio_buffer = np.array([])
 						scipy.io.wavfile.write(dirname+filename+'-filtered.wav', FilterDecimator['OutputSampleRate'], chop_filtered_audio_buffer.astype(np.int16))
 						chop_filtered_audio_buffer = np.array([])
+						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer2.astype(np.int16))
+						chop_demodulated_audio_buffer2 = np.array([])
 					else:
 						if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
 							duplicate_packets += 1
@@ -432,13 +454,15 @@ for sample in audio:
 							AX25Decoder2['UniquePackets'] -= 1
 							print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
 
-scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
+scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 
 scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"MarkSignal.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer.astype(np.int16))
-scipy.io.wavfile.write(dirname+"SpaceSignal.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer.astype(np.int16))
-
+scipy.io.wavfile.write(dirname+"MarkSignal1.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer1.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceSignal1.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer1.astype(np.int16))
+scipy.io.wavfile.write(dirname+"MarkSignal2.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer2.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceSignal2.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer2.astype(np.int16))
 
 # print(AFSKDemodulator1)
 
@@ -447,6 +471,6 @@ print('duplicate_packets: ', duplicate_packets)
 print('Decoder 1 unique packets: ', AX25Decoder1['UniquePackets'])
 print('Decoder 1 total packets: ', AX25Decoder1['PacketCount'])
 print('Decoder 2 unique packets: ', AX25Decoder2['UniquePackets'])
-print('Decoder 2 total packets: ', AX25Decoder1['PacketCount'])
+print('Decoder 2 total packets: ', AX25Decoder2['PacketCount'])
 print('made new directory: ', dirname)
 print('done')
