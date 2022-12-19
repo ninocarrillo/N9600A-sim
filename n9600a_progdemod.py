@@ -6,9 +6,9 @@ def InitAFSKDemod(demodulator):
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
 	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
-	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq']* np.pi * time)))
+	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
-	demodulator['CorrelatorShift'] = 0
+	demodulator['CorrelatorShift'] = 1.0
 	demodulator['SquareScale'] = 2.0**18.0
 	demodulator['SquareOutputScale'] = 2.0
 	demodulator['SquareCoef'] = 4096.0
@@ -92,8 +92,8 @@ def DemodulateAFSK(demodulator):
 	demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
 	demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
 
-	mark_cos_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-	mark_sin_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	mark_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
 	mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
 	mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
@@ -103,8 +103,10 @@ def DemodulateAFSK(demodulator):
 
 	mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
 
-	space_cos_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-	space_sin_sig = np.rint((demodulator['CorrelatorShift'] * np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	demodulator['MarkSig'] = mark_sig
+
+	space_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+	space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
 	space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
 	space_sig = np.rint(space_sig / demodulator['SquareScale'])
@@ -114,6 +116,8 @@ def DemodulateAFSK(demodulator):
 
 	space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
 	space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
+
+	demodulator['SpaceSig'] = space_sig
 
 	demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][1:]
 	demodulator['OutputFilterBuffer'] = np.append(demodulator['OutputFilterBuffer'], np.array([mark_sig - space_sig]))

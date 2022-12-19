@@ -3,7 +3,7 @@ import struct
 import scipy.io.wavfile
 import numpy as np
 import os
-import progdemod as demod
+import n9600a_progdemod as demod
 
 if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 afsk-1200-ax25-rx.py <wav file>")
@@ -63,9 +63,9 @@ attack = 3
 decay = 2
 
 Input_Fs = 28800
-decimation = 3
+decimation = 2
 Fs = Input_Fs // decimation
-correlator_taps = 8
+correlator_taps = 12
 samplesperbit = Fs // 1200
 
 #create some dictionaries for the processing objects
@@ -132,6 +132,7 @@ DifferentialDecoder2 = {'LastBit':0, 'NewBit':0, 'Result':0}
 AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 AX25Decoder2 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 
+print(AFSKDemodulator1)
 
 index1 = 0
 index2 = 0
@@ -162,6 +163,8 @@ duplicate_packets = 0
 data = np.array([])
 filtered_signal_buffer = np.zeros(round(len(audio) / decimation))
 demod_sig_buffer = np.zeros(round(len(audio) / decimation))
+mark_sig_buffer = np.zeros(round(len(audio) / decimation))
+space_sig_buffer = np.zeros(round(len(audio) / decimation))
 chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
 chop_demodulated_audio_buffer = np.array([])
@@ -181,10 +184,13 @@ for sample in audio:
 	for filtered_signal in FilterDecimator['DataBuffer']:
 		chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
 		AFSKDemodulator1['NewSample'] = filtered_signal
+		filtered_signal_buffer[envelope_index] = filtered_signal
 		AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
 			chop_demodulated_audio_buffer = np.append(chop_demodulated_audio_buffer, np.array([demodulated_signal]))
 			demod_sig_buffer[envelope_index] = demodulated_signal
+			mark_sig_buffer[envelope_index] = AFSKDemodulator1['MarkSig']
+			space_sig_buffer[envelope_index] = AFSKDemodulator1['SpaceSig']
 			envelope_index = envelope_index + 1
 
 			#slice the data
@@ -255,8 +261,12 @@ for sample in audio:
 							AX25Decoder2['UniquePackets'] -= 1
 							print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
 
-
+print(AFSKDemodulator1)
 scipy.io.wavfile.write(dirname+"DemodSignal.wav", round(samplerate / decimation), demod_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"FilteredSignal.wav", round(samplerate / decimation), filtered_signal_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"MarkSignal.wav", round(samplerate / decimation), mark_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceSignal.wav", round(samplerate / decimation), space_sig_buffer.astype(np.int16))
+
 
 print('total packets: ', total_packets)
 print('duplicate_packets: ', duplicate_packets)
