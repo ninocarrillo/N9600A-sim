@@ -440,7 +440,7 @@ scipy.io.wavfile.write(dirname+"MarkSignal.wav", FilterDecimator['OutputSampleRa
 scipy.io.wavfile.write(dirname+"SpaceSignal.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer.astype(np.int16))
 
 
-print(AFSKDemodulator1)
+# print(AFSKDemodulator1)
 
 print('total packets: ', total_packets)
 print('duplicate_packets: ', duplicate_packets)
