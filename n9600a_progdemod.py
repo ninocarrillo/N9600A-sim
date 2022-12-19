@@ -1,6 +1,27 @@
 import numpy as np
 import n9600a_crc as crc
 
+def InitDataSlicer(data_slicer):
+	data_slicer['Rate'] = 0.7
+	data_slicer['PLLClock'] = 0.0
+	data_slicer['PLLStep'] = 1000000.0
+	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * 1000000
+	data_slicer['LastSample'] = 0.0
+	data_slicer['NewSample'] = 0.0
+	data_slicer['Result'] = 0.0
+	data_slicer['Midpoint'] = 0
+	return data_slicer
+
+def InitFilterDecimator(filter_decimator):
+	filter_decimator['FilterBuffer'] = np.zeros(len(filter_decimator['Filter']))
+	filter_decimator['DataBuffer'] = np.array([])
+	filter_decimator['FilterShift'] = 0
+	filter_decimator['DecimationCounter'] = 0
+	filter_decimator['NewSample'] = 0
+	filter_decimator['PeakDetector'] = {'AttackRate':filter_decimator['InputAGCAttackRate'], 'SustainPeriod': filter_decimator['InputAGCSustainPeriod'], 'DecayRate':filter_decimator['InputAGCDecayRate'], 'SustainCount':0, 'Envelope':0}
+	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
+	return filter_decimator
+
 def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
@@ -8,7 +29,7 @@ def InitAFSKDemod(demodulator):
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
-	demodulator['CorrelatorShift'] = 1.0
+	demodulator['CorrelatorShift'] = 0
 	demodulator['SquareScale'] = 2.0**18.0
 	demodulator['SquareOutputScale'] = 2.0
 	demodulator['SquareCoef'] = 4096.0
@@ -17,6 +38,10 @@ def InitAFSKDemod(demodulator):
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
 	demodulator['Result'] = 0
 	demodulator['NewSample'] = 0
+	demodulator['EnvelopeDetector'] = {'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
+	demodulator['EnvelopeDetector']['AttackRate'] = demodulator['EnvelopeAttackRate']
+	demodulator['EnvelopeDetector']['SustainPeriod'] = demodulator['EnvelopeSustainPeriod']
+	demodulator['EnvelopeDetector']['DecayRate'] = demodulator['EnvelopeDecayRate']
 	return demodulator
 
 def HighLowDetect(signal_value, detector):
@@ -123,8 +148,9 @@ def DemodulateAFSK(demodulator):
 	demodulator['OutputFilterBuffer'] = np.append(demodulator['OutputFilterBuffer'], np.array([mark_sig - space_sig]))
 
 	demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
-	demodulator['EnvelopeDetector'] = HighLowDetect(demodulator['Result'], demodulator['EnvelopeDetector'])
-	demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * 0.5)
+	if demodulator['OffsetRemovalEnabled'] == True:
+		demodulator['EnvelopeDetector'] = HighLowDetect(demodulator['Result'], demodulator['EnvelopeDetector'])
+		demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * 0.5)
 	return demodulator
 
 

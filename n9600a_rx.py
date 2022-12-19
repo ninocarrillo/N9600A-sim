@@ -31,59 +31,58 @@ except:
 	sys.exit(-2)
 
 # Get input filter taps
+FilterDecimator = {}
 print(f'Opened ini file {sys.argv[1]}')
 try:
-	InputFilterTaps = StringToIntArray(config['Input Filter']['taps'])
+ 	FilterDecimator['Filter'] = StringToIntArray(config['Input Filter']['taps'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'taps\' is missing or invalid')
 	sys.exit(-2)
 
 # Get input filter Sample Rate:
 try:
-	InputFs = int(config['Input Filter']['sample rate'])
+	FilterDecimator['InputSampleRate'] = int(config['Input Filter']['sample rate'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'sample rate\' is missing or invalid')
 	sys.exit(-2)
 
 # Get input filter Decimation Rate:
 try:
-	Decimation = int(config['Input Filter']['decimation'])
+	FilterDecimator['DecimationRate'] = int(config['Input Filter']['decimation'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'decimation\' is missing or invalid')
 	sys.exit(-2)
 
 # Get input filter AGC option:
 try:
-	InputAGCEnabled = bool(config['Input Filter']['agc enabled'])
+	FilterDecimator['InputAGCEnabled'] = bool(config['Input Filter']['agc enabled'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'agc enabled\' is missing or invalid')
 	sys.exit(-2)
 
 # Get Input Filter AGC Attack Rate:
 try:
-	InputAGCAttackRate = int(config['Input Filter']['agc attack rate'])
+	FilterDecimator['InputAGCAttackRate'] = int(config['Input Filter']['agc attack rate'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'agc attack rate\' is missing or invalid')
 	sys.exit(-2)
 
 # Get Input Filter AGC Sustain Period:
 try:
-	InputAGCSustainPeriod = int(config['Input Filter']['agc sustain period'])
+	FilterDecimator['InputAGCSustainPeriod'] = int(config['Input Filter']['agc sustain period'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'agc sustain period\' is missing or invalid')
 	sys.exit(-2)
 
 # Get Input Filter AGC Decay Rate:
 try:
-	InputAGCDecayRate = int(config['Input Filter']['agc decay rate'])
+	FilterDecimator['InputAGCDecayRate'] = int(config['Input Filter']['agc decay rate'])
 except:
 	print(f'{sys.argv[1]} [Input Filter] \'agc decay rate\' is missing or invalid')
 	sys.exit(-2)
 
 # Create the Input Filter dictionaries
-InputFilterBuffer = np.zeros(len(InputFilterTaps))
-InputPeakDetector = {'AttackRate':InputAGCAttackRate, 'SustainPeriod': InputAGCSustainPeriod, 'DecayRate':InputAGCDecayRate, 'SustainCount':0, 'Envelope':0}
-FilterDecimator = {'Filter':InputFilterTaps, 'DecimationRate':Decimation, 'FilterBuffer':InputFilterBuffer, 'DataBuffer':np.array([]), 'PeakDetector':InputPeakDetector, 'InputAGCEnabled':InputAGCEnabled, 'FilterShift':0, 'DecimationCounter':0, 'NewSample':0}
+FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
 # Read settings for AFSK Demodulator 1
 AFSKDemodulator1 = {}
@@ -147,18 +146,139 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'output filter shift\' is missing or invalid')
 	sys.exit(-2)
 
+try:
+	AFSKDemodulator1['EnvelopeAttackRate'] = int(config['AFSK Demodulator 1']['envelope attack rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope attack rate\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['EnvelopeSustainPeriod'] = int(config['AFSK Demodulator 1']['envelope sustain period'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope sustain period\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['EnvelopeDecayRate'] = int(config['AFSK Demodulator 1']['envelope decay rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope decay rate\' is missing or invalid')
+	sys.exit(-2)
+
 DataSlicer1 = {}
 try:
 	DataSlicer1['BitRate'] = int(config['AFSK Demodulator 1']['slicer bit rate'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'slicer bit rate\' is missing or invalid')
 	sys.exit(-2)
+try:
+	DataSlicer1['Rate'] = float(config['AFSK Demodulator 1']['slicer lock rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'slicer lock rate\' is missing or invalid')
+	sys.exit(-2)
 
 # Initialize AFSK Demodulator 1
-AFSKDemodulator1['InputSampleRate'] = InputFs // Decimation
+AFSKDemodulator1['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+DataSlicer1['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 AFSKDemodulator1 = demod.InitAFSKDemod(AFSKDemodulator1)
+DataSlicer1 = demod.InitDataSlicer(DataSlicer1)
 
+# Read settings for AFSK Demodulator 1
+AFSKDemodulator2 = {}
+try:
+	AFSKDemodulator2['Enabled'] = bool(config['AFSK Demodulator 2']['enabled'])
+except:
+	print(f'{sys.argv[1]} [AFSKDemodulator2] \'enabled\' is missing or invalid')
+	sys.exit(-2)
 
+try:
+	AFSKDemodulator2['CorrelatorTapCount'] = int(config['AFSK Demodulator 2']['correlator tap count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'correlator tap count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['MarkAmplitude'] = float(config['AFSK Demodulator 2']['mark amplitude'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'mark amplitude\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['SpaceAmplitude'] = float(config['AFSK Demodulator 2']['space amplitude'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space amplitude\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['SpaceRatio'] = float(config['AFSK Demodulator 2']['space gain'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space gain\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['OffsetRemovalEnabled'] = bool(config['AFSK Demodulator 2']['offset removal enabled'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'offset removal enabled\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['MarkFreq'] = int(config['AFSK Demodulator 2']['mark frequency'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'mark frequency\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['SpaceFreq'] = int(config['AFSK Demodulator 2']['space frequency'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space frequency\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['OutputFilter'] = StringToIntArray(config['AFSK Demodulator 2']['output filter taps'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'output filter taps\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['OutputFilterShift'] = int(config['AFSK Demodulator 2']['output filter shift'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'output filter shift\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['EnvelopeAttackRate'] = int(config['AFSK Demodulator 2']['envelope attack rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope attack rate\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['EnvelopeSustainPeriod'] = int(config['AFSK Demodulator 2']['envelope sustain period'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope sustain period\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['EnvelopeDecayRate'] = int(config['AFSK Demodulator 2']['envelope decay rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope decay rate\' is missing or invalid')
+	sys.exit(-2)
+
+DataSlicer2 = {}
+try:
+	DataSlicer2['BitRate'] = int(config['AFSK Demodulator 2']['slicer bit rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'slicer bit rate\' is missing or invalid')
+	sys.exit(-2)
+try:
+	DataSlicer2['Rate'] = float(config['AFSK Demodulator 2']['slicer lock rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'slicer lock rate\' is missing or invalid')
+	sys.exit(-2)
+
+# Initialize AFSK Demodulator 2
+AFSKDemodulator2['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+DataSlicer2['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+AFSKDemodulator2 = demod.InitAFSKDemod(AFSKDemodulator2)
+DataSlicer2 = demod.InitDataSlicer(DataSlicer2)
 
 try:
 	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
@@ -167,23 +287,6 @@ except:
 	sys.exit(-2)
 
 print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
-
-
-# output_filter = np.array([583, 201, 157, 51, -113, -316, -525, -701, -796, -767, -580, -219, 309, 975, 1727, 2494, 3201, 3771, 4142, 4270, 4142, 3771, 3201, 2494, 1727, 975, 309, -219, -580, -767, -796, -701, -525, -316, -113, 51, 157, 201, 583])
-# output_filter = np.ones(3) * 5000
-# output_filter_buffer = np.zeros(len(output_filter))
-# output_filter_buffer2 = np.zeros(len(output_filter))
-# output_filter_shift = -3
-
-period = 3500
-attack = 3
-decay = 2
-
-Fs = InputFs // Decimation
-
-samplesperbit = Fs // 1200
-
-
 
 # space_cos = np.rint(np.multiply(space_cos,window))
 # space_sin = np.rint(np.multiply(space_sin,window))
@@ -195,19 +298,12 @@ samplesperbit = Fs // 1200
 # print(space_cos)
 # print(window)
 
-
-SlicerEnvelope = {'AttackRate':1, 'DecayRate':1, 'SustainPeriod':300, 'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
-AFSKDemodulator1['EnvelopeDetector'] = SlicerEnvelope
-
-AFSKDemodulator2 = AFSKDemodulator1
-DataSlicer1 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'Midpoint':0, 'EnvelopeDetector':SlicerEnvelope}
-DataSlicer2 = {'Rate':0.7, 'PLLClock':0.0, 'PLLStep':1000000.0, 'PLLPeriod': 12 * 1000000, 'LastSample':0.0, 'NewSample':0.0,'Result':0.0, 'Midpoint':0, 'EnvelopeDetector':SlicerEnvelope}
 DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
 DifferentialDecoder2 = {'LastBit':0, 'NewBit':0, 'Result':0}
 AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 AX25Decoder2 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 
-print(AFSKDemodulator1)
+# print(AFSKDemodulator1)
 index1 = 0
 index2 = 0
 index3 = 0
@@ -235,10 +331,10 @@ total_packets = 0
 duplicate_packets = 0
 
 data = np.array([])
-filtered_signal_buffer = np.zeros(round(len(audio) / Decimation))
-demod_sig_buffer = np.zeros(round(len(audio) / Decimation))
-mark_sig_buffer = np.zeros(round(len(audio) / Decimation))
-space_sig_buffer = np.zeros(round(len(audio) / Decimation))
+filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
+demod_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
+mark_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
+space_sig_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']))
 
 chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
@@ -288,11 +384,11 @@ for sample in audio:
 						decodernum = '1'
 						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
 						print(dirname+filename)
-						scipy.io.wavfile.write(dirname+filename+'-audio.wav', InputFs, chop_audio_buffer.astype(np.int16))
+						scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
 						chop_audio_buffer = np.array([])
-						scipy.io.wavfile.write(dirname+filename+'-demod.wav', Fs, chop_demodulated_audio_buffer.astype(np.int16))
+						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer.astype(np.int16))
 						chop_demodulated_audio_buffer = np.array([])
-						scipy.io.wavfile.write(dirname+filename+'-filtered.wav', Fs, chop_filtered_audio_buffer.astype(np.int16))
+						scipy.io.wavfile.write(dirname+filename+'-filtered.wav', FilterDecimator['OutputSampleRate'], chop_filtered_audio_buffer.astype(np.int16))
 						chop_filtered_audio_buffer = np.array([])
 					else:
 						if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
@@ -304,44 +400,44 @@ for sample in audio:
 
 
 		# Second AFSKDemodulator
-		# AFSKDemodulator2['NewSample'] = filtered_signal
-		# AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
-		# for demodulated_signal in AFSKDemodulator2['Result']:
-		# 	DataSlicer2['NewSample'] = demodulated_signal
-		# 	DataSlicer2 = demod.ProgSliceData(DataSlicer2)
-		# 	for data_bit in DataSlicer2['Result']:
-		# 		DifferentialDecoder2['NewBit'] = data_bit
-		# 		DifferentialDecoder2 = demod.ProgDifferentialDecode(DifferentialDecoder2)
-		# 		AX25Decoder2['NewBit'] = DifferentialDecoder2['Result']
-		# 		AX25Decoder2 = demod.ProgDecodeAX25(AX25Decoder2)
-		# 		if AX25Decoder2['OutputTrigger'] == True:
-		# 			AX25Decoder2['OutputTrigger'] = False
-		# 			# Check for uniqueness
-		# 			if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
-		# 				total_packets += 1
-		# 				CRC = AX25Decoder1['CRC'][0]
-		# 				decodernum = '2'
-		# 				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-		# 				print(dirname+filename)
-		# 				scipy.io.wavfile.write(dirname+filename+'-audio.wav', InputFs, chop_audio_buffer.astype(np.int16))
-		# 				chop_audio_buffer = np.array([])
-		# 				scipy.io.wavfile.write(dirname+filename+'-demod.wav', Fs, chop_demodulated_audio_buffer.astype(np.int16))
-		# 				chop_demodulated_audio_buffer = np.array([])
-		# 				scipy.io.wavfile.write(dirname+filename+'-filtered.wav', Fs, chop_filtered_audio_buffer.astype(np.int16))
-		# 				chop_filtered_audio_buffer = np.array([])
-		# 			else:
-		# 				if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
-		# 					duplicate_packets += 1
-		# 					AX25Decoder1['UniquePackets'] -= 1
-		# 					AX25Decoder2['UniquePackets'] -= 1
-		# 					print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
+		AFSKDemodulator2['NewSample'] = filtered_signal
+		AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
+		for demodulated_signal in AFSKDemodulator2['Result']:
+			DataSlicer2['NewSample'] = demodulated_signal
+			DataSlicer2 = demod.ProgSliceData(DataSlicer2)
+			for data_bit in DataSlicer2['Result']:
+				DifferentialDecoder2['NewBit'] = data_bit
+				DifferentialDecoder2 = demod.ProgDifferentialDecode(DifferentialDecoder2)
+				AX25Decoder2['NewBit'] = DifferentialDecoder2['Result']
+				AX25Decoder2 = demod.ProgDecodeAX25(AX25Decoder2)
+				if AX25Decoder2['OutputTrigger'] == True:
+					AX25Decoder2['OutputTrigger'] = False
+					# Check for uniqueness
+					if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+						total_packets += 1
+						CRC = AX25Decoder1['CRC'][0]
+						decodernum = '2'
+						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
+						print(dirname+filename)
+						scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
+						chop_audio_buffer = np.array([])
+						scipy.io.wavfile.write(dirname+filename+'-demod.wav', FilterDecimator['OutputSampleRate'], chop_demodulated_audio_buffer.astype(np.int16))
+						chop_demodulated_audio_buffer = np.array([])
+						scipy.io.wavfile.write(dirname+filename+'-filtered.wav', FilterDecimator['OutputSampleRate'], chop_filtered_audio_buffer.astype(np.int16))
+						chop_filtered_audio_buffer = np.array([])
+					else:
+						if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
+							duplicate_packets += 1
+							AX25Decoder1['UniquePackets'] -= 1
+							AX25Decoder2['UniquePackets'] -= 1
+							print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
 
-scipy.io.wavfile.write(dirname+"DemodSignal.wav", InputFs // Decimation, demod_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"FilteredSignal.wav", InputFs // Decimation, filtered_signal_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
-scipy.io.wavfile.write(dirname+"MarkSignal.wav", InputFs // Decimation, mark_sig_buffer.astype(np.int16))
-scipy.io.wavfile.write(dirname+"SpaceSignal.wav", InputFs // Decimation, space_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"MarkSignal.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer.astype(np.int16))
+scipy.io.wavfile.write(dirname+"SpaceSignal.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer.astype(np.int16))
 
 
 print(AFSKDemodulator1)
