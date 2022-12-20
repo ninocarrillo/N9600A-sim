@@ -448,7 +448,7 @@ for sample in audio:
 						except:
 							pass
 						with bin_file:
-							for byte in AX25Decoder1['Result']:
+							for byte in AX25Decoder1['Output']:
 								bin_file.write(byte.astype('uint8'))
 							bin_file.close()
 						if AFSKDemodulator1['ChopAudio'] == True:
@@ -497,7 +497,7 @@ for sample in audio:
 						except:
 							pass
 						with bin_file:
-							for byte in AX25Decoder2['Result']:
+							for byte in AX25Decoder2['Output']:
 								bin_file.write(byte.astype('uint8'))
 							bin_file.close()
 						if AFSKDemodulator2['ChopAudio'] == True:

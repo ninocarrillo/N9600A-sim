@@ -219,7 +219,7 @@ def ProgDecodeAX25(decoder):
 					decoder['CRCAge'] = 0
 					decoder['PacketCount'] += 1
 					decoder['UniquePackets'] += 1
-					decoder['Output'] = decoder['Result']
+					decoder['Output'] = decoder['Result'][:-2]
 					decoder['OutputTrigger'] = True
 					if decoder['Verbose'] == 1:
 						print(hex(decoder['CRC'][0]), decoder['PacketCount'])
