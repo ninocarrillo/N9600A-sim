@@ -22,11 +22,11 @@ try:
     first = True
     for element in data:
         if first == True:
-            file.write(str(element))
+            file.write(str(int(element)))
         else:
-            file.write(', ' + str(element))
+            file.write(', ' + str(int(element)))
         first = False
-    file.write(' ]')
+    file.write(' ]\n')
     file.close()
 except:
     print(f'Unable to write file {filename + sys.argv[1]}')
