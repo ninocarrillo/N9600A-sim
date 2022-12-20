@@ -81,6 +81,13 @@ except:
 	print(f'{sys.argv[1]} [Input Filter] \'agc decay rate\' is missing or invalid')
 	sys.exit(-2)
 
+# Get Input Filter ADC bit count:
+try:
+	FilterDecimator['InputBitCount'] = int(config['Input Filter']['input bit count'])
+except:
+	print(f'{sys.argv[1]} [Input Filter] \'input bit count\' is missing or invalid')
+	sys.exit(-2)
+
 # Create the Input Filter dictionaries
 FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
@@ -174,6 +181,12 @@ try:
 	AFSKDemodulator1['ChopAudio'] = config['AFSK Demodulator 1'].getboolean('chop audio enable')
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'chop audio enable\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator1['SqrtBitCount'] = int(config['AFSK Demodulator 1']['sqrt bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'sqrt bit count\' is missing or invalid')
 	sys.exit(-2)
 
 DataSlicer1 = {}
@@ -286,6 +299,12 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'chop audio enable\' is missing or invalid')
 	sys.exit(-2)
 
+try:
+	AFSKDemodulator2['SqrtBitCount'] = int(config['AFSK Demodulator 2']['sqrt bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'sqrt bit count\' is missing or invalid')
+	sys.exit(-2)
+
 DataSlicer2 = {}
 try:
 	DataSlicer2['BitRate'] = int(config['AFSK Demodulator 2']['slicer bit rate'])
@@ -307,7 +326,7 @@ DataSlicer2 = demod.InitDataSlicer(DataSlicer2)
 try:
 	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
 	# Take two bits of resolution away
-	audio = audio // 4
+	audio = audio >> (16 - FilterDecimator['InputBitCount'])
 except:
 	print('Unable to open wave file.')
 	sys.exit(-2)
@@ -334,7 +353,7 @@ AX25Decoder2 = demod.InitAX25Decoder()
 # AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 # AX25Decoder2 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 
-# print(AX25Decoder1)
+# print(AFSKDemodulator1['SqrtTable'])
 # print(AX25Decoder2)
 # sys.exit(-3)
 index1 = 0
@@ -382,6 +401,11 @@ for sample in audio:
 		midpoint = DataSlicer1['Midpoint']
 		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
 		print(f'{index3}')
+		print(AFSKDemodulator1['MarkClip'], AFSKDemodulator1['SpaceClip'], AFSKDemodulator2['MarkClip'], AFSKDemodulator2['SpaceClip'])
+		AFSKDemodulator1['MarkClip'] = False
+		AFSKDemodulator1['SpaceClip'] = False
+		AFSKDemodulator2['MarkClip'] = False
+		AFSKDemodulator2['SpaceClip'] = False
 	FilterDecimator['NewSample'] = sample
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
 

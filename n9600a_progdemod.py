@@ -39,9 +39,11 @@ def InitAFSKDemod(demodulator):
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['CorrelatorShift'] = 0
 	demodulator['SquareScale'] = 2.0**18.0
-	demodulator['SquareOutputScale'] = 2.0
-	demodulator['SquareCoef'] = 4096.0
+	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
 	demodulator['SquareClip'] = demodulator['SquareCoef'] - 1.0
+	demodulator['SqrtTable'] = np.zeros(demodulator['SquareCoef'])
+	for N in range(demodulator['SquareCoef']):
+		demodulator['SqrtTable'][N] = round(2*np.sqrt(demodulator['SquareCoef']*N))
 	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['CorrelatorTapCount'])
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
 	demodulator['Result'] = 0
@@ -50,6 +52,8 @@ def InitAFSKDemod(demodulator):
 	demodulator['EnvelopeDetector']['AttackRate'] = demodulator['EnvelopeAttackRate']
 	demodulator['EnvelopeDetector']['SustainPeriod'] = demodulator['EnvelopeSustainPeriod']
 	demodulator['EnvelopeDetector']['DecayRate'] = demodulator['EnvelopeDecayRate']
+	demodulator['MarkClip'] = False
+	demodulator['SpaceClip'] = False
 	return demodulator
 
 def HighLowDetect(signal_value, detector):
@@ -131,11 +135,12 @@ def DemodulateAFSK(demodulator):
 
 		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
 		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
-		# if mark_sig > 4095:
-		# 	print('mark clip')
-		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
+		if mark_sig > demodulator['SquareClip']:
+			demodulator['MarkClip'] = True
+		mark_sig = int(np.clip(mark_sig, 0, demodulator['SquareClip']))
 
-		mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
+		# mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
+		mark_sig = demodulator['SqrtTable'][mark_sig]
 
 		demodulator['MarkSig'] = mark_sig
 
@@ -144,11 +149,12 @@ def DemodulateAFSK(demodulator):
 
 		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
 		space_sig = np.rint(space_sig / demodulator['SquareScale'])
-		# if space_sig > 4095:
-		# 	print('space clip')
-		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
+		if space_sig > demodulator['SquareClip']:
+			demodulator['SpaceClip'] = True
+		space_sig = int(np.clip(space_sig, 0, demodulator['SquareClip']))
 
-		space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
+		# space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
+		space_sig = demodulator['SqrtTable'][space_sig]
 		space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
 
 		demodulator['SpaceSig'] = space_sig
