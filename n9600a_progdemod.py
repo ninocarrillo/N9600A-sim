@@ -1,6 +1,14 @@
 import numpy as np
 import n9600a_crc as crc
 
+def InitAX25Decoder():
+	decoder = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
+	return decoder
+
+def InitDifferentialDecoder():
+	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
+	return decoder
+
 def InitDataSlicer(data_slicer):
 	data_slicer['Rate'] = 0.7
 	data_slicer['PLLClock'] = 0.0
@@ -114,43 +122,44 @@ def FilterDecimate(filter):
 	return filter
 
 def DemodulateAFSK(demodulator):
-	demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
-	demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
+	if demodulator['Enabled'] == True:
+		demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
+		demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
 
-	mark_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-	mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		mark_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
-	mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
-	mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
-	# if mark_sig > 4095:
-	# 	print('mark clip')
-	mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
+		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
+		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
+		# if mark_sig > 4095:
+		# 	print('mark clip')
+		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
 
-	mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
+		mark_sig = np.rint(demodulator['SquareOutputScale'] * np.sqrt(demodulator['SquareCoef'] * mark_sig))
 
-	demodulator['MarkSig'] = mark_sig
+		demodulator['MarkSig'] = mark_sig
 
-	space_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-	space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		space_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
-	space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
-	space_sig = np.rint(space_sig / demodulator['SquareScale'])
-	# if space_sig > 4095:
-	# 	print('space clip')
-	space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
+		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
+		space_sig = np.rint(space_sig / demodulator['SquareScale'])
+		# if space_sig > 4095:
+		# 	print('space clip')
+		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
 
-	space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
-	space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
+		space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
+		space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
 
-	demodulator['SpaceSig'] = space_sig
+		demodulator['SpaceSig'] = space_sig
 
-	demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][1:]
-	demodulator['OutputFilterBuffer'] = np.append(demodulator['OutputFilterBuffer'], np.array([mark_sig - space_sig]))
+		demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][1:]
+		demodulator['OutputFilterBuffer'] = np.append(demodulator['OutputFilterBuffer'], np.array([mark_sig - space_sig]))
 
-	demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
-	if demodulator['OffsetRemovalEnabled'] == True:
-		demodulator['EnvelopeDetector'] = HighLowDetect(demodulator['Result'], demodulator['EnvelopeDetector'])
-		demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * demodulator['OffsetRemovalRate'])
+		demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
+		if demodulator['OffsetRemovalEnabled'] == True:
+			demodulator['EnvelopeDetector'] = HighLowDetect(demodulator['Result'], demodulator['EnvelopeDetector'])
+			demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * demodulator['OffsetRemovalRate'])
 	return demodulator
 
 
