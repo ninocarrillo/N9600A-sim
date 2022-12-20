@@ -3,7 +3,7 @@ import n9600a_crc as crc
 
 def InitAX25Decoder():
 	decoder = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
-	decoder{['LastChop']:0
+	decoder['LastChop'] = 0
 	return decoder
 
 def InitDifferentialDecoder():
