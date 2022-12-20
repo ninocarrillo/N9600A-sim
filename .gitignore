@@ -1,3 +1,5 @@
 *.wav
 *.pyc
 __pycache__/*
+*.bin
+run*/
