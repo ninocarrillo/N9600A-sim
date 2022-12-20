@@ -443,6 +443,14 @@ for sample in audio:
 						decodernum = '1'
 						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
 						print(dirname+filename)
+						try:
+							bin_file = open(dirname + filename + '.bin', '+wb')
+						except:
+							pass
+						with bin_file:
+							for byte in AX25Decoder2['Result']:
+								bin_file.write(byte.astype('uint8'))
+							bin_file.close()
 						if AFSKDemodulator1['ChopAudio'] == True:
 							scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
 							chop_audio_buffer = np.array([])
@@ -484,6 +492,14 @@ for sample in audio:
 						decodernum = '2'
 						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
 						print(dirname+filename)
+						try:
+							bin_file = open(dirname + filename + '.bin', '+wb')
+						except:
+							pass
+						with bin_file:
+							for byte in AX25Decoder2['Result']:
+								bin_file.write(byte.astype('uint8'))
+							bin_file.close()
 						if AFSKDemodulator2['ChopAudio'] == True:
 							scipy.io.wavfile.write(dirname+filename+'-audio.wav', FilterDecimator['InputSampleRate'], chop_audio_buffer.astype(np.int16))
 							chop_audio_buffer = np.array([])
