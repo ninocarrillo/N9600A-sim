@@ -508,6 +508,41 @@ scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSamp
 
 # print(AFSKDemodulator1)
 
+# Generate and save report file
+report_file_name = f'run{run_number}_report.txt'
+try:
+	report_file = open(dirname + report_file_name, 'w+')
+except:
+	print('Unable to create report file.')
+with report_file:
+	report_file.write('# Command line: ')
+	for argument in sys.argv:
+		report_file.write(f'{argument} ')
+	report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+	try:
+		ini_file = open(sys.argv[1])
+	except:
+		report_file.write('Unable to open .ini file.')
+	with ini_file:
+		for character in ini_file:
+			report_file.write(character)
+	report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+	report_file.write('\n\n# Demodulator performance:\n')
+	report_file.write('\n')
+	report_file.write(f'# Total packets: {total_packets}')
+	report_file.write('\n')
+	report_file.write(f'# Duplicate packets: {duplicate_packets}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder1["UniquePackets"]}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 1 total packets: {AX25Decoder1["PacketCount"]}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder2["UniquePackets"]}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 2 total packets: {AX25Decoder2["PacketCount"]}')
+	report_file.write('\n')
+	report_file.close()
+
 print('total packets: ', total_packets)
 print('duplicate_packets: ', duplicate_packets)
 print('Decoder 1 unique packets: ', AX25Decoder1['UniquePackets'])
