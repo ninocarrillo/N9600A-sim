@@ -329,10 +329,10 @@ DifferentialDecoder2 = demod.InitDifferentialDecoder()
 
 # DifferentialDecoder1 = {'LastBit':0, 'NewBit':0, 'Result':0}
 # DifferentialDecoder2 = {'LastBit':0, 'NewBit':0, 'Result':0}
-AX25Decoder1 = demod.InitDifferentialDecoder()
-AX25Decoder2 = demod.InitDifferentialDecoder()
-# AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
-# AX25Decoder2 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
+# AX25Decoder1 = demod.InitDifferentialDecoder()
+# AX25Decoder2 = demod.InitDifferentialDecoder()
+AX25Decoder1 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
+AX25Decoder2 = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 
 # print(AFSKDemodulator1)
 # print(AFSKDemodulator2)
