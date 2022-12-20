@@ -399,8 +399,6 @@ for sample in audio:
 	if index2 > len(audio) / 100:
 		index2 = 0
 		index3 = index3 + 1
-		midpoint = DataSlicer1['Midpoint']
-		#print(index3, InputPeakDetector['Envelope'], space_sig_ratio, space_sig_gain_error)
 		print(f'{index3}')
 		print(AFSKDemodulator1['MarkClip'], AFSKDemodulator1['SpaceClip'], AFSKDemodulator2['MarkClip'], AFSKDemodulator2['SpaceClip'])
 		AFSKDemodulator1['MarkClip'] = False
@@ -408,13 +406,13 @@ for sample in audio:
 		AFSKDemodulator2['MarkClip'] = False
 		AFSKDemodulator2['SpaceClip'] = False
 	FilterDecimator['NewSample'] = sample
-	FilterDecimator = demod.FilterDecimate(FilterDecimator)
+	FilterDecimator = demod.ProgFilterDecimate(FilterDecimator)
 	for filtered_signal in FilterDecimator['DataBuffer']:
 		filtered_signal_buffer[envelope_index] = filtered_signal
 		if AFSKDemodulator1['ChopAudio'] == True:
 			chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
 		AFSKDemodulator1['NewSample'] = filtered_signal
-		AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
+		AFSKDemodulator1 = demod.ProgDemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
 			if AFSKDemodulator1['ChopAudio'] == True:
 				chop_demodulated_audio_buffer1 = np.append(chop_demodulated_audio_buffer1, np.array([demodulated_signal]))
@@ -469,7 +467,7 @@ for sample in audio:
 
 		# Second AFSKDemodulator
 		AFSKDemodulator2['NewSample'] = filtered_signal
-		AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
+		AFSKDemodulator2 = demod.ProgDemodulateAFSK(AFSKDemodulator2)
 		for demodulated_signal in AFSKDemodulator2['Result']:
 			if AFSKDemodulator2['ChopAudio'] == True:
 				chop_demodulated_audio_buffer2 = np.append(chop_demodulated_audio_buffer2, np.array([demodulated_signal]))

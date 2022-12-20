@@ -102,7 +102,7 @@ def PeakDetect(signal_value, detector):
 	detector['SustainCount'] = detector['SustainCount'] + 1
 	return detector
 
-def FilterDecimate(filter):
+def ProgFilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][1:]
 	filter['FilterBuffer'] = np.append(filter['FilterBuffer'], np.array([filter['NewSample']]))
 	output_buffer = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid') / pow(2, (16 + filter['FilterShift'])))
@@ -126,7 +126,7 @@ def FilterDecimate(filter):
 					filter['FilterShift'] = -16
 	return filter
 
-def DemodulateAFSK(demodulator):
+def ProgDemodulateAFSK(demodulator):
 	if demodulator['Enabled'] == True:
 		demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
 		demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
