@@ -382,17 +382,18 @@ data = np.array([])
 filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 demod_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 demod_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-mark_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-space_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-mark_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-space_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+# mark_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+# space_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+# mark_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+# space_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 
 chop_audio_buffer = np.array([])
 chop_filtered_audio_buffer = np.array([])
 chop_demodulated_audio_buffer1 = np.array([])
 chop_demodulated_audio_buffer2 = np.array([])
 for sample in audio:
-	chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
+	if AFSKDemodulator1['ChopAudio'] == True:
+		chop_audio_buffer = np.append(chop_audio_buffer, np.array([sample]))
 	index1 = index1 + 1
 	index2 = index2 + 1
 	if index2 > len(audio) / 100:
@@ -408,18 +409,18 @@ for sample in audio:
 		AFSKDemodulator2['SpaceClip'] = False
 	FilterDecimator['NewSample'] = sample
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
-
 	for filtered_signal in FilterDecimator['DataBuffer']:
 		filtered_signal_buffer[envelope_index] = filtered_signal
-		chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
+		if AFSKDemodulator1['ChopAudio'] == True:
+			chop_filtered_audio_buffer = np.append(chop_filtered_audio_buffer, np.array([filtered_signal]))
 		AFSKDemodulator1['NewSample'] = filtered_signal
 		AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
 		for demodulated_signal in AFSKDemodulator1['Result']:
 			if AFSKDemodulator1['ChopAudio'] == True:
 				chop_demodulated_audio_buffer1 = np.append(chop_demodulated_audio_buffer1, np.array([demodulated_signal]))
 			demod_sig_buffer1[envelope_index] = demodulated_signal
-			mark_sig_buffer1[envelope_index] = AFSKDemodulator1['MarkSig']
-			space_sig_buffer1[envelope_index] = AFSKDemodulator1['SpaceSig']
+			# mark_sig_buffer1[envelope_index] = AFSKDemodulator1['MarkSig']
+			# space_sig_buffer1[envelope_index] = AFSKDemodulator1['SpaceSig']
 			envelope_index = envelope_index + 1
 
 			#slice the data
@@ -465,8 +466,8 @@ for sample in audio:
 			if AFSKDemodulator2['ChopAudio'] == True:
 				chop_demodulated_audio_buffer2 = np.append(chop_demodulated_audio_buffer2, np.array([demodulated_signal]))
 			demod_sig_buffer2[envelope_index] = demodulated_signal
-			mark_sig_buffer2[envelope_index] = AFSKDemodulator2['MarkSig']
-			space_sig_buffer2[envelope_index] = AFSKDemodulator2['SpaceSig']
+			# mark_sig_buffer2[envelope_index] = AFSKDemodulator2['MarkSig']
+			# space_sig_buffer2[envelope_index] = AFSKDemodulator2['SpaceSig']
 			DataSlicer2['NewSample'] = demodulated_signal
 			DataSlicer2 = demod.ProgSliceData(DataSlicer2)
 			for data_bit in DataSlicer2['Result']:
@@ -500,10 +501,10 @@ for sample in audio:
 scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
 scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
-scipy.io.wavfile.write(dirname+"MarkSignal1.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer1.astype(np.int16))
-scipy.io.wavfile.write(dirname+"SpaceSignal1.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer1.astype(np.int16))
-scipy.io.wavfile.write(dirname+"MarkSignal2.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer2.astype(np.int16))
-scipy.io.wavfile.write(dirname+"SpaceSignal2.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer2.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"MarkSignal1.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer1.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"SpaceSignal1.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer1.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"MarkSignal2.wav", FilterDecimator['OutputSampleRate'], mark_sig_buffer2.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"SpaceSignal2.wav", FilterDecimator['OutputSampleRate'], space_sig_buffer2.astype(np.int16))
 
 # print(AFSKDemodulator1)
 
