@@ -11,7 +11,6 @@ def InitDifferentialDecoder():
 	return decoder
 
 def InitDataSlicer(data_slicer):
-	data_slicer['Rate'] = 0.7
 	data_slicer['PLLClock'] = 0.0
 	data_slicer['PLLStep'] = 1000000.0
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * 1000000
