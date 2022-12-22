@@ -570,21 +570,29 @@ with report_file:
 	space_cos_1 = np.convolve(max_space_cos_input, AFSKDemodulator1["SpaceCOS"], "valid")/65536
 	space_square_sum_1 = space_sin_1**2 + space_cos_1**2
 
+	mark_sin_2 = np.convolve(max_mark_sin_input, AFSKDemodulator2["MarkSIN"], "valid")/65536
+	mark_cos_2 = np.convolve(max_mark_cos_input, AFSKDemodulator2["MarkCOS"], "valid")/65536
+	mark_square_sum_2 = mark_sin_2**2 + mark_cos_2**2
+
+	space_sin_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceSIN"], "valid")/65536
+	space_cos_2 = np.convolve(max_space_cos_input, AFSKDemodulator2["SpaceCOS"], "valid")/65536
+	space_square_sum_2 = space_sin_2**2 + space_cos_2**2
+
 	report_file.write(f'\n Mark Sin Correlator 1: {int(np.rint(mark_sin_1[0]))}')
 	report_file.write(f'\n Mark Cos Correlator 1: {int(np.rint(mark_cos_1[0]))}')
-	report_file.write(f'\n Mark RMS Correlator 1: {int(np.rint(mark_square_sum_1[0]))}')
+	report_file.write(f'\n Mark Square Sum Correlator 1: {int(np.rint(mark_square_sum_1[0]))}')
 
 	report_file.write(f'\n Space Sin Correlator 1: {int(np.rint(space_sin_1[0]))}')
 	report_file.write(f'\n Space Cos Correlator 1: {int(np.rint(space_cos_1[0]))}')
-	report_file.write(f'\n Space RMS Correlator 1: {int(np.rint(space_square_sum_1[0]))}')
+	report_file.write(f'\n Space Square Sum Correlator 1: {int(np.rint(space_square_sum_1[0]))}')
 
-	report_file.write(f'\n Space Sin Correlator 1: {int(np.convolve(AFSKDemodulator1["SpaceCOS"], AFSKDemodulator1["SpaceCOS"], "valid")/65536):d}')
-	report_file.write(f'\n Space Cos Correlator 1: {int(np.convolve(AFSKDemodulator1["SpaceSIN"], AFSKDemodulator1["SpaceSIN"], "valid")/65536):d}')
+	report_file.write(f'\n Mark Sin Correlator 2: {int(np.rint(mark_sin_2[0]))}')
+	report_file.write(f'\n Mark Cos Correlator 2: {int(np.rint(mark_cos_2[0]))}')
+	report_file.write(f'\n Mark Square Sum Correlator 2: {int(np.rint(mark_square_sum_2[0]))}')
 
-	report_file.write(f'\n Mark Sin Correlator 2: {int(np.convolve(AFSKDemodulator2["MarkCOS"], AFSKDemodulator2["MarkCOS"], "valid")/65536):d}')
-	report_file.write(f'\n Mark Cos Correlator 2: {int(np.convolve(AFSKDemodulator2["MarkSIN"], AFSKDemodulator2["MarkSIN"], "valid")/65536):d}')
-	report_file.write(f'\n Space Sin Correlator 2: {int(np.convolve(AFSKDemodulator2["SpaceCOS"], AFSKDemodulator2["SpaceCOS"], "valid")/65536):d}')
-	report_file.write(f'\n Space Cos Correlator 2: {int(np.convolve(AFSKDemodulator2["SpaceSIN"], AFSKDemodulator2["SpaceSIN"], "valid")/65536):d}')
+	report_file.write(f'\n Space Sin Correlator 2: {int(np.rint(space_sin_2[0]))}')
+	report_file.write(f'\n Space Cos Correlator 2: {int(np.rint(space_cos_2[0]))}')
+	report_file.write(f'\n Space Square Sum Correlator 2: {int(np.rint(space_square_sum_2[0]))}')
 
 
 
