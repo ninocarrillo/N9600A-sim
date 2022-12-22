@@ -6,15 +6,15 @@ import numpy as np
 import os
 
 def GenInt16ArrayC(name, array, column_width):
-	result = 'int16_t '
-	result += name
-	result += ' = {'
-	for x in range(len(array)):
+	result = '\n'
+	result += f'int16_t {name}[{len(array)}] = '
+	result += '{ '
+	y = len(array)
+	for x in range(y):
 		if x % column_width == 0:
 			result += ' \\\n     '
-		if x == 0:
-			result += f' {int(array[x])}'
-		else:
-			result += f', {int(array[x])}'
+		result += f' {int(array[x])}'
+		if x < (y-1):
+			result += ','
 	result += ' };'
 	return result

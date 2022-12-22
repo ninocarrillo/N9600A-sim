@@ -544,64 +544,17 @@ with report_file:
 
 	report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-	report_file.write(fo.GenInt16ArrayC('Mark_cos_1', AFSKDemodulator1['MarkCOS'], 16))
+	report_file.write(fo.GenInt16ArrayC('MarkCorCos1', AFSKDemodulator1['MarkCOS'], 16))
+	report_file.write(fo.GenInt16ArrayC('MarkCorSin1', AFSKDemodulator1['MarkSIN'], 16))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator1['SpaceCOS'], 16))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator1['SpaceSIN'], 16))
 
-	report_file.write(f'\nMarkCos 1:')
-	for x in range(len(AFSKDemodulator1["MarkCOS"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator1["MarkCOS"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator1["MarkCOS"][x])}')
-	report_file.write(f'\nMarkSin 1:')
-	for x in range(len(AFSKDemodulator1["MarkSIN"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator1["MarkSIN"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator1["MarkSIN"][x])}')
-	report_file.write(f'\nSpaceCos 1:')
-	for x in range(len(AFSKDemodulator1["SpaceCOS"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator1["SpaceCOS"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator1["SpaceCOS"][x])}')
-	report_file.write(f'\nSpaceSin 1:')
-	for x in range(len(AFSKDemodulator1["SpaceSIN"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator1["SpaceSIN"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator1["SpaceSIN"][x])}')
+	report_file.write(fo.GenInt16ArrayC('MarkCorCos2', AFSKDemodulator2['MarkCOS'], 16))
+	report_file.write(fo.GenInt16ArrayC('MarkCorSin2', AFSKDemodulator2['MarkSIN'], 16))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceCOS'], 16))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceSIN'], 16))
 
-	report_file.write(f'\nMarkCos 2:')
-	for x in range(len(AFSKDemodulator2["MarkCOS"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator2["MarkCOS"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator2["MarkCOS"][x])}')
-	report_file.write(f'\nMarkSin 2:')
-	for x in range(len(AFSKDemodulator2["MarkSIN"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator2["MarkSIN"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator2["MarkSIN"][x])}')
-	report_file.write(f'\nSpaceCos 2:')
-	for x in range(len(AFSKDemodulator2["SpaceCOS"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator2["SpaceCOS"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator2["SpaceCOS"][x])}')
-	report_file.write(f'\nSpaceSin 2:')
-	for x in range(len(AFSKDemodulator2["SpaceSIN"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator2["SpaceSIN"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator2["SpaceSIN"][x])}')
-
-	report_file.write(f'\nSqrtTable:')
-	for x in range(len(AFSKDemodulator2["SqrtTable"])):
-		if x > 0:
-			report_file.write(f', {int(AFSKDemodulator2["SqrtTable"][x])}')
-		else:
-			report_file.write(f' {int(AFSKDemodulator2["SqrtTable"][x])}')
+	report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator1["SqrtBitCount"]}', AFSKDemodulator1['SqrtTable'], 16))
 
 	report_file.write('\n\n# Demodulator performance:\n')
 	report_file.write('\n')
