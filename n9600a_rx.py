@@ -111,11 +111,11 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'mark amplitude\' is missing or invalid')
 	sys.exit(-2)
 
-try:
-	AFSKDemodulator1['SpaceAmplitude'] = float(config['AFSK Demodulator 1']['space amplitude'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space amplitude\' is missing or invalid')
-	sys.exit(-2)
+#try:
+#	AFSKDemodulator1['SpaceAmplitude'] = float(config['AFSK Demodulator 1']['space amplitude'])
+#except:
+#	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space amplitude\' is missing or invalid')
+#	sys.exit(-2)
 
 try:
 	AFSKDemodulator1['SpaceRatio'] = float(config['AFSK Demodulator 1']['space gain'])
@@ -233,11 +233,11 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space amplitude\' is missing or invalid')
 	sys.exit(-2)
 
-try:
-	AFSKDemodulator2['SpaceRatio'] = float(config['AFSK Demodulator 2']['space gain'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space gain\' is missing or invalid')
-	sys.exit(-2)
+#try:
+#	AFSKDemodulator2['SpaceRatio'] = float(config['AFSK Demodulator 2']['space gain'])
+#except:
+#	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space gain\' is missing or invalid')
+#	sys.exit(-2)
 
 try:
 	AFSKDemodulator2['OffsetRemovalEnabled'] = config['AFSK Demodulator 2'].getboolean('offset removal enabled')
@@ -541,28 +541,37 @@ with report_file:
 		for character in ini_file:
 			report_file.write(character)
 
-	report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+    report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-	report_file.write(f'\nMarkCos 1: {AFSKDemodulator1["MarkCOS"]}')
-	report_file.write(f'\nMarkCos 1: {AFSKDemodulator1["MarkSIN"]}')
-	report_file.write(f'\nMarkCos 2: {AFSKDemodulator2["MarkCOS"]}')
-	report_file.write(f'\nMarkCos 2: {AFSKDemodulator2["MarkSIN"]}')
-	report_file.write(f'\nSqrt Table: {AFSKDemodulator1["SqrtTable"]}')
-	report_file.write('\n\n# Demodulator performance:\n')
-	report_file.write('\n')
-	report_file.write(f'# Total packets: {total_packets}')
-	report_file.write('\n')
-	report_file.write(f'# Duplicate packets: {duplicate_packets}')
-	report_file.write('\n')
-	report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder1["UniquePackets"]}')
-	report_file.write('\n')
-	report_file.write(f'# Demodulator 1 total packets: {AX25Decoder1["PacketCount"]}')
-	report_file.write('\n')
-	report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder2["UniquePackets"]}')
-	report_file.write('\n')
-	report_file.write(f'# Demodulator 2 total packets: {AX25Decoder2["PacketCount"]}')
-	report_file.write('\n')
-	report_file.close()
+    report_file.write(f'\nMarkCos 1:')
+    for x in AFSKDemodulator1["MarkCOS"]:
+        report_file.write(f'{x}')
+    report_file.write(f'\nMarkSin 1:')
+    for x in AFSKDemodulator1["MarkSIN"]:
+        report_file.write(f'{x}')
+    report_file.write(f'\nMarkCos 2:')
+    for x in AFSKDemodulator2["MarkCOS"]:
+        report_file.write(f'{x}')
+    report_file.write(f'\nMarkSin 2:')
+    for x in AFSKDemodulator2["MarkCOS"]:
+        report_file.write(f'{x}')
+
+    report_file.write(f'\nSqrt Table: {AFSKDemodulator1["SqrtTable"]}')
+    report_file.write('\n\n# Demodulator performance:\n')
+    report_file.write('\n')
+    report_file.write(f'# Total packets: {total_packets}')
+    report_file.write('\n')
+    report_file.write(f'# Duplicate packets: {duplicate_packets}')
+    report_file.write('\n')
+    report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder1["UniquePackets"]}')
+    report_file.write('\n')
+    report_file.write(f'# Demodulator 1 total packets: {AX25Decoder1["PacketCount"]}')
+    report_file.write('\n')
+    report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder2["UniquePackets"]}')
+    report_file.write('\n')
+    report_file.write(f'# Demodulator 2 total packets: {AX25Decoder2["PacketCount"]}')
+    report_file.write('\n')
+    report_file.close()
 
 print('total packets: ', total_packets)
 print('duplicate_packets: ', duplicate_packets)

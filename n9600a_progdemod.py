@@ -33,6 +33,7 @@ def InitFilterDecimator(filter_decimator):
 def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
+    demodulator['MarkAmplitude'] = np.rint(demodulator['MarkAmplitude'] * demodulator['SpaceRatio'})
 	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
@@ -155,7 +156,7 @@ def ProgDemodulateAFSK(demodulator):
 
 		# space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
 		space_sig = demodulator['SqrtTable'][space_sig]
-		space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
+		#space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
 
 		demodulator['SpaceSig'] = space_sig
 
