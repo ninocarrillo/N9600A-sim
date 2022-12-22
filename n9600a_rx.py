@@ -5,6 +5,7 @@ import scipy.io.wavfile
 import numpy as np
 import os
 import n9600a_progdemod as demod
+import format_output as fo
 
 def StringToIntArray(input_string):
 	working_string = ''
@@ -542,6 +543,8 @@ with report_file:
 			report_file.write(character)
 
 	report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+
+	report_file.write(fo.GenInt16ArrayC('Mark_cos_1', AFSKDemodulator1['MarkCOS'], 16))
 
 	report_file.write(f'\nMarkCos 1:')
 	for x in range(len(AFSKDemodulator1["MarkCOS"])):
