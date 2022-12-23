@@ -38,7 +38,6 @@ def InitAFSKDemod(demodulator):
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
-	demodulator['CorrelatorShift'] = 0
 	demodulator['SquareScale'] = 2**(30 - demodulator['SqrtBitCount'])
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
 	demodulator['SquareClip'] = demodulator['SquareCoef'] - 1

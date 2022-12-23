@@ -125,6 +125,12 @@ except:
 	sys.exit(-2)
 
 try:
+	AFSKDemodulator1['CorrelatorShift'] = int(config['AFSK Demodulator 1']['correlator shift'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'correlator shift\' is missing or invalid')
+	sys.exit(-2)
+
+try:
 	AFSKDemodulator1['OffsetRemovalEnabled'] = config['AFSK Demodulator 1'].getboolean('offset removal enabled')
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal enabled\' is missing or invalid')
@@ -238,6 +244,12 @@ try:
 	AFSKDemodulator2['SpaceRatio'] = float(config['AFSK Demodulator 2']['space gain'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space gain\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator2['CorrelatorShift'] = int(config['AFSK Demodulator 2']['correlator shift'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'correlator shift\' is missing or invalid')
 	sys.exit(-2)
 
 try:
@@ -544,15 +556,15 @@ with report_file:
 
 	report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-	report_file.write(fo.GenInt16ArrayC('MarkCorCos1', AFSKDemodulator1['MarkCOS'], 16))
-	report_file.write(fo.GenInt16ArrayC('MarkCorSin1', AFSKDemodulator1['MarkSIN'], 16))
-	report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator1['SpaceCOS'], 16))
-	report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator1['SpaceSIN'], 16))
-
-	report_file.write(fo.GenInt16ArrayC('MarkCorCos2', AFSKDemodulator2['MarkCOS'], 16))
-	report_file.write(fo.GenInt16ArrayC('MarkCorSin2', AFSKDemodulator2['MarkSIN'], 16))
-	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceCOS'], 16))
-	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceSIN'], 16))
+	report_file.write(fo.GenInt16ArrayC('MarkCorCos1', AFSKDemodulator1['MarkCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('MarkCorSin1', AFSKDemodulator1['MarkSIN'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator1['SpaceCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorSin1', AFSKDemodulator1['SpaceSIN'], 32))
+	report_file.write('\n')
+	report_file.write(fo.GenInt16ArrayC('MarkCorCos2', AFSKDemodulator2['MarkCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('MarkCorSin2', AFSKDemodulator2['MarkSIN'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorSin2', AFSKDemodulator2['SpaceSIN'], 32))
 
 	report_file.write('\nMaximum correlation values:')
 	tstep = 1.0 / AFSKDemodulator1['InputSampleRate']
@@ -562,20 +574,20 @@ with report_file:
 	max_space_cos_input = np.rint(24576 * (np.cos(2 * AFSKDemodulator1['SpaceFreq'] * np.pi * time)))
 	max_space_sin_input = np.rint(24576 * (np.sin(2 * AFSKDemodulator1['SpaceFreq'] * np.pi * time)))
 
-	mark_sin_1 = np.convolve(max_mark_sin_input, AFSKDemodulator1["MarkSIN"], "valid")/65536
-	mark_cos_1 = np.convolve(max_mark_cos_input, AFSKDemodulator1["MarkCOS"], "valid")/65536
+	mark_sin_1 = np.convolve(max_mark_sin_input, AFSKDemodulator1["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator1['CorrelatorShift']))
+	mark_cos_1 = np.convolve(max_mark_sin_input, AFSKDemodulator1["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator1['CorrelatorShift']))
 	mark_square_sum_1 = mark_sin_1**2 + mark_cos_1**2
 
-	space_sin_1 = np.convolve(max_space_sin_input, AFSKDemodulator1["SpaceSIN"], "valid")/65536
-	space_cos_1 = np.convolve(max_space_cos_input, AFSKDemodulator1["SpaceCOS"], "valid")/65536
+	space_sin_1 = np.convolve(max_space_sin_input, AFSKDemodulator1["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator1['CorrelatorShift']))
+	space_cos_1 = np.convolve(max_space_sin_input, AFSKDemodulator1["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator1['CorrelatorShift']))
 	space_square_sum_1 = space_sin_1**2 + space_cos_1**2
 
-	mark_sin_2 = np.convolve(max_mark_sin_input, AFSKDemodulator2["MarkSIN"], "valid")/65536
-	mark_cos_2 = np.convolve(max_mark_cos_input, AFSKDemodulator2["MarkCOS"], "valid")/65536
+	mark_sin_2 = np.convolve(max_mark_sin_input, AFSKDemodulator2["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
+	mark_cos_2 = np.convolve(max_mark_sin_input, AFSKDemodulator2["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
 	mark_square_sum_2 = mark_sin_2**2 + mark_cos_2**2
 
-	space_sin_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceSIN"], "valid")/65536
-	space_cos_2 = np.convolve(max_space_cos_input, AFSKDemodulator2["SpaceCOS"], "valid")/65536
+	space_sin_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
+	space_cos_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
 	space_square_sum_2 = space_sin_2**2 + space_cos_2**2
 
 	report_file.write('\n')
@@ -603,7 +615,7 @@ with report_file:
 	report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_2[0] // 2**AFSKDemodulator2["SqrtBitCount"]):.2f}')
 
 
-
+	report_file.write('\n')
 	report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator1["SqrtBitCount"]}', AFSKDemodulator1['SqrtTable'], 16))
 
 	report_file.write('\n\n# Demodulator performance:\n')
