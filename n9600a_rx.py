@@ -591,31 +591,37 @@ with report_file:
 	space_square_sum_2 = space_sin_2**2 + space_cos_2**2
 
 	report_file.write('\n')
-	report_file.write(f'\n Mark Sin Correlator 1: {int(np.rint(mark_sin_1[0]))}')
-	report_file.write(f'\n Mark Cos Correlator 1: {int(np.rint(mark_cos_1[0]))}')
-	report_file.write(f'\n Mark Square Sum Correlator 1: {int(np.rint(mark_square_sum_1[0]))}')
-	report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_1[0] // 2**AFSKDemodulator1["SqrtBitCount"]):.2f}')
+	report_file.write(f'\nMark Sin Correlator 1: {int(np.rint(mark_sin_1[0]))}')
+	report_file.write(f'\nMark Cos Correlator 1: {int(np.rint(mark_cos_1[0]))}')
+	report_file.write(f'\nMark Square Sum Correlator 1: {int(np.rint(mark_square_sum_1[0]))}')
+	# report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_1[0] // 2**AFSKDemodulator1["SqrtBitCount"]):.2f}')
 
 	report_file.write('\n')
-	report_file.write(f'\n Space Sin Correlator 1: {int(np.rint(space_sin_1[0]))}')
-	report_file.write(f'\n Space Cos Correlator 1: {int(np.rint(space_cos_1[0]))}')
-	report_file.write(f'\n Space Square Sum Correlator 1: {int(np.rint(space_square_sum_1[0]))}')
-	report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_1[0] // 2**AFSKDemodulator1["SqrtBitCount"]):.2f}')
+	report_file.write(f'\nSpace Sin Correlator 1: {int(np.rint(space_sin_1[0]))}')
+	report_file.write(f'\nSpace Cos Correlator 1: {int(np.rint(space_cos_1[0]))}')
+	report_file.write(f'\nSpace Square Sum Correlator 1: {int(np.rint(space_square_sum_1[0]))}')
+	# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_1[0] // 2**AFSKDemodulator1["SqrtBitCount"]):.2f}')
 
 	report_file.write('\n')
-	report_file.write(f'\n Mark Sin Correlator 2: {int(np.rint(mark_sin_2[0]))}')
-	report_file.write(f'\n Mark Cos Correlator 2: {int(np.rint(mark_cos_2[0]))}')
-	report_file.write(f'\n Mark Square Sum Correlator 2: {int(np.rint(mark_square_sum_2[0]))}')
-	report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_2[0] // 2**AFSKDemodulator2["SqrtBitCount"]):.2f}')
+	report_file.write(f'\nMark Sin Correlator 2: {int(np.rint(mark_sin_2[0]))}')
+	report_file.write(f'\nMark Cos Correlator 2: {int(np.rint(mark_cos_2[0]))}')
+	report_file.write(f'\nMark Square Sum Correlator 2: {int(np.rint(mark_square_sum_2[0]))}')
+	# report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_2[0] // 2**AFSKDemodulator2["SqrtBitCount"]):.2f}')
 
 	report_file.write('\n')
-	report_file.write(f'\n Space Sin Correlator 2: {int(np.rint(space_sin_2[0]))}')
-	report_file.write(f'\n Space Cos Correlator 2: {int(np.rint(space_cos_2[0]))}')
-	report_file.write(f'\n Space Square Sum Correlator 2: {int(np.rint(space_square_sum_2[0]))}')
-	report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_2[0] // 2**AFSKDemodulator2["SqrtBitCount"]):.2f}')
+	report_file.write(f'\nSpace Sin Correlator 2: {int(np.rint(space_sin_2[0]))}')
+	report_file.write(f'\nSpace Cos Correlator 2: {int(np.rint(space_cos_2[0]))}')
+	report_file.write(f'\nSpace Square Sum Correlator 2: {int(np.rint(space_square_sum_2[0]))}')
+	# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_2[0] // 2**AFSKDemodulator2["SqrtBitCount"]):.2f}')
 
+
+	report_file.write('\n\n')
+	report_file.write(f'Square Scale 1: {AFSKDemodulator1["SquareScale"]}')
 
 	report_file.write('\n')
+	report_file.write(f'Square Scale 2: {AFSKDemodulator2["SquareScale"]}')
+
+	report_file.write('\n\n')
 	report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator1["SqrtBitCount"]}', AFSKDemodulator1['SqrtTable'], 16))
 
 	report_file.write('\n\n# Demodulator performance:\n')
