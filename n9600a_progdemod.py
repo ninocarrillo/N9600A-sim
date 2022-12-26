@@ -108,9 +108,11 @@ def FilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
 	index = 0
 	for data in filter['FilterBuffer']:
-		filter['FilterBuffer'][index] = data // pow(2, (16 + filter['FilterShift']))
+		data = data // pow(2, (16 + filter['FilterShift']))
+		filter['FilterBuffer'][index] = data
 		index += 1
 		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+		filter['GainChange'] = 0
 		if filter['PeakDetector']['Envelope'] > 24576:
 			filter['FilterShift'] = filter['FilterShift'] + 1
 			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
