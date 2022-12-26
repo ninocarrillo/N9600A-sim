@@ -112,6 +112,7 @@ def FilterDecimate(audio_data, filter):
 	result = np.zeros(len(audio_data))
 	for data in audio_data:
 		result[index] = data // pow(2, (16 + filter['FilterShift']))
+		index += 1
 		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 		if filter['PeakDetector']['Envelope'] > 24576:
 			filter['FilterShift'] = filter['FilterShift'] + 1
