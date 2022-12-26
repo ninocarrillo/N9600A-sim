@@ -152,12 +152,12 @@ def ProgFilterDecimate(filter):
 def DemodulateAFSK(demodulator):
 	if demodulator['Enabled'] == True:
 
-		mark_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-		mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		mark_cos_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+		mark_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
 
 		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
 		mark_sig = np.clip(mark_sig, 0, 32767)
-		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
+		mark_sig = mark_sig // demodulator['SquareScale']
 		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
 
 		index = 0
@@ -168,12 +168,12 @@ def DemodulateAFSK(demodulator):
 
 		# demodulator['MarkSig'] = mark_sig
 
-		space_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
-		space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		space_cos_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+		space_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
 
 		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
 		space_sig = np.clip(space_sig, 0, 32767)
-		space_sig = np.rint(space_sig / demodulator['SquareScale'])
+		space_sig = space_sig // demodulator['SquareScale']
 		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
 
 		# space_sig = demodulator['SqrtTable'][space_sig]
@@ -186,7 +186,7 @@ def DemodulateAFSK(demodulator):
 
 		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
 
-		demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
+		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
 
 	return demodulator
 

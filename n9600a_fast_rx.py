@@ -378,18 +378,21 @@ filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['Decimation
 demod_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 demod_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 
+print(f'\nFiltering and decimating audio. ')
 FilterDecimator['FilterBuffer'] = audio
 FilterDecimator = demod.FilterDecimate(FilterDecimator)
+print(f'Done.')
 
 scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
+print(f'\nDemodulating audio. ')
 AFSKDemodulator1['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
 AFSKDemodulator2['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
-
-
 AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
 AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
+print(f'Done.')
 
+print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 loop_count = np.min([len(AFSKDemodulator1['Result']), len(AFSKDemodulator2['Result'])])
 for index in range(loop_count):
 	DataSlicer1['NewSample'] = AFSKDemodulator1['Result'][index]
