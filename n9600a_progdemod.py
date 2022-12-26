@@ -103,6 +103,28 @@ def PeakDetect(signal_value, detector):
 	detector['SustainCount'] = detector['SustainCount'] + 1
 	return detector
 
+def FilterDecimate(audio_data, filter):
+	audio_data = np.rint(np.convolve(audio_data, filter['Filter'], 'valid'))
+	print(len(audio_data))
+	audio_data = audio_data[::filter['DecimationRate']]
+	print(len(audio_data))
+	index = 0
+	result = np.zeros(len(audio_data))
+	for data in audio_data:
+		result[index] = data // pow(2, (16 + filter['FilterShift']))
+		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+		if filter['PeakDetector']['Envelope'] > 24576:
+			filter['FilterShift'] = filter['FilterShift'] + 1
+			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+			if filter['FilterShift'] > 16:
+				filter['FilterShift'] = 16
+		if filter['PeakDetector']['Envelope'] < 8192:
+			filter['FilterShift'] = filter['FilterShift'] - 1
+			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+			if filter['FilterShift'] < -16:
+				filter['FilterShift'] = -16
+	return result
+
 def ProgFilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][1:]
 	filter['FilterBuffer'] = np.append(filter['FilterBuffer'], np.array([filter['NewSample']]))
