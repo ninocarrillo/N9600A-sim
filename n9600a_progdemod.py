@@ -149,6 +149,47 @@ def ProgFilterDecimate(filter):
 					filter['FilterShift'] = -16
 	return filter
 
+def DemodulateAFSK(demodulator):
+	if demodulator['Enabled'] == True:
+
+		mark_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+
+		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
+		mark_sig = np.clip(mark_sig, 0, 32767)
+		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
+		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
+
+		index = 0
+		for sample in mark_sig:
+			# print(sample)
+			mark_sig[index] = demodulator['SqrtTable'][int(sample)]
+			index = index + 1
+
+		# demodulator['MarkSig'] = mark_sig
+
+		space_cos_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+		space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
+
+		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
+		space_sig = np.clip(space_sig, 0, 32767)
+		space_sig = np.rint(space_sig / demodulator['SquareScale'])
+		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
+
+		# space_sig = demodulator['SqrtTable'][space_sig]
+
+		index = 0
+		for sample in space_sig:
+			space_sig[index] = demodulator['SqrtTable'][int(sample)]
+			index = index + 1
+		# demodulator['SpaceSig'] = space_sig
+
+		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
+
+		demodulator['Result'] = np.rint(np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') / pow(2, (16 + demodulator['OutputFilterShift'])))
+
+	return demodulator
+
 def ProgDemodulateAFSK(demodulator):
 	if demodulator['Enabled'] == True:
 		demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]

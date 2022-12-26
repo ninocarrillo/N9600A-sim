@@ -383,96 +383,82 @@ FilterDecimator = demod.FilterDecimate(FilterDecimator)
 
 scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
-for sample in FilterDecimator['FilterBuffer']:
-	index1 = index1 + 1
-	index2 = index2 + 1
-	if index2 > len(audio) / 100:
-		index2 = 0
-		index3 = index3 + 1
-		print(f'{index3}')
-
-	AFSKDemodulator1['NewSample'] = sample
-	AFSKDemodulator1 = demod.ProgDemodulateAFSK(AFSKDemodulator1)
-	for demodulated_signal in AFSKDemodulator1['Result']:
-		demod_sig_buffer1[envelope_index] = demodulated_signal
-		envelope_index = envelope_index + 1
-
-		#slice the data
-		DataSlicer1['NewSample'] = demodulated_signal
-		DataSlicer1 = demod.ProgSliceData(DataSlicer1)
-		for data_bit in DataSlicer1['Result']:
-			# data = np.append(data, np.array([data_bit]))
-			DifferentialDecoder1['NewBit'] = data_bit
-			DifferentialDecoder1 = demod.ProgDifferentialDecode(DifferentialDecoder1)
-
-			#data = np.append(data, np.array([DifferentialDecoder1['Result']]))
-			AX25Decoder1['NewBit'] = DifferentialDecoder1['Result']
-			AX25Decoder1 = demod.ProgDecodeAX25(AX25Decoder1)
-			if AX25Decoder1['OutputTrigger'] == True:
-				AX25Decoder1['OutputTrigger'] = False
-				# Check for unioqueness
-				if AX25Decoder2['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
-					total_packets += 1
-					CRC = AX25Decoder1['CRC'][0]
-					decodernum = '1'
-					filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-					print(dirname+filename)
-					try:
-						bin_file = open(dirname + filename + '.bin', '+wb')
-					except:
-						pass
-					with bin_file:
-						for byte in AX25Decoder1['Output']:
-							bin_file.write(byte.astype('uint8'))
-						bin_file.close()
-						chop_demodulated_audio_buffer1 = np.array([])
-				else:
-					if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
-						duplicate_packets += 1
-						AX25Decoder1['UniquePackets'] -= 1
-						AX25Decoder2['UniquePackets'] -= 1
-						print('Decoder 1 Duplicate, bit delay: ', AX25Decoder2['CRCAge'])
+AFSKDemodulator1['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
+AFSKDemodulator2['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
 
 
+AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
+AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
 
-	# Second AFSKDemodulator
-	AFSKDemodulator2['NewSample'] = sample
-	AFSKDemodulator2 = demod.ProgDemodulateAFSK(AFSKDemodulator2)
-	for demodulated_signal in AFSKDemodulator2['Result']:
-		demod_sig_buffer2[envelope_index] = demodulated_signal
-		DataSlicer2['NewSample'] = demodulated_signal
-		DataSlicer2 = demod.ProgSliceData(DataSlicer2)
-		for data_bit in DataSlicer2['Result']:
-			DifferentialDecoder2['NewBit'] = data_bit
-			DifferentialDecoder2 = demod.ProgDifferentialDecode(DifferentialDecoder2)
-			AX25Decoder2['NewBit'] = DifferentialDecoder2['Result']
-			AX25Decoder2 = demod.ProgDecodeAX25(AX25Decoder2)
-			if AX25Decoder2['OutputTrigger'] == True:
-				AX25Decoder2['OutputTrigger'] = False
-				# Check for uniqueness
-				if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
-					total_packets += 1
-					CRC = AX25Decoder2['CRC'][0]
-					decodernum = '2'
-					filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-					print(dirname+filename)
-					try:
-						bin_file = open(dirname + filename + '.bin', '+wb')
-					except:
-						pass
-					with bin_file:
-						for byte in AX25Decoder2['Output']:
-							bin_file.write(byte.astype('uint8'))
-						bin_file.close()
-				else:
-					if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
-						duplicate_packets += 1
-						AX25Decoder1['UniquePackets'] -= 1
-						AX25Decoder2['UniquePackets'] -= 1
-						print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
+loop_count = np.min([len(AFSKDemodulator1['Result']), len(AFSKDemodulator2['Result'])])
+for index in range(loop_count):
+	DataSlicer1['NewSample'] = AFSKDemodulator1['Result'][index]
+	DataSlicer1 = demod.ProgSliceData(DataSlicer1)
+	for data_bit in DataSlicer1['Result']:
+		DifferentialDecoder1['NewBit'] = data_bit
+		DifferentialDecoder1 = demod.ProgDifferentialDecode(DifferentialDecoder1)
+		AX25Decoder1['NewBit'] = DifferentialDecoder1['Result']
+		AX25Decoder1 = demod.ProgDecodeAX25(AX25Decoder1)
+		if AX25Decoder1['OutputTrigger'] == True:
+			AX25Decoder1['OutputTrigger'] = False
+			# Check for unioqueness
+			if AX25Decoder2['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+				total_packets += 1
+				CRC = AX25Decoder1['CRC'][0]
+				decodernum = '1'
+				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
+				print(dirname+filename)
+				# try:
+				# 	bin_file = open(dirname + filename + '.bin', '+wb')
+				# except:
+				# 	pass
+				# with bin_file:
+				# 	for byte in AX25Decoder1['Output']:
+				# 		bin_file.write(byte.astype('uint8'))
+				# 	bin_file.close()
+				# 	chop_demodulated_audio_buffer1 = np.array([])
+			else:
+				if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
+					duplicate_packets += 1
+					AX25Decoder1['UniquePackets'] -= 1
+					AX25Decoder2['UniquePackets'] -= 1
+					print('Decoder 1 Duplicate, bit delay: ', AX25Decoder2['CRCAge'])
 
-scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
-scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
+	DataSlicer2['NewSample'] = AFSKDemodulator2['Result'][index]
+	DataSlicer2 = demod.ProgSliceData(DataSlicer2)
+	for data_bit in DataSlicer2['Result']:
+		DifferentialDecoder2['NewBit'] = data_bit
+		DifferentialDecoder2 = demod.ProgDifferentialDecode(DifferentialDecoder2)
+		AX25Decoder2['NewBit'] = DifferentialDecoder2['Result']
+		AX25Decoder2 = demod.ProgDecodeAX25(AX25Decoder2)
+		if AX25Decoder2['OutputTrigger'] == True:
+			AX25Decoder2['OutputTrigger'] = False
+			# Check for uniqueness
+			if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+				total_packets += 1
+				CRC = AX25Decoder2['CRC'][0]
+				decodernum = '2'
+				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
+				print(dirname+filename)
+				# try:
+				# 	bin_file = open(dirname + filename + '.bin', '+wb')
+				# except:
+				# 	pass
+				# with bin_file:
+				# 	for byte in AX25Decoder2['Output']:
+				# 		bin_file.write(byte.astype('uint8'))
+				# 	bin_file.close()
+			else:
+				if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
+					duplicate_packets += 1
+					AX25Decoder1['UniquePackets'] -= 1
+					AX25Decoder2['UniquePackets'] -= 1
+					print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
+
+
+
+# scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
+# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
 # Generate and save report file
