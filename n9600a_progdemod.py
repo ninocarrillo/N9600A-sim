@@ -13,6 +13,7 @@ def InitDifferentialDecoder():
 def InitDataSlicer(data_slicer):
 	data_slicer['PLLClock'] = 0.0
 	data_slicer['PLLStep'] = 1000000.0
+	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * 1000000
 	data_slicer['LastSample'] = 0.0
 	data_slicer['NewSample'] = 0.0
@@ -304,6 +305,31 @@ def ProgDecodeAX25(decoder):
 		decoder['Ones'] = 0
 	return decoder
 
+
+def SliceData(slicer):
+	slicer['Midpoint'] = 0
+	slicer['LastSample'] = 0
+	slicer['Result'] = np.zeros(int((len(slicer['Input']) / slicer['Oversample']) * 1.1))
+	output_index = 0
+	for slicer['NewSample'] in slicer['Input']:
+		slicer['PLLClock'] += slicer['PLLStep']
+		if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+			slicer['PLLClock'] -= slicer['PLLPeriod']
+			if slicer['NewSample'] > slicer['Midpoint']:
+				slicer['Result'][output_index] = 1
+			else:
+				slicer['Result'][output_index] = 0
+			output_index += 1
+		if slicer['LastSample'] > slicer['Midpoint']:
+			if slicer['NewSample'] <= slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		else:
+			if slicer['NewSample'] > slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		slicer['LastSample'] = slicer['NewSample']
+	return slicer
 
 def ProgSliceData(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
