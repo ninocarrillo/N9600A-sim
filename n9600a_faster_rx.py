@@ -411,7 +411,7 @@ for index in range(loop_count):
 	if AX25Decoder1['OutputTrigger'] == True:
 		AX25Decoder1['OutputTrigger'] = False
 		# Check for unioqueness
-		if AX25Decoder2['CRCAge'] > 1500 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+		if AX25Decoder2['CRCAge'] > 30 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
 			total_packets += 1
 			CRC = AX25Decoder1['CRC'][0]
 			decodernum = '1'
@@ -442,7 +442,7 @@ for index in range(loop_count):
 	if AX25Decoder2['OutputTrigger'] == True:
 		AX25Decoder2['OutputTrigger'] = False
 		# Check for uniqueness
-		if AX25Decoder1['CRCAge'] > 1500 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+		if AX25Decoder1['CRCAge'] > 30 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
 			total_packets += 1
 			CRC = AX25Decoder2['CRC'][0]
 			decodernum = '2'
@@ -467,7 +467,7 @@ for index in range(loop_count):
 
 # scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
 # scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
-scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
+#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
 # Generate and save report file
 report_file_name = f'run{run_number}_report.txt'
