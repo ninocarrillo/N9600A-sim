@@ -126,6 +126,7 @@ def FilterDecimate(filter):
 			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
 			if filter['FilterShift'] < -16:
 				filter['FilterShift'] = -16
+	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
 
 def ProgFilterDecimate(filter):
