@@ -40,7 +40,7 @@ def InitAFSKDemod(demodulator):
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
-	demodulator['SquareScale'] = 2**(15 - demodulator['SqrtBitCount'])
+	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 1) - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**0
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
@@ -52,10 +52,6 @@ def InitAFSKDemod(demodulator):
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
 	demodulator['Result'] = 0
 	demodulator['NewSample'] = 0
-	demodulator['EnvelopeDetector'] = {'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
-	demodulator['EnvelopeDetector']['AttackRate'] = demodulator['EnvelopeAttackRate']
-	demodulator['EnvelopeDetector']['SustainPeriod'] = demodulator['EnvelopeSustainPeriod']
-	demodulator['EnvelopeDetector']['DecayRate'] = demodulator['EnvelopeDecayRate']
 	demodulator['MarkClip'] = False
 	demodulator['SpaceClip'] = False
 	return demodulator
@@ -160,9 +156,9 @@ def DemodulateAFSK(demodulator):
 		mark_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
 
 		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
-		mark_sig += 2**15
-		mark_sig %= 2**16
-		mark_sig -= 2**15
+		mark_sig += 2**(demodulator['SquareSumBitCount'] - 1)
+		mark_sig %= 2**demodulator['SquareSumBitCount']
+		mark_sig -= 2**(demodulator['SquareSumBitCount'] - 1)
 		mark_sig = mark_sig // demodulator['SquareScale']
 		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
 
@@ -178,9 +174,9 @@ def DemodulateAFSK(demodulator):
 		space_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
 
 		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
-		space_sig += 2**15
-		space_sig %= 2**16
-		space_sig -= 2**15
+		space_sig += 2**(demodulator['SquareSumBitCount'] - 1)
+		space_sig %= 2**demodulator['SquareSumBitCount']
+		space_sig -= 2**(demodulator['SquareSumBitCount'] - 1)
 		space_sig = space_sig // demodulator['SquareScale']
 		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
 

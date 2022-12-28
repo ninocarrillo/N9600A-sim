@@ -112,12 +112,6 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'mark amplitude\' is missing or invalid')
 	sys.exit(-2)
 
-#try:
-#	AFSKDemodulator1['SpaceAmplitude'] = float(config['AFSK Demodulator 1']['space amplitude'])
-#except:
-#	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'space amplitude\' is missing or invalid')
-#	sys.exit(-2)
-
 try:
 	AFSKDemodulator1['SpaceRatio'] = float(config['AFSK Demodulator 1']['space gain'])
 except:
@@ -128,12 +122,6 @@ try:
 	AFSKDemodulator1['CorrelatorShift'] = int(config['AFSK Demodulator 1']['correlator shift'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'correlator shift\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator1['OffsetRemovalEnabled'] = config['AFSK Demodulator 1'].getboolean('offset removal enabled')
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal enabled\' is missing or invalid')
 	sys.exit(-2)
 
 try:
@@ -149,6 +137,12 @@ except:
 	sys.exit(-2)
 
 try:
+	AFSKDemodulator1['SquareSumBitCount'] = int(config['AFSK Demodulator 1']['square sum bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'square sum bit count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
 	AFSKDemodulator1['OutputFilter'] = StringToIntArray(config['AFSK Demodulator 1']['output filter taps'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'output filter taps\' is missing or invalid')
@@ -158,30 +152,6 @@ try:
 	AFSKDemodulator1['OutputFilterShift'] = int(config['AFSK Demodulator 1']['output filter shift'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'output filter shift\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator1['EnvelopeAttackRate'] = int(config['AFSK Demodulator 1']['envelope attack rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope attack rate\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator1['OffsetRemovalRate'] = float(config['AFSK Demodulator 1']['offset removal rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'offset removal rate\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator1['EnvelopeSustainPeriod'] = int(config['AFSK Demodulator 1']['envelope sustain period'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope sustain period\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator1['EnvelopeDecayRate'] = int(config['AFSK Demodulator 1']['envelope decay rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 1] \'envelope decay rate\' is missing or invalid')
 	sys.exit(-2)
 
 try:
@@ -234,12 +204,6 @@ except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'mark amplitude\' is missing or invalid')
 	sys.exit(-2)
 
-# try:
-# 	AFSKDemodulator2['SpaceAmplitude'] = float(config['AFSK Demodulator 2']['space amplitude'])
-# except:
-# 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'space amplitude\' is missing or invalid')
-# 	sys.exit(-2)
-
 try:
 	AFSKDemodulator2['SpaceRatio'] = float(config['AFSK Demodulator 2']['space gain'])
 except:
@@ -250,12 +214,6 @@ try:
 	AFSKDemodulator2['CorrelatorShift'] = int(config['AFSK Demodulator 2']['correlator shift'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'correlator shift\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator2['OffsetRemovalEnabled'] = config['AFSK Demodulator 2'].getboolean('offset removal enabled')
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'offset removal enabled\' is missing or invalid')
 	sys.exit(-2)
 
 try:
@@ -271,6 +229,12 @@ except:
 	sys.exit(-2)
 
 try:
+	AFSKDemodulator2['SquareSumBitCount'] = int(config['AFSK Demodulator 2']['square sum bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'square sum bit count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
 	AFSKDemodulator2['OutputFilter'] = StringToIntArray(config['AFSK Demodulator 2']['output filter taps'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'output filter taps\' is missing or invalid')
@@ -280,30 +244,6 @@ try:
 	AFSKDemodulator2['OutputFilterShift'] = int(config['AFSK Demodulator 2']['output filter shift'])
 except:
 	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'output filter shift\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator2['OffsetRemovalRate'] = float(config['AFSK Demodulator 2']['offset removal rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'offset removal rate\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator2['EnvelopeAttackRate'] = int(config['AFSK Demodulator 2']['envelope attack rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope attack rate\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator2['EnvelopeSustainPeriod'] = int(config['AFSK Demodulator 2']['envelope sustain period'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope sustain period\' is missing or invalid')
-	sys.exit(-2)
-
-try:
-	AFSKDemodulator2['EnvelopeDecayRate'] = int(config['AFSK Demodulator 2']['envelope decay rate'])
-except:
-	print(f'{sys.argv[1]} [AFSK Demodulator 2] \'envelope decay rate\' is missing or invalid')
 	sys.exit(-2)
 
 try:
