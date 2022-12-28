@@ -184,7 +184,7 @@ DataSlicer1['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 AFSKDemodulator1 = demod.InitAFSKDemod(AFSKDemodulator1)
 DataSlicer1 = demod.InitDataSlicer(DataSlicer1)
 
-# Read settings for AFSK Demodulator 1
+# Read settings for AFSK Demodulator 2
 AFSKDemodulator2 = {}
 try:
 	AFSKDemodulator2['Enabled'] = config['AFSK Demodulator 2'].getboolean('enabled')
@@ -276,6 +276,99 @@ DataSlicer2['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 AFSKDemodulator2 = demod.InitAFSKDemod(AFSKDemodulator2)
 DataSlicer2 = demod.InitDataSlicer(DataSlicer2)
 
+
+# Read settings for AFSK Demodulator 3
+AFSKDemodulator3 = {}
+try:
+	AFSKDemodulator3['Enabled'] = config['AFSK Demodulator 3'].getboolean('enabled')
+except:
+	print(f'{sys.argv[1]} [AFSKDemodulator3] \'enabled\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['CorrelatorTapCount'] = int(config['AFSK Demodulator 3']['correlator tap count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'correlator tap count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['MarkAmplitude'] = float(config['AFSK Demodulator 3']['mark amplitude'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'mark amplitude\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['SpaceRatio'] = float(config['AFSK Demodulator 3']['space gain'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'space gain\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['CorrelatorShift'] = int(config['AFSK Demodulator 3']['correlator shift'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'correlator shift\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['MarkFreq'] = int(config['AFSK Demodulator 3']['mark frequency'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'mark frequency\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['SpaceFreq'] = int(config['AFSK Demodulator 3']['space frequency'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'space frequency\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['SquareSumBitCount'] = int(config['AFSK Demodulator 3']['square sum bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'square sum bit count\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['OutputFilter'] = StringToIntArray(config['AFSK Demodulator 3']['output filter taps'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'output filter taps\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['OutputFilterShift'] = int(config['AFSK Demodulator 3']['output filter shift'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'output filter shift\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['ChopAudio'] = config['AFSK Demodulator 3'].getboolean('chop audio enable')
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'chop audio enable\' is missing or invalid')
+	sys.exit(-2)
+
+try:
+	AFSKDemodulator3['SqrtBitCount'] = int(config['AFSK Demodulator 3']['sqrt bit count'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'sqrt bit count\' is missing or invalid')
+	sys.exit(-2)
+
+DataSlicer3 = {}
+try:
+	DataSlicer3['BitRate'] = int(config['AFSK Demodulator 3']['slicer bit rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'slicer bit rate\' is missing or invalid')
+	sys.exit(-2)
+try:
+	DataSlicer3['Rate'] = float(config['AFSK Demodulator 3']['slicer lock rate'])
+except:
+	print(f'{sys.argv[1]} [AFSK Demodulator 3] \'slicer lock rate\' is missing or invalid')
+	sys.exit(-2)
+
+# Initialize AFSK Demodulator 2
+AFSKDemodulator3['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+DataSlicer3['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+AFSKDemodulator3 = demod.InitAFSKDemod(AFSKDemodulator3)
+DataSlicer3 = demod.InitDataSlicer(DataSlicer3)
+
 try:
 	samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
 	# Take two bits of resolution away
@@ -288,8 +381,10 @@ print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
 
 DifferentialDecoder1 = demod.InitDifferentialDecoder()
 DifferentialDecoder2 = demod.InitDifferentialDecoder()
+DifferentialDecoder3 = demod.InitDifferentialDecoder()
 AX25Decoder1 = demod.InitAX25Decoder()
 AX25Decoder2 = demod.InitAX25Decoder()
+AX25Decoder3 = demod.InitAX25Decoder()
 
 index1 = 0
 index2 = 0
@@ -317,6 +412,7 @@ data = np.array([])
 filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 demod_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 demod_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
+demod_sig_buffer3 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 
 print(f'\nFiltering and decimating audio. ')
 FilterDecimator['FilterBuffer'] = audio
@@ -328,12 +424,14 @@ scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSamp
 print(f'\nDemodulating audio. ')
 AFSKDemodulator1['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
 AFSKDemodulator2['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
+AFSKDemodulator3['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
 AFSKDemodulator1 = demod.DemodulateAFSK(AFSKDemodulator1)
 AFSKDemodulator2 = demod.DemodulateAFSK(AFSKDemodulator2)
+AFSKDemodulator3 = demod.DemodulateAFSK(AFSKDemodulator3)
 print(f'Done.')
 
 print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
-loop_count = np.min([len(AFSKDemodulator1['Result']), len(AFSKDemodulator2['Result'])])
+loop_count = np.min([len(AFSKDemodulator1['Result']), len(AFSKDemodulator2['Result']), len(AFSKDemodulator3['Result'])])
 for index in range(loop_count):
 	DataSlicer1['NewSample'] = AFSKDemodulator1['Result'][index]
 	DataSlicer1 = demod.ProgSliceData(DataSlicer1)
@@ -345,7 +443,7 @@ for index in range(loop_count):
 		if AX25Decoder1['OutputTrigger'] == True:
 			AX25Decoder1['OutputTrigger'] = False
 			# Check for unioqueness
-			if AX25Decoder2['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+			if ((AX25Decoder2['CRCAge'] > 10) and (AX25Decoder3['CRCAge'] > 10)) or ((AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]) and (AX25Decoder1['CRC'] != AX25Decoder3['CRC'])):
 				total_packets += 1
 				CRC = AX25Decoder1['CRC'][0]
 				decodernum = '1'
@@ -356,16 +454,28 @@ for index in range(loop_count):
 				# except:
 				# 	pass
 				# with bin_file:
-				# 	for byte in AX25Decoder1['Output']:
+				# 	for byte in AX25Decoder2['Output']:
 				# 		bin_file.write(byte.astype('uint8'))
 				# 	bin_file.close()
-				# 	chop_demodulated_audio_buffer1 = np.array([])
 			else:
-				if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
+				if (AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]) and AX25Decoder2['CRCAge'] <= 10:
 					duplicate_packets += 1
-					AX25Decoder1['UniquePackets'] -= 1
-					AX25Decoder2['UniquePackets'] -= 1
-					print('Decoder 1 Duplicate, bit delay: ', AX25Decoder2['CRCAge'])
+					if AX25Decoder1['UniqueFlag'] == True:
+						AX25Decoder1['UniquePackets'] -= 1
+						AX25Decoder1['UniqueFlag'] = False
+					if AX25Decoder2['UniqueFlag'] == True:
+						AX25Decoder2['UniquePackets'] -= 1
+						AX25Decoder2['UniqueFlag'] = False
+					print('Decoder 1 Duplicate 2, bit delay: ', AX25Decoder2['CRCAge'])
+				if (AX25Decoder1['CRC'][0] == AX25Decoder3['CRC'][0]) and AX25Decoder3['CRCAge'] <= 10:
+					duplicate_packets += 1
+					if AX25Decoder1['UniqueFlag'] == True:
+						AX25Decoder1['UniquePackets'] -= 1
+						AX25Decoder1['UniqueFlag'] = False
+					if AX25Decoder3['UniqueFlag'] == True:
+						AX25Decoder3['UniquePackets'] -= 1
+						AX25Decoder3['UniqueFlag'] = False
+					print('Decoder 1 Duplicate 3, bit delay: ', AX25Decoder3['CRCAge'])
 
 	DataSlicer2['NewSample'] = AFSKDemodulator2['Result'][index]
 	DataSlicer2 = demod.ProgSliceData(DataSlicer2)
@@ -377,7 +487,7 @@ for index in range(loop_count):
 		if AX25Decoder2['OutputTrigger'] == True:
 			AX25Decoder2['OutputTrigger'] = False
 			# Check for uniqueness
-			if AX25Decoder1['CRCAge'] > 10 or AX25Decoder1['CRC'][0] != AX25Decoder2['CRC'][0]:
+			if ((AX25Decoder1['CRCAge'] > 10) and (AX25Decoder3['CRCAge'] > 10)) or ((AX25Decoder2['CRC'][0] != AX25Decoder1['CRC'][0]) and (AX25Decoder2['CRC'] != AX25Decoder3['CRC'])):
 				total_packets += 1
 				CRC = AX25Decoder2['CRC'][0]
 				decodernum = '2'
@@ -392,13 +502,68 @@ for index in range(loop_count):
 				# 		bin_file.write(byte.astype('uint8'))
 				# 	bin_file.close()
 			else:
-				if AX25Decoder1['CRC'][0] == AX25Decoder2['CRC'][0]:
+				if (AX25Decoder2['CRC'][0] == AX25Decoder1['CRC'][0]) and AX25Decoder1['CRCAge'] <= 10:
 					duplicate_packets += 1
-					AX25Decoder1['UniquePackets'] -= 1
-					AX25Decoder2['UniquePackets'] -= 1
-					print('Decoder 2 Duplicate, bit delay: ', AX25Decoder1['CRCAge'])
+					if AX25Decoder2['UniqueFlag'] == True:
+						AX25Decoder2['UniquePackets'] -= 1
+						AX25Decoder2['UniqueFlag'] = False
+					if AX25Decoder1['UniqueFlag'] == True:
+						AX25Decoder1['UniquePackets'] -= 1
+						AX25Decoder1['UniqueFlag'] = False
+					print('Decoder 2 Duplicate 1, bit delay: ', AX25Decoder1['CRCAge'])
+				if (AX25Decoder2['CRC'][0] == AX25Decoder3['CRC'][0]) and AX25Decoder3['CRCAge'] <= 10:
+					duplicate_packets += 1
+					if AX25Decoder2['UniqueFlag'] == True:
+						AX25Decoder2['UniquePackets'] -= 1
+						AX25Decoder2['UniqueFlag'] = False
+					if AX25Decoder3['UniqueFlag'] == True:
+						AX25Decoder3['UniquePackets'] -= 1
+						AX25Decoder3['UniqueFlag'] = False
+					print('Decoder 2 Duplicate 3, bit delay: ', AX25Decoder3['CRCAge'])
 
-
+	DataSlicer3['NewSample'] = AFSKDemodulator3['Result'][index]
+	DataSlicer3 = demod.ProgSliceData(DataSlicer3)
+	for data_bit in DataSlicer3['Result']:
+		DifferentialDecoder3['NewBit'] = data_bit
+		DifferentialDecoder3 = demod.ProgDifferentialDecode(DifferentialDecoder3)
+		AX25Decoder3['NewBit'] = DifferentialDecoder3['Result']
+		AX25Decoder3 = demod.ProgDecodeAX25(AX25Decoder3)
+		if AX25Decoder3['OutputTrigger'] == True:
+			AX25Decoder3['OutputTrigger'] = False
+			# Check for uniqueness
+			if ((AX25Decoder1['CRCAge'] > 10) and (AX25Decoder2['CRCAge'] > 10)) or ((AX25Decoder3['CRC'][0] != AX25Decoder1['CRC'][0]) and (AX25Decoder3['CRC'] != AX25Decoder2['CRC'])):
+				total_packets += 1
+				CRC = AX25Decoder2['CRC'][0]
+				decodernum = '3'
+				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
+				print(dirname+filename)
+				# try:
+				# 	bin_file = open(dirname + filename + '.bin', '+wb')
+				# except:
+				# 	pass
+				# with bin_file:
+				# 	for byte in AX25Decoder2['Output']:
+				# 		bin_file.write(byte.astype('uint8'))
+				# 	bin_file.close()
+			else:
+				if (AX25Decoder3['CRC'][0] == AX25Decoder1['CRC'][0]) and AX25Decoder1['CRCAge'] <= 10:
+					duplicate_packets += 1
+					if AX25Decoder3['UniqueFlag'] == True:
+						AX25Decoder3['UniquePackets'] -= 1
+						AX25Decoder3['UniqueFlag'] = False
+					if AX25Decoder1['UniqueFlag'] == True:
+						AX25Decoder1['UniquePackets'] -= 1
+						AX25Decoder1['UniqueFlag'] = False
+					print('Decoder 3 Duplicate 1, bit delay: ', AX25Decoder1['CRCAge'])
+				if (AX25Decoder3['CRC'][0] == AX25Decoder2['CRC'][0]) and AX25Decoder2['CRCAge'] <= 10:
+					duplicate_packets += 1
+					if AX25Decoder3['UniqueFlag'] == True:
+						AX25Decoder3['UniquePackets'] -= 1
+						AX25Decoder3['UniqueFlag'] = False
+					if AX25Decoder2['UniqueFlag'] == True:
+						AX25Decoder2['UniquePackets'] -= 1
+						AX25Decoder2['UniqueFlag'] = False
+					print('Decoder 3 Duplicate 2, bit delay: ', AX25Decoder2['CRCAge'])
 
 # scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
 # scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
@@ -434,6 +599,11 @@ with report_file:
 	report_file.write(fo.GenInt16ArrayC('MarkCorSin2', AFSKDemodulator2['MarkSIN'], 32))
 	report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator2['SpaceCOS'], 32))
 	report_file.write(fo.GenInt16ArrayC('SpaceCorSin2', AFSKDemodulator2['SpaceSIN'], 32))
+	report_file.write('\n')
+	report_file.write(fo.GenInt16ArrayC('MarkCorCos3', AFSKDemodulator3['MarkCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('MarkCorSin3', AFSKDemodulator3['MarkSIN'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorCos3', AFSKDemodulator3['SpaceCOS'], 32))
+	report_file.write(fo.GenInt16ArrayC('SpaceCorSin3', AFSKDemodulator3['SpaceSIN'], 32))
 
 	report_file.write('\nMaximum correlation values:')
 	tstep = 1.0 / AFSKDemodulator1['InputSampleRate']
@@ -458,6 +628,14 @@ with report_file:
 	space_sin_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
 	space_cos_2 = np.convolve(max_space_sin_input, AFSKDemodulator2["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
 	space_square_sum_2 = space_sin_2**2 + space_cos_2**2
+
+	mark_sin_3 = np.convolve(max_mark_sin_input, AFSKDemodulator3["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
+	mark_cos_3 = np.convolve(max_mark_sin_input, AFSKDemodulator3["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator2['CorrelatorShift']))
+	mark_square_sum_3 = mark_sin_2**2 + mark_cos_2**2
+
+	space_sin_3 = np.convolve(max_space_sin_input, AFSKDemodulator3["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator3['CorrelatorShift']))
+	space_cos_3 = np.convolve(max_space_sin_input, AFSKDemodulator3["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator3['CorrelatorShift']))
+	space_square_sum_3 = space_sin_3**2 + space_cos_3**2
 
 	report_file.write('\n')
 	report_file.write(f'\nMark Sin Correlator 1: {int(np.rint(mark_sin_1[0]))}')
@@ -503,21 +681,27 @@ with report_file:
 	report_file.write('\n')
 	report_file.write(f'# Duplicate packets: {duplicate_packets}')
 	report_file.write('\n')
-	report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder1["UniquePackets"]}')
+	report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder1["UniquePackets"] // 2}')
 	report_file.write('\n')
 	report_file.write(f'# Demodulator 1 total packets: {AX25Decoder1["PacketCount"]}')
 	report_file.write('\n')
-	report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder2["UniquePackets"]}')
+	report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder2["UniquePackets"] // 2}')
 	report_file.write('\n')
 	report_file.write(f'# Demodulator 2 total packets: {AX25Decoder2["PacketCount"]}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 3 unique packets: {AX25Decoder3["UniquePackets"] // 2}')
+	report_file.write('\n')
+	report_file.write(f'# Demodulator 3 total packets: {AX25Decoder3["PacketCount"]}')
 	report_file.write('\n')
 	report_file.close()
 
 print('total packets: ', total_packets)
 print('duplicate_packets: ', duplicate_packets)
-print('Decoder 1 unique packets: ', AX25Decoder1['UniquePackets'])
+print('Decoder 1 unique packets: ', AX25Decoder1['UniquePackets'] // 2)
 print('Decoder 1 total packets: ', AX25Decoder1['PacketCount'])
-print('Decoder 2 unique packets: ', AX25Decoder2['UniquePackets'])
+print('Decoder 2 unique packets: ', AX25Decoder2['UniquePackets'] // 2)
 print('Decoder 2 total packets: ', AX25Decoder2['PacketCount'])
+print('Decoder 3 unique packets: ', AX25Decoder3['UniquePackets'] // 2)
+print('Decoder 3 total packets: ', AX25Decoder3['PacketCount'])
 print('made new directory: ', dirname)
 print('done')
