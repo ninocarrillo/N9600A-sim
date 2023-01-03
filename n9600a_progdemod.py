@@ -20,6 +20,20 @@ def InitDataSlicer(data_slicer):
 	data_slicer['NewSample'] = 0.0
 	data_slicer['Result'] = 0.0
 	data_slicer['Midpoint'] = 0
+	data_slicer['LoosePhaseTolerance'] = 4
+	data_slicer['TightPhaseTolerance'] = 2
+	data_slicer['DCD'] = 0
+	data_slicer['DCDLoad'] = 80
+	data_slicer['Phase'] = 0
+	data_slicer['PhaseError'] = 0
+	data_slicer['PhaseTolerance'] = data_slicer['TightPhaseTolerance']
+	data_slicer['CrossingsInSyncThreshold'] = 4
+	data_slicer['CrossingsInSync'] = 0
+	data_slicer['CrossingPhase'] = 0
+	data_slicer['ZeroCrossing'] = False
+	data_slicer['AvgPhaseError'] = 0
+	data_slicer['PhaseErrorHistory'] = np.zeros(45)
+	data_slicer['PhaseErrorFilter'] = np.ones(45) * 1
 	return data_slicer
 
 def InitFilterDecimator(filter_decimator):
@@ -35,7 +49,9 @@ def InitFilterDecimator(filter_decimator):
 def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
-	demodulator['SpaceAmplitude'] = np.rint(demodulator['MarkAmplitude'] * demodulator['SpaceRatio'])
+	# demodulator['SpaceAmplitude'] = np.rint(demodulator['MarkAmplitude'] * demodulator['SpaceRatio'])
+
+	demodulator['SpaceAmplitude'] = demodulator['MarkAmplitude']
 	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
@@ -173,6 +189,9 @@ def DemodulateAFSK(demodulator):
 
 		space_cos_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
 		space_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+
+		space_cos_sig = np.rint(space_cos_sig * demodulator['SpaceRatio'])
+		space_sin_sig = np.rint(space_sin_sig * demodulator['SpaceRatio'])
 
 		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
 		space_sig += 2**(demodulator['SquareSumBitCount'] - 1)
@@ -357,10 +376,33 @@ def ProgSliceData(slicer):
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
+			slicer['ZeroCrossing'] = True
 			slicer['PLLClock'] *= slicer['Rate']
 	else:
 		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
+			slicer['ZeroCrossing'] = True
 			slicer['PLLClock'] *= slicer['Rate']
+
+	if slicer['ZeroCrossing'] == True:
+		slicer['ZeroCrossing'] = False
+		if slicer['DCD'] < (slicer['DCDLoad'] / 2):
+			slicer['PhaseTolerance'] = slicer['TightPhaseTolerance']
+		slicer['PhaseError'] = abs(slicer['Phase'] - slicer['CrossingPhase'])
+		slicer['PhaseErrorHistory'] = slicer['PhaseErrorHistory'][1:]
+		slicer['PhaseErrorHistory'] = np.append(slicer['PhaseErrorHistory'], np.array([slicer['PhaseError']]))
+		slicer['AvgPhaseError'] = np.convolve(slicer['PhaseErrorHistory'], slicer['PhaseErrorFilter'], 'valid')[0]
+		if slicer['PhaseError'] < slicer['PhaseTolerance']:
+			slicer['CrossingsInSync'] += 1
+			if slicer['CrossingsInSync'] > slicer['CrossingsInSyncThreshold']:
+				slicer['DCD'] = slicer['DCDLoad']
+				slicer['PhaseTolerance'] = slicer['LoosePhaseTolerance']
+		else:
+			slicer['CrossingsInSync'] //= 2
+		slicer['CrossingPhase'] = slicer['Phase']
+
 	slicer['LastSample'] = slicer['NewSample']
+	slicer['Phase'] += 1
+	if slicer['Phase'] >= slicer['Oversample']:
+		slicer['Phase'] = 0
 	return slicer

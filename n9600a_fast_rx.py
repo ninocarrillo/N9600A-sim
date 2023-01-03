@@ -433,12 +433,26 @@ print(f'Done.')
 print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 loop_count = np.min([len(AFSKDemodulator1['Result']), len(AFSKDemodulator2['Result']), len(AFSKDemodulator3['Result'])])
 for index in range(loop_count):
+	trials = [DataSlicer1['AvgPhaseError'], DataSlicer2['AvgPhaseError'], DataSlicer3['AvgPhaseError']]
+	winning_value = 100
+	winning_index = 0
+	losing_value = 0
+	losing_index = 0
+	for test in range(3):
+		# if trials[test] > winning_value:
+		# 	winning_index = test
+		# 	winning_value = trials[test]
+		if trials[test] > losing_value:
+			losing_index = test
+			losing_value = trials[test]
+	losing_index += 1
 	DataSlicer1['NewSample'] = AFSKDemodulator1['Result'][index]
 	DataSlicer1 = demod.ProgSliceData(DataSlicer1)
 	for data_bit in DataSlicer1['Result']:
 		DifferentialDecoder1['NewBit'] = data_bit
 		DifferentialDecoder1 = demod.ProgDifferentialDecode(DifferentialDecoder1)
 		AX25Decoder1['NewBit'] = DifferentialDecoder1['Result']
+		# if losing_index != 1:
 		AX25Decoder1 = demod.ProgDecodeAX25(AX25Decoder1)
 		if AX25Decoder1['OutputTrigger'] == True:
 			AX25Decoder1['OutputTrigger'] = False
@@ -448,7 +462,7 @@ for index in range(loop_count):
 				CRC = AX25Decoder1['CRC'][0]
 				decodernum = '1'
 				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-				print(dirname+filename)
+				print(f'{dirname+filename} {DataSlicer1["AvgPhaseError"]} {DataSlicer2["AvgPhaseError"]} {DataSlicer3["AvgPhaseError"]} ')
 				# try:
 				# 	bin_file = open(dirname + filename + '.bin', '+wb')
 				# except:
@@ -483,6 +497,7 @@ for index in range(loop_count):
 		DifferentialDecoder2['NewBit'] = data_bit
 		DifferentialDecoder2 = demod.ProgDifferentialDecode(DifferentialDecoder2)
 		AX25Decoder2['NewBit'] = DifferentialDecoder2['Result']
+		# if losing_index != 2:
 		AX25Decoder2 = demod.ProgDecodeAX25(AX25Decoder2)
 		if AX25Decoder2['OutputTrigger'] == True:
 			AX25Decoder2['OutputTrigger'] = False
@@ -492,7 +507,7 @@ for index in range(loop_count):
 				CRC = AX25Decoder2['CRC'][0]
 				decodernum = '2'
 				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-				print(dirname+filename)
+				print(f'{dirname+filename} {DataSlicer1["AvgPhaseError"]} {DataSlicer2["AvgPhaseError"]} {DataSlicer3["AvgPhaseError"]} ')
 				# try:
 				# 	bin_file = open(dirname + filename + '.bin', '+wb')
 				# except:
@@ -527,6 +542,7 @@ for index in range(loop_count):
 		DifferentialDecoder3['NewBit'] = data_bit
 		DifferentialDecoder3 = demod.ProgDifferentialDecode(DifferentialDecoder3)
 		AX25Decoder3['NewBit'] = DifferentialDecoder3['Result']
+		# if losing_index != 3:
 		AX25Decoder3 = demod.ProgDecodeAX25(AX25Decoder3)
 		if AX25Decoder3['OutputTrigger'] == True:
 			AX25Decoder3['OutputTrigger'] = False
@@ -536,7 +552,7 @@ for index in range(loop_count):
 				CRC = AX25Decoder2['CRC'][0]
 				decodernum = '3'
 				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-				print(dirname+filename)
+				print(f'{dirname+filename} {DataSlicer1["AvgPhaseError"]} {DataSlicer2["AvgPhaseError"]} {DataSlicer3["AvgPhaseError"]} ')
 				# try:
 				# 	bin_file = open(dirname + filename + '.bin', '+wb')
 				# except:
