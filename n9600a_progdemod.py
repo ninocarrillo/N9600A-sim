@@ -46,6 +46,15 @@ def InitFilterDecimator(filter_decimator):
 	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
 	return filter_decimator
 
+
+def InitDPSKDemod(demodulator):
+	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
+	demodulator['Result'] = 0
+	demodulator['NewSample'] = 0
+	return demodulator
+
+
 def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
@@ -165,6 +174,44 @@ def ProgFilterDecimate(filter):
 				if filter['FilterShift'] < -16:
 					filter['FilterShift'] = -16
 	return filter
+
+def DemodulateDPSK2(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['LagBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+		demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+		demodulator['Result'] = np.zeros(len(demodulator['InputBuffer']))
+		index = 0
+		for sample in demodulator['InputBuffer']:
+			lag_sample = demodulator['CorrelatorBuffer'][0]
+			demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
+			demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([sample]))
+			demodulator['LagBuffer'] = demodulator['LagBuffer'][1:]
+			demodulator['LagBuffer'] = np.append(demodulator['LagBuffer'], np.array([lag_sample]))
+			demodulator['Result'][index] = np.convolve(demodulator['LagBuffer'], demodulator['CorrelatorBuffer'], 'valid') // pow(2, 16 + demodulator['CorrelatorShift'])
+			index += 1
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+
+	return demodulator
+
+def DemodulateDPSK3(demodulator):
+	if demodulator['Enabled'] == True:
+
+		index = 0
+		for sample in demodulator['InputBuffer']:
+			if demodulator['InputBuffer'][index] > 0:
+				demodulator['InputBuffer'][index] = 128
+			else:
+				demodulator['InputBuffer'][index] = -128
+			index += 1
+		demodulator['Result'] = np.rint(np.multiply(demodulator['InputBuffer'][:-demodulator['AutoCorrelatorLag']], demodulator['InputBuffer'][demodulator['AutoCorrelatorLag']:]))
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+	return demodulator
+
+def DemodulateDPSK(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['Result'] = np.rint(np.multiply(demodulator['InputBuffer'][:-demodulator['AutoCorrelatorLag']], demodulator['InputBuffer'][demodulator['AutoCorrelatorLag']:]) / 8192)
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+	return demodulator
 
 def DemodulateAFSK(demodulator):
 	if demodulator['Enabled'] == True:
