@@ -3,6 +3,8 @@ import n9600a_crc as crc
 
 def InitAX25Decoder():
 	decoder = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
+	decoder['UniqueFlag'] = False
+	decoder['LastChop'] = 0
 	return decoder
 
 def InitDifferentialDecoder():
@@ -10,14 +12,28 @@ def InitDifferentialDecoder():
 	return decoder
 
 def InitDataSlicer(data_slicer):
-	data_slicer['Rate'] = 0.7
 	data_slicer['PLLClock'] = 0.0
 	data_slicer['PLLStep'] = 1000000.0
+	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * 1000000
 	data_slicer['LastSample'] = 0.0
 	data_slicer['NewSample'] = 0.0
 	data_slicer['Result'] = 0.0
 	data_slicer['Midpoint'] = 0
+	data_slicer['LoosePhaseTolerance'] = 4
+	data_slicer['TightPhaseTolerance'] = 2
+	data_slicer['DCD'] = 0
+	data_slicer['DCDLoad'] = 80
+	data_slicer['Phase'] = 0
+	data_slicer['PhaseError'] = 0
+	data_slicer['PhaseTolerance'] = data_slicer['TightPhaseTolerance']
+	data_slicer['CrossingsInSyncThreshold'] = 4
+	data_slicer['CrossingsInSync'] = 0
+	data_slicer['CrossingPhase'] = 0
+	data_slicer['ZeroCrossing'] = False
+	data_slicer['AvgPhaseError'] = 0
+	data_slicer['PhaseErrorHistory'] = np.zeros(45)
+	data_slicer['PhaseErrorFilter'] = np.ones(45) * 1
 	return data_slicer
 
 def InitFilterDecimator(filter_decimator):
@@ -30,15 +46,29 @@ def InitFilterDecimator(filter_decimator):
 	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
 	return filter_decimator
 
+
+def InitDPSKDemod(demodulator):
+	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
+	demodulator['Result'] = 0
+	demodulator['NewSample'] = 0
+	return demodulator
+
+
 def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
+	# demodulator['SpaceAmplitude'] = np.rint(demodulator['MarkAmplitude'] * demodulator['SpaceRatio'])
+
+	demodulator['SpaceAmplitude'] = demodulator['MarkAmplitude']
 	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
 	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
-	demodulator['CorrelatorShift'] = 0
-	demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
+	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
+	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 1) - demodulator['SqrtBitCount'])
+	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
+	# demodulator['SquareScale'] = 2**0
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
 	demodulator['SquareClip'] = demodulator['SquareCoef'] - 1
 	demodulator['SqrtTable'] = np.zeros(demodulator['SquareCoef'])
@@ -48,10 +78,6 @@ def InitAFSKDemod(demodulator):
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
 	demodulator['Result'] = 0
 	demodulator['NewSample'] = 0
-	demodulator['EnvelopeDetector'] = {'High':0, 'Low':0, 'HighSustainCount':0, 'LowSustainCount':0, 'Midpoint':0}
-	demodulator['EnvelopeDetector']['AttackRate'] = demodulator['EnvelopeAttackRate']
-	demodulator['EnvelopeDetector']['SustainPeriod'] = demodulator['EnvelopeSustainPeriod']
-	demodulator['EnvelopeDetector']['DecayRate'] = demodulator['EnvelopeDecayRate']
 	demodulator['MarkClip'] = False
 	demodulator['SpaceClip'] = False
 	return demodulator
@@ -102,6 +128,30 @@ def PeakDetect(signal_value, detector):
 	return detector
 
 def FilterDecimate(filter):
+	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
+	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	index = 0
+	for data in filter['FilterBuffer']:
+		# filter['FilterShift'] = -3
+		data = data // pow(2, (16 + filter['FilterShift']))
+		filter['FilterBuffer'][index] = data
+		index += 1
+		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+		filter['GainChange'] = 0
+		if filter['PeakDetector']['Envelope'] > 24576:
+			filter['FilterShift'] = filter['FilterShift'] + 1
+			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+			if filter['FilterShift'] > 16:
+				filter['FilterShift'] = 16
+		if filter['PeakDetector']['Envelope'] < 8192:
+			filter['FilterShift'] = filter['FilterShift'] - 1
+			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+			if filter['FilterShift'] < -16:
+				filter['FilterShift'] = -16
+	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
+	return filter
+
+def ProgFilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][1:]
 	filter['FilterBuffer'] = np.append(filter['FilterBuffer'], np.array([filter['NewSample']]))
 	output_buffer = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid') / pow(2, (16 + filter['FilterShift'])))
@@ -125,7 +175,93 @@ def FilterDecimate(filter):
 					filter['FilterShift'] = -16
 	return filter
 
+def DemodulateDPSK2(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['LagBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+		demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
+		demodulator['Result'] = np.zeros(len(demodulator['InputBuffer']))
+		index = 0
+		for sample in demodulator['InputBuffer']:
+			lag_sample = demodulator['CorrelatorBuffer'][0]
+			demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
+			demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([sample]))
+			demodulator['LagBuffer'] = demodulator['LagBuffer'][1:]
+			demodulator['LagBuffer'] = np.append(demodulator['LagBuffer'], np.array([lag_sample]))
+			demodulator['Result'][index] = np.convolve(demodulator['LagBuffer'], demodulator['CorrelatorBuffer'], 'valid') // pow(2, 16 + demodulator['CorrelatorShift'])
+			index += 1
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+
+	return demodulator
+
+def DemodulateDPSK3(demodulator):
+	if demodulator['Enabled'] == True:
+
+		index = 0
+		for sample in demodulator['InputBuffer']:
+			if demodulator['InputBuffer'][index] > 0:
+				demodulator['InputBuffer'][index] = 128
+			else:
+				demodulator['InputBuffer'][index] = -128
+			index += 1
+		demodulator['Result'] = np.rint(np.multiply(demodulator['InputBuffer'][:-demodulator['AutoCorrelatorLag']], demodulator['InputBuffer'][demodulator['AutoCorrelatorLag']:]))
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+	return demodulator
+
+def DemodulateDPSK(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['Result'] = np.rint(np.multiply(demodulator['InputBuffer'][:-demodulator['AutoCorrelatorLag']], demodulator['InputBuffer'][demodulator['AutoCorrelatorLag']:]) / 8192)
+		demodulator['Result'] = np.convolve(demodulator['Result'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+	return demodulator
+
 def DemodulateAFSK(demodulator):
+	if demodulator['Enabled'] == True:
+
+		mark_cos_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkCOS'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+		mark_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+
+		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
+		mark_sig += 2**(demodulator['SquareSumBitCount'] - 1)
+		mark_sig %= 2**demodulator['SquareSumBitCount']
+		mark_sig -= 2**(demodulator['SquareSumBitCount'] - 1)
+		mark_sig = mark_sig // demodulator['SquareScale']
+		mark_sig = np.clip(mark_sig, 0, demodulator['SquareClip'])
+
+		index = 0
+		for sample in mark_sig:
+			# print(sample)
+			mark_sig[index] = demodulator['SqrtTable'][int(sample)]
+			index = index + 1
+
+		# demodulator['MarkSig'] = mark_sig
+
+		space_cos_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceCOS'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+		space_sin_sig = np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift']))
+
+		space_cos_sig = np.rint(space_cos_sig * demodulator['SpaceRatio'])
+		space_sin_sig = np.rint(space_sin_sig * demodulator['SpaceRatio'])
+
+		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
+		space_sig += 2**(demodulator['SquareSumBitCount'] - 1)
+		space_sig %= 2**demodulator['SquareSumBitCount']
+		space_sig -= 2**(demodulator['SquareSumBitCount'] - 1)
+		space_sig = space_sig // demodulator['SquareScale']
+		space_sig = np.clip(space_sig, 0, demodulator['SquareClip'])
+
+		# space_sig = demodulator['SqrtTable'][space_sig]
+
+		index = 0
+		for sample in space_sig:
+			space_sig[index] = demodulator['SqrtTable'][int(sample)]
+			index = index + 1
+		# demodulator['SpaceSig'] = space_sig
+
+		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
+
+		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+
+	return demodulator
+
+def ProgDemodulateAFSK(demodulator):
 	if demodulator['Enabled'] == True:
 		demodulator['CorrelatorBuffer'] = demodulator['CorrelatorBuffer'][1:]
 		demodulator['CorrelatorBuffer'] = np.append(demodulator['CorrelatorBuffer'], np.array([demodulator['NewSample']]))
@@ -134,6 +270,10 @@ def DemodulateAFSK(demodulator):
 		mark_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
 		mark_sig = np.add(np.square(mark_cos_sig), np.square(mark_sin_sig))
+		# mark_sig = int(np.clip(mark_sig, 0, 32767))
+		mark_sig += 32768
+		mark_sig %= 65536
+		mark_sig -= 32768
 		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
 		if mark_sig > demodulator['SquareClip']:
 			demodulator['MarkClip'] = True
@@ -148,6 +288,10 @@ def DemodulateAFSK(demodulator):
 		space_sin_sig = np.rint((np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceSIN'], 'valid')) / pow(2, (16 + demodulator['CorrelatorShift'])))
 
 		space_sig = np.add(np.square(space_cos_sig), np.square(space_sin_sig))
+		# space_sig = int(np.clip(space_sig, 0, 32767))
+		space_sig += 32768
+		space_sig %= 65536
+		space_sig -= 32768
 		space_sig = np.rint(space_sig / demodulator['SquareScale'])
 		if space_sig > demodulator['SquareClip']:
 			demodulator['SpaceClip'] = True
@@ -155,7 +299,7 @@ def DemodulateAFSK(demodulator):
 
 		# space_sig = np.rint(demodulator['SquareOutputScale']* np.sqrt(demodulator['SquareCoef'] * space_sig))
 		space_sig = demodulator['SqrtTable'][space_sig]
-		space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
+		#space_sig = np.rint(space_sig * demodulator['SpaceRatio'])
 
 		demodulator['SpaceSig'] = space_sig
 
@@ -218,7 +362,8 @@ def ProgDecodeAX25(decoder):
 					decoder['CRCAge'] = 0
 					decoder['PacketCount'] += 1
 					decoder['UniquePackets'] += 1
-					decoder['Output'] = decoder['Result']
+					decoder['UniqueFlag'] = True
+					decoder['Output'] = decoder['Result'][:-2]
 					decoder['OutputTrigger'] = True
 					if decoder['Verbose'] == 1:
 						print(hex(decoder['CRC'][0]), decoder['PacketCount'])
@@ -238,6 +383,31 @@ def ProgDecodeAX25(decoder):
 	return decoder
 
 
+def SliceData(slicer):
+	slicer['Midpoint'] = 0
+	slicer['LastSample'] = 0
+	slicer['Result'] = np.zeros(int((len(slicer['Input']) / slicer['Oversample']) * 1.1))
+	output_index = 0
+	for slicer['NewSample'] in slicer['Input']:
+		slicer['PLLClock'] += slicer['PLLStep']
+		if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+			slicer['PLLClock'] -= slicer['PLLPeriod']
+			if slicer['NewSample'] > slicer['Midpoint']:
+				slicer['Result'][output_index] = 1
+			else:
+				slicer['Result'][output_index] = 0
+			output_index += 1
+		if slicer['LastSample'] > slicer['Midpoint']:
+			if slicer['NewSample'] <= slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		else:
+			if slicer['NewSample'] > slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		slicer['LastSample'] = slicer['NewSample']
+	return slicer
+
 def ProgSliceData(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
 	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
@@ -253,10 +423,33 @@ def ProgSliceData(slicer):
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
+			slicer['ZeroCrossing'] = True
 			slicer['PLLClock'] *= slicer['Rate']
 	else:
 		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
+			slicer['ZeroCrossing'] = True
 			slicer['PLLClock'] *= slicer['Rate']
+
+	if slicer['ZeroCrossing'] == True:
+		slicer['ZeroCrossing'] = False
+		if slicer['DCD'] < (slicer['DCDLoad'] / 2):
+			slicer['PhaseTolerance'] = slicer['TightPhaseTolerance']
+		slicer['PhaseError'] = abs(slicer['Phase'] - slicer['CrossingPhase'])
+		slicer['PhaseErrorHistory'] = slicer['PhaseErrorHistory'][1:]
+		slicer['PhaseErrorHistory'] = np.append(slicer['PhaseErrorHistory'], np.array([slicer['PhaseError']]))
+		slicer['AvgPhaseError'] = np.convolve(slicer['PhaseErrorHistory'], slicer['PhaseErrorFilter'], 'valid')[0]
+		if slicer['PhaseError'] < slicer['PhaseTolerance']:
+			slicer['CrossingsInSync'] += 1
+			if slicer['CrossingsInSync'] > slicer['CrossingsInSyncThreshold']:
+				slicer['DCD'] = slicer['DCDLoad']
+				slicer['PhaseTolerance'] = slicer['LoosePhaseTolerance']
+		else:
+			slicer['CrossingsInSync'] //= 2
+		slicer['CrossingPhase'] = slicer['Phase']
+
 	slicer['LastSample'] = slicer['NewSample']
+	slicer['Phase'] += 1
+	if slicer['Phase'] >= slicer['Oversample']:
+		slicer['Phase'] = 0
 	return slicer
