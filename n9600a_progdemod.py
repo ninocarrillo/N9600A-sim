@@ -20,8 +20,8 @@ def InitDataSlicer(data_slicer):
 	data_slicer['NewSample'] = 0.0
 	data_slicer['Result'] = 0.0
 	data_slicer['Midpoint'] = 0
-	data_slicer['LoosePhaseTolerance'] = 4
-	data_slicer['TightPhaseTolerance'] = 2
+	data_slicer['LoosePhaseTolerance'] = 2
+	data_slicer['TightPhaseTolerance'] = 1
 	data_slicer['DCD'] = 0
 	data_slicer['DCDLoad'] = 80
 	data_slicer['Phase'] = 0
@@ -46,6 +46,8 @@ def InitFilterDecimator(filter_decimator):
 	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
 	return filter_decimator
 
+def InitGFSKDemod(demodulator):
+	return demodulator
 
 def InitDPSKDemod(demodulator):
 	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
@@ -136,18 +138,19 @@ def FilterDecimate(filter):
 		data = data // pow(2, (16 + filter['FilterShift']))
 		filter['FilterBuffer'][index] = data
 		index += 1
-		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
-		filter['GainChange'] = 0
-		if filter['PeakDetector']['Envelope'] > 24576:
-			filter['FilterShift'] = filter['FilterShift'] + 1
-			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-			if filter['FilterShift'] > 16:
-				filter['FilterShift'] = 16
-		if filter['PeakDetector']['Envelope'] < 8192:
-			filter['FilterShift'] = filter['FilterShift'] - 1
-			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-			if filter['FilterShift'] < -16:
-				filter['FilterShift'] = -16
+		if filter['InputAGCEnabled'] == True:
+			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+			filter['GainChange'] = 0
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
 
@@ -174,6 +177,11 @@ def ProgFilterDecimate(filter):
 				if filter['FilterShift'] < -16:
 					filter['FilterShift'] = -16
 	return filter
+
+def DemodulateGFSK(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['Result'] = demodulator['InputBuffer']
+	return demodulator
 
 def DemodulateDPSK2(demodulator):
 	if demodulator['Enabled'] == True:
