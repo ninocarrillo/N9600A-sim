@@ -134,7 +134,6 @@ def FilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
 	index = 0
 	for data in filter['FilterBuffer']:
-		# filter['FilterShift'] = -3
 		data = data // pow(2, (16 + filter['FilterShift']))
 		filter['FilterBuffer'][index] = data
 		index += 1
@@ -320,6 +319,8 @@ def ProgDemodulateAFSK(demodulator):
 			demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * demodulator['OffsetRemovalRate'])
 	return demodulator
 
+def ProgUnScramble(decoder):
+	return decoder
 
 def ProgDifferentialDecode(decoder):
 	if decoder['NewBit'] == decoder['LastBit']:

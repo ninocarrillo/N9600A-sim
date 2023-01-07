@@ -737,6 +737,7 @@ elif DemodulatorType == 'dpsk':
 	print('total packets: ', total_packets)
 	print('made new directory: ', dirname)
 	print('done')
+
 elif DemodulatorType == 'gfsk':
 	GFSKDemodulator = []
 	DataSlicer = []
@@ -812,6 +813,7 @@ elif DemodulatorType == 'gfsk':
 	print(f'\nDemodulating audio. ')
 	GFSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
 	GFSKDemodulator[1] = demod.DemodulateGFSK(GFSKDemodulator[1])
+	print(GFSKDemodulator[1]['Result'])
 	print(f'Done.')
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
@@ -823,11 +825,9 @@ elif DemodulatorType == 'gfsk':
 			DifferentialDecoder[1]['NewBit'] = data_bit
 			DifferentialDecoder[1] = demod.ProgDifferentialDecode(DifferentialDecoder[1])
 			AX25Decoder[1]['NewBit'] = DifferentialDecoder[1]['Result']
-			# if losing_index != 1:
 			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
 			if AX25Decoder[1]['OutputTrigger'] == True:
 				AX25Decoder[1]['OutputTrigger'] = False
-				# Check for unioqueness
 				total_packets += 1
 				CRC = AX25Decoder[1]['CRC'][0]
 				decodernum = '1'
