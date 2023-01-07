@@ -767,12 +767,15 @@ elif DemodulatorType == 'gfsk':
 
 	DifferentialDecoder = [{}]
 	AX25Decoder = [{}]
+	Descrambler = [{}]
 	for index in range(1,DemodulatorCount+1):
-		print(f'Initializing DifferentialDecoder {index} and AX25Decoder {index}')
+		print(f'Initializing DifferentialDecoder {index}, AX25Decoder {index}, Descrambler {index}')
 		DifferentialDecoder.append({})
 		AX25Decoder.append({})
+		Descrambler.append({})
 		DifferentialDecoder[index] = demod.InitDifferentialDecoder()
 		AX25Decoder[index] = demod.InitAX25Decoder()
+		Descrambler[index] = demod.InitDescrambler()
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
@@ -822,9 +825,9 @@ elif DemodulatorType == 'gfsk':
 		DataSlicer[1]['NewSample'] = GFSKDemodulator[1]['Result'][index]
 		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
 		for data_bit in DataSlicer[1]['Result']:
-			DifferentialDecoder[1]['NewBit'] = data_bit
-			DifferentialDecoder[1] = demod.ProgDifferentialDecode(DifferentialDecoder[1])
-			AX25Decoder[1]['NewBit'] = DifferentialDecoder[1]['Result']
+			Descrambler[1]['NewBit'] = data_bit
+			Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
+			AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
 			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
 			if AX25Decoder[1]['OutputTrigger'] == True:
 				AX25Decoder[1]['OutputTrigger'] = False

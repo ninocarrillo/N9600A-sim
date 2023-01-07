@@ -10,6 +10,26 @@ def InitAX25Decoder():
 def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
+	
+def InitDescrambler():
+	descrambler = {}
+	descrambler['Polynomial'] = int('0x63003',16)
+	descrambler['Tap'] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	descrambler['Invert'] = True
+	descrambler['TapCount'] = 0
+	for i in range(32):
+		if (descrambler['Polynomial'] >> i) & 1 == 1:
+			descrambler['Tap'][descrambler['TapCount']] = i
+			descrambler['TapCount'] += 1
+	descrambler['InputMask'] = 1 << (descrambler['Tap'][descrambler['TapCount'] - 1])
+	descrambler['OutputMask'] = 1 << descrambler['Tap'][1]
+	descrambler['FeedbackMask'] = 1
+	descrambler['BitDelay'] = descrambler['Tap'][descrambler['TapCount'] - 1] - descrambler['Tap'][1]
+	descrambler['BitsInProgress'] = 0
+	descrambler['Order'] = 1 << descrambler['Tap'][descrambler['TapCount'] - 1]
+	descrambler['ShiftRegister'] = int('0xFFFF', 16)
+	descrambler['Initialized'] = True
+	return descrambler
 
 def InitDataSlicer(data_slicer):
 	data_slicer['PLLClock'] = 0.0
@@ -319,8 +339,21 @@ def ProgDemodulateAFSK(demodulator):
 			demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * demodulator['OffsetRemovalRate'])
 	return demodulator
 
-def ProgUnScramble(decoder):
-	return decoder
+def ProgUnscramble(descrambler):
+	if descrambler['NewBit'] == 1:
+		descrambler['ShiftRegister'] ^= descrambler['Polynomial']
+	if descrambler['Invert'] == True:
+		if descrambler['ShiftRegister'] & 1 == 1:
+			descrambler['Result'] = 0
+		else:
+			descrambler['Result'] = 1
+	else:
+		if descrambler['ShiftRegister'] & 1 == 1:
+			descrambler['Result'] = 1
+		else:
+			descrambler['Result'] = 0
+	descrambler['ShiftRegister'] = descrambler['ShiftRegister'] >> 1
+	return descrambler
 
 def ProgDifferentialDecode(decoder):
 	if decoder['NewBit'] == decoder['LastBit']:
