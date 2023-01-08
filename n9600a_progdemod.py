@@ -10,6 +10,26 @@ def InitAX25Decoder():
 def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
+	
+def InitDescrambler():
+	descrambler = {}
+	descrambler['Polynomial'] = int('0x63003',16)
+	descrambler['Tap'] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	descrambler['Invert'] = True
+	descrambler['TapCount'] = 0
+	for i in range(32):
+		if (descrambler['Polynomial'] >> i) & 1 == 1:
+			descrambler['Tap'][descrambler['TapCount']] = i
+			descrambler['TapCount'] += 1
+	descrambler['InputMask'] = 1 << (descrambler['Tap'][descrambler['TapCount'] - 1])
+	descrambler['OutputMask'] = 1 << descrambler['Tap'][1]
+	descrambler['FeedbackMask'] = 1
+	descrambler['BitDelay'] = descrambler['Tap'][descrambler['TapCount'] - 1] - descrambler['Tap'][1]
+	descrambler['BitsInProgress'] = 0
+	descrambler['Order'] = 1 << descrambler['Tap'][descrambler['TapCount'] - 1]
+	descrambler['ShiftRegister'] = int('0xFFFF', 16)
+	descrambler['Initialized'] = True
+	return descrambler
 
 def InitDataSlicer(data_slicer):
 	data_slicer['PLLClock'] = 0.0
@@ -20,8 +40,8 @@ def InitDataSlicer(data_slicer):
 	data_slicer['NewSample'] = 0.0
 	data_slicer['Result'] = 0.0
 	data_slicer['Midpoint'] = 0
-	data_slicer['LoosePhaseTolerance'] = 4
-	data_slicer['TightPhaseTolerance'] = 2
+	data_slicer['LoosePhaseTolerance'] = 2
+	data_slicer['TightPhaseTolerance'] = 1
 	data_slicer['DCD'] = 0
 	data_slicer['DCDLoad'] = 80
 	data_slicer['Phase'] = 0
@@ -46,6 +66,8 @@ def InitFilterDecimator(filter_decimator):
 	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
 	return filter_decimator
 
+def InitGFSKDemod(demodulator):
+	return demodulator
 
 def InitDPSKDemod(demodulator):
 	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['AutoCorrelatorLag'])
@@ -132,22 +154,22 @@ def FilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
 	index = 0
 	for data in filter['FilterBuffer']:
-		# filter['FilterShift'] = -3
 		data = data // pow(2, (16 + filter['FilterShift']))
 		filter['FilterBuffer'][index] = data
 		index += 1
-		filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
-		filter['GainChange'] = 0
-		if filter['PeakDetector']['Envelope'] > 24576:
-			filter['FilterShift'] = filter['FilterShift'] + 1
-			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-			if filter['FilterShift'] > 16:
-				filter['FilterShift'] = 16
-		if filter['PeakDetector']['Envelope'] < 8192:
-			filter['FilterShift'] = filter['FilterShift'] - 1
-			filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-			if filter['FilterShift'] < -16:
-				filter['FilterShift'] = -16
+		if filter['InputAGCEnabled'] == True:
+			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
+			filter['GainChange'] = 0
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
 
@@ -174,6 +196,11 @@ def ProgFilterDecimate(filter):
 				if filter['FilterShift'] < -16:
 					filter['FilterShift'] = -16
 	return filter
+
+def DemodulateGFSK(demodulator):
+	if demodulator['Enabled'] == True:
+		demodulator['Result'] = demodulator['InputBuffer']
+	return demodulator
 
 def DemodulateDPSK2(demodulator):
 	if demodulator['Enabled'] == True:
@@ -312,6 +339,21 @@ def ProgDemodulateAFSK(demodulator):
 			demodulator['Result'] = demodulator['Result'] - (demodulator['EnvelopeDetector']['Midpoint'] * demodulator['OffsetRemovalRate'])
 	return demodulator
 
+def ProgUnscramble(descrambler):
+	if descrambler['NewBit'] == 1:
+		descrambler['ShiftRegister'] ^= descrambler['Polynomial']
+	if descrambler['Invert'] == True:
+		if descrambler['ShiftRegister'] & 1 == 1:
+			descrambler['Result'] = 0
+		else:
+			descrambler['Result'] = 1
+	else:
+		if descrambler['ShiftRegister'] & 1 == 1:
+			descrambler['Result'] = 1
+		else:
+			descrambler['Result'] = 0
+	descrambler['ShiftRegister'] = descrambler['ShiftRegister'] >> 1
+	return descrambler
 
 def ProgDifferentialDecode(decoder):
 	if decoder['NewBit'] == decoder['LastBit']:
