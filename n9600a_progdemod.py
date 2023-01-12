@@ -10,7 +10,7 @@ def InitAX25Decoder():
 def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
-	
+
 def InitDescrambler():
 	descrambler = {}
 	descrambler['Polynomial'] = int('0x63003',16)
@@ -102,6 +102,13 @@ def InitAFSKDemod(demodulator):
 	demodulator['NewSample'] = 0
 	demodulator['MarkClip'] = False
 	demodulator['SpaceClip'] = False
+	return demodulator
+
+def InitAFSKSSBDemod(demodulator):
+	demodulator['CorrelatorTapCount'] = len(demodulator['MarkFilter'])
+	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['CorrelatorTapCount'])
+	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
+	demodulator['Result'] = 0
 	return demodulator
 
 def HighLowDetect(signal_value, detector):
@@ -495,3 +502,11 @@ def ProgSliceData(slicer):
 	if slicer['Phase'] >= slicer['Oversample']:
 		slicer['Phase'] = 0
 	return slicer
+
+def DemodulateAFSKSSB(demodulator):
+	if demodulator['Enabled'] == True:
+		mark_sig = abs(np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkFilter'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift'])))
+		space_sig = abs(np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceFilter'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift'])))
+		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
+		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+	return demodulator
