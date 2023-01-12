@@ -105,6 +105,7 @@ def InitAFSKDemod(demodulator):
 	return demodulator
 
 def InitAFSKSSBDemod(demodulator):
+	demodulator['OutputSampleRate'] = demodulator['InputSampleRate'] // demodulator['DecimationRate']
 	demodulator['CorrelatorTapCount'] = len(demodulator['MarkFilter'])
 	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['CorrelatorTapCount'])
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
@@ -509,4 +510,5 @@ def DemodulateAFSKSSB(demodulator):
 		space_sig = abs(np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceFilter'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift'])))
 		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
 		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
+		demodulator['Result'] = demodulator['Result'][::demodulator['DecimationRate']]
 	return demodulator

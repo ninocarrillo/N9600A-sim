@@ -111,6 +111,11 @@ def GetAFSKSSBDemodulatorConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'output filter shift\' is missing or invalid')
 		sys.exit(-2)
+	try:
+		afsk_demodulator['DecimationRate'] = int(config[f'AFSK SSB Demodulator {num}']['decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'decimation\' is missing or invalid')
+		sys.exit(-2)
 	return afsk_demodulator
 
 
@@ -745,8 +750,8 @@ elif DemodulatorType == 'afsk_ssb':
 				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
 
-			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			AFSKDemodulator[DemodulatorNumber] = demod.InitAFSKSSBDemod(AFSKDemodulator[DemodulatorNumber])
+			DataSlicer[DemodulatorNumber]['InputSampleRate'] = AFSKDemodulator[1]['OutputSampleRate']
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
 	DifferentialDecoder = [{}]
@@ -830,7 +835,7 @@ elif DemodulatorType == 'afsk_ssb':
 				# 		bin_file.write(byte.astype('uint8'))
 				# 	bin_file.close()
 
-	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], AFSKDemodulator[1]['Result'].astype(np.int16))
+	scipy.io.wavfile.write(dirname+"DemodSignal.wav", AFSKDemodulator[1]['OutputSampleRate'], AFSKDemodulator[1]['Result'].astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
@@ -855,14 +860,16 @@ elif DemodulatorType == 'afsk_ssb':
 
 		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-		report_file.write(f'\nMark Filter Taps: {AFSKDemodulator[1]["MarkFilter"]}')
 		report_file.write(f'\nMark Filter Tap Count: {len(AFSKDemodulator[1]["MarkFilter"])}')
 
-		report_file.write(f'\nSpace Filter Taps: {AFSKDemodulator[1]["SpaceFilter"]}')
 		report_file.write(f'\nSpace Filter Tap Count: {len(AFSKDemodulator[1]["SpaceFilter"])}')
 
 		report_file.write(f'\nOutput Filter Tap Count: {len(AFSKDemodulator[1]["OutputFilter"])}')
 		report_file.write('\n')
+
+
+		report_file.write(f'\nMax Demod Output: {max(AFSKDemodulator[1]["Result"])}')
+		report_file.write(f'\nMin Demod Output: {min(AFSKDemodulator[1]["Result"])}')
 
 		report_file.write('\n\n# Demodulator performance:\n')
 		report_file.write('\n')
