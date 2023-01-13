@@ -59,7 +59,7 @@ def InitDataSlicer(data_slicer):
 def InitFilterDecimator(filter_decimator):
 	filter_decimator['FilterBuffer'] = np.zeros(len(filter_decimator['Filter']))
 	filter_decimator['DataBuffer'] = np.array([])
-	filter_decimator['FilterShift'] = 0
+	filter_decimator['FilterShift'] = -5
 	filter_decimator['DecimationCounter'] = 0
 	filter_decimator['NewSample'] = 0
 	filter_decimator['PeakDetector'] = {'AttackRate':filter_decimator['InputAGCAttackRate'], 'SustainPeriod': filter_decimator['InputAGCSustainPeriod'], 'DecayRate':filter_decimator['InputAGCDecayRate'], 'SustainCount':0, 'Envelope':0}
@@ -102,10 +102,11 @@ def InitAFSKDemod(demodulator):
 	demodulator['NewSample'] = 0
 	demodulator['MarkClip'] = False
 	demodulator['SpaceClip'] = False
+	demodulator['OutputSampleRate'] = demodulator['InputSampleRate'] // (demodulator['OutputFilterDecimationRate'] * demodulator['CorrelatorDecimationRate'])
 	return demodulator
 
 def InitAFSKSSBDemod(demodulator):
-	demodulator['OutputSampleRate'] = demodulator['InputSampleRate'] // demodulator['DecimationRate']
+	demodulator['OutputSampleRate'] = demodulator['InputSampleRate'] // (demodulator['OutputFilterDecimationRate'] * demodulator['CorrelatorDecimationRate'])
 	demodulator['CorrelatorTapCount'] = len(demodulator['MarkFilter'])
 	demodulator['CorrelatorBuffer'] = np.zeros(demodulator['CorrelatorTapCount'])
 	demodulator['OutputFilterBuffer'] = np.zeros(len(demodulator['OutputFilter']))
@@ -292,8 +293,11 @@ def DemodulateAFSK(demodulator):
 
 		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
 
+		demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][::demodulator['CorrelatorDecimationRate']]
+
 		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
 
+		demodulator['Result'] = demodulator['Result'][::demodulator['OutputFilterDecimationRate']]
 	return demodulator
 
 def ProgDemodulateAFSK(demodulator):
@@ -509,6 +513,7 @@ def DemodulateAFSKSSB(demodulator):
 		mark_sig = abs(np.convolve(demodulator['CorrelatorBuffer'], demodulator['MarkFilter'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift'])))
 		space_sig = abs(np.convolve(demodulator['CorrelatorBuffer'], demodulator['SpaceFilter'], 'valid') // pow(2, (16 + demodulator['CorrelatorShift'])))
 		demodulator['OutputFilterBuffer'] = np.subtract(mark_sig, space_sig)
+		demodulator['OutputFilterBuffer'] = demodulator['OutputFilterBuffer'][::demodulator['CorrelatorDecimationRate']]
 		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
-		demodulator['Result'] = demodulator['Result'][::demodulator['DecimationRate']]
+		demodulator['Result'] = demodulator['Result'][::demodulator['OutputFilterDecimationRate']]
 	return demodulator

@@ -112,9 +112,14 @@ def GetAFSKSSBDemodulatorConfig(config, num):
 		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'output filter shift\' is missing or invalid')
 		sys.exit(-2)
 	try:
-		afsk_demodulator['DecimationRate'] = int(config[f'AFSK SSB Demodulator {num}']['decimation'])
+		afsk_demodulator['OutputFilterDecimationRate'] = int(config[f'AFSK SSB Demodulator {num}']['output filter decimation'])
 	except:
-		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'decimation\' is missing or invalid')
+		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'output filter decimation\' is missing or invalid')
+		sys.exit(-2)
+	try:
+		afsk_demodulator['CorrelatorDecimationRate'] = int(config[f'AFSK SSB Demodulator {num}']['correlator decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK SSB Demodulator {num}] \'correlator decimation\' is missing or invalid')
 		sys.exit(-2)
 	return afsk_demodulator
 
@@ -192,6 +197,16 @@ def GetAFSKDemodulatorConfig(config, num):
 		afsk_demodulator['SqrtBitCount'] = int(config[f'AFSK Demodulator {num}']['sqrt bit count'])
 	except:
 		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt bit count\' is missing or invalid')
+		sys.exit(-2)
+	try:
+		afsk_demodulator['OutputFilterDecimationRate'] = int(config[f'AFSK Demodulator {num}']['output filter decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'output filter decimation\' is missing or invalid')
+		sys.exit(-2)
+	try:
+		afsk_demodulator['CorrelatorDecimationRate'] = int(config[f'AFSK Demodulator {num}']['correlator decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'correlator decimation\' is missing or invalid')
 		sys.exit(-2)
 	return afsk_demodulator
 
@@ -279,8 +294,9 @@ if DemodulatorType == 'afsk':
 				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
 
-			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			AFSKDemodulator[DemodulatorNumber] = demod.InitAFSKDemod(AFSKDemodulator[DemodulatorNumber])
+
+			DataSlicer[DemodulatorNumber]['InputSampleRate'] = AFSKDemodulator[DemodulatorNumber]['OutputSampleRate']
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
 	DifferentialDecoder = [{}]
