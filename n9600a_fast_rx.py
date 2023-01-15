@@ -279,7 +279,7 @@ if DemodulatorType == 'afsk':
 
 	#generate a new directory for the reports
 	run_number = 0
-	print('trying to make a new directory')
+	print('Trying to make a new directory.')
 	while True:
 		run_number = run_number + 1
 		dirname = f'./run{run_number}/'
@@ -288,6 +288,7 @@ if DemodulatorType == 'afsk':
 		except:
 			print(dirname + ' exists')
 			continue
+		print('Made ' + dirname)
 		break
 
 
@@ -303,8 +304,9 @@ if DemodulatorType == 'afsk':
 	print(f'Done.')
 
 	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
+	print(f'Wrote file {dirname}FilteredSignal.wav at {FilterDecimator["OutputSampleRate"]} samples per second.')
 
-	print(f'\nDemodulating audio. ')
+	print(f'\nDemodulating audio.')
 	loop_count = 0
 	for index in range(1, DemodulatorCount + 1):
 		AFSKDemodulator[index]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
@@ -401,6 +403,9 @@ if DemodulatorType == 'afsk':
 		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
 
+		report_file.write(f'\nFilter Decimator Output Sample Rate: {FilterDecimator["OutputSampleRate"]}.')
+		print(f'\nFilter Decimator Output Sample Rate: {FilterDecimator["OutputSampleRate"]}.')
+
 		tstep = 1.0 / AFSKDemodulator[1]['InputSampleRate']
 
 		time = np.arange(0, tstep * AFSKDemodulator[1]['CorrelatorTapCount'], tstep)
@@ -408,6 +413,9 @@ if DemodulatorType == 'afsk':
 		index = 0
 		while index < DemodulatorCount:
 			index += 1
+
+			report_file.write(f'\nDemodulator {index} Output Sample Rate: {AFSKDemodulator[index]["OutputSampleRate"]}.')
+			print(f'\nDemodulator {index} Output Sample Rate: {AFSKDemodulator[index]["OutputSampleRate"]}.')
 			report_file.write(fo.GenInt16ArrayC(f'MarkCorCos{index}', AFSKDemodulator[index]['MarkCOS'], 8))
 			report_file.write(fo.GenInt16ArrayC(f'MarkCorSin{index}', AFSKDemodulator[index]['MarkSIN'], 8))
 			report_file.write(fo.GenInt16ArrayC(f'SpaceCorCos{index}', AFSKDemodulator[index]['SpaceCOS'], 8))
@@ -442,16 +450,13 @@ if DemodulatorType == 'afsk':
 			report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(space_square_sum[0] / AFSKDemodulator[index]["SquareScale"]))}')
 			# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_1[0] // 2**AFSKDemodulator[1]["SqrtBitCount"]):.2f}')
 
-			report_file.write('\n\n')
-			report_file.write(f'Square Scale {index}: {AFSKDemodulator[index]["SquareScale"]}')
 
-			report_file.write('\n\n')
-			report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator[index]["SqrtBitCount"]}', AFSKDemodulator[1]['SqrtTable'], 16))
+			report_file.write(f'\nSquare Scale {index}: {AFSKDemodulator[index]["SquareScale"]}')
 
-			report_file.write(f'# Demodulator index unique packets: {AX25Decoder[index]["UniquePackets"] // 2}')
-			report_file.write('\n')
-			report_file.write(f'# Demodulator index total packets: {AX25Decoder[index]["PacketCount"]}')
-			report_file.write('\n')
+			report_file.write(fo.GenInt16ArrayC(f'\nSquareRoot{AFSKDemodulator[index]["SqrtBitCount"]}', AFSKDemodulator[1]['SqrtTable'], 8))
+
+
+			report_file.write(f'\nDemodulator {index} total packets: {AX25Decoder[index]["PacketCount"]}')
 
 			# print(f'Decoder {index} unique packets: ', AX25Decoder[index]['UniquePackets'])
 			print(f'Decoder {index} total packets: ', AX25Decoder[index]['PacketCount'])
@@ -461,9 +466,8 @@ if DemodulatorType == 'afsk':
 		report_file.write(f'# Total packets: {total_packets}')
 		report_file.write('\n')
 
-	print('total packets: ', total_packets)
-	print('made new directory: ', dirname)
-	print('done')
+	print(f'\nTotal packets: {total_packets}.')
+	print(f'\nDone.')
 
 elif DemodulatorType == 'dpsk':
 	DPSKDemodulator = []
