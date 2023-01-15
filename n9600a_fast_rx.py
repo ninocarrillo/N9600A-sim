@@ -153,6 +153,16 @@ def GetAFSKDemodulatorConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt bit count\' is missing or invalid')
 		sys.exit(-2)
+	try:
+		afsk_demodulator['OutputFilterDecimationRate'] = int(config[f'AFSK Demodulator {num}']['output filter decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'output filter decimation\' is missing or invalid')
+		sys.exit(-2)
+	try:
+		afsk_demodulator['CorrelatorDecimationRate'] = int(config[f'AFSK Demodulator {num}']['correlator decimation'])
+	except:
+		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'correlator decimation\' is missing or invalid')
+		sys.exit(-2)
 	return afsk_demodulator
 
 def GetGFSKDemodulatorConfig(config, num):
@@ -231,16 +241,16 @@ if DemodulatorType == 'afsk':
 			try:
 				DataSlicer[DemodulatorNumber]['BitRate'] = int(config['Data Slicer 1']['slicer bit rate'])
 			except:
-				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer bit rate\' is missing or invalid')
+				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer bit rate\' is missing or invalid')
 				sys.exit(-2)
 			try:
 				DataSlicer[DemodulatorNumber]['Rate'] = float(config['Data Slicer 1']['slicer lock rate'])
 			except:
-				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
+				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
 
-			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			AFSKDemodulator[DemodulatorNumber] = demod.InitAFSKDemod(AFSKDemodulator[DemodulatorNumber])
+			DataSlicer[DemodulatorNumber]['InputSampleRate'] = AFSKDemodulator[DemodulatorNumber]['OutputSampleRate']
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
 	DifferentialDecoder = [{}]
@@ -286,9 +296,6 @@ if DemodulatorType == 'afsk':
 
 	data = np.array([])
 	filtered_signal_buffer = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-	demod_sig_buffer1 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-	demod_sig_buffer2 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
-	demod_sig_buffer3 = np.zeros(round(len(audio) / FilterDecimator['DecimationRate']) + 1)
 
 	print(f'\nFiltering and decimating audio. ')
 	FilterDecimator['FilterBuffer'] = audio
@@ -298,84 +305,58 @@ if DemodulatorType == 'afsk':
 	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
 	print(f'\nDemodulating audio. ')
-	AFSKDemodulator[1]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
-	AFSKDemodulator[1] = demod.DemodulateAFSK(AFSKDemodulator[1])
-	loop_count = len(AFSKDemodulator[1]['Result'])
-	if DemodulatorCount > 2:
-		AFSKDemodulator[2]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
-		AFSKDemodulator[2] = demod.DemodulateAFSK(AFSKDemodulator[2])
-		loop_count = np.min([len(AFSKDemodulator[1]['Result']), len(AFSKDemodulator[2]['Result'])])
-	if DemodulatorCount > 3:
-		AFSKDemodulator[3]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
-		AFSKDemodulator[3] = demod.DemodulateAFSK(AFSKDemodulator[3])
-		loop_count = np.min([len(AFSKDemodulator[1]['Result']), len(AFSKDemodulator[2]['Result']), len(AFSKDemodulator[3]['Result'])])
+	for index in range(1, DemodulatorCount + 1):
+		AFSKDemodulator[index]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
+		AFSKDemodulator[index] = demod.DemodulateAFSK(AFSKDemodulator[index])
+		if index == 1:
+			loop_count = len(AFSKDemodulator[index]['Result'])
+		else:
+			if loop_count > len(AFSKDemodulator[index]['Result']):
+				loop_count = len(AFSKDemodulator[index]['Result'])
 
 	print(f'Done.')
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
+
 	for index in range(loop_count):
-		DataSlicer[1]['NewSample'] = AFSKDemodulator[1]['Result'][index]
-		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
-		for data_bit in DataSlicer[1]['Result']:
-			DifferentialDecoder[1]['NewBit'] = data_bit
-			DifferentialDecoder[1] = demod.ProgDifferentialDecode(DifferentialDecoder[1])
-			AX25Decoder[1]['NewBit'] = DifferentialDecoder[1]['Result']
-			# if losing_index != 1:
-			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
-			if AX25Decoder[1]['OutputTrigger'] == True:
-				AX25Decoder[1]['OutputTrigger'] = False
-				# Check for unioqueness
-				if ((AX25Decoder[2]['CRCAge'] > 10) and (AX25Decoder[3]['CRCAge'] > 10)) or ((AX25Decoder[1]['CRC'][0] != AX25Decoder[2]['CRC'][0]) and (AX25Decoder[1]['CRC'] != AX25Decoder[3]['CRC'])):
-					total_packets += 1
-					CRC = AX25Decoder[1]['CRC'][0]
-					decodernum = '1'
-					filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-					print(f'{dirname+filename} {DataSlicer[1]["AvgPhaseError"]} {DataSlicer[2]["AvgPhaseError"]} {DataSlicer[3]["AvgPhaseError"]} ')
-					# try:
-					# 	bin_file = open(dirname + filename + '.bin', '+wb')
-					# except:
-					# 	pass
-					# with bin_file:
-					# 	for byte in AX25Decoder[2]['Output']:
-					# 		bin_file.write(byte.astype('uint8'))
-					# 	bin_file.close()
-				else:
-					if (AX25Decoder[1]['CRC'][0] == AX25Decoder[2]['CRC'][0]) and AX25Decoder[2]['CRCAge'] <= 10:
-						duplicate_packets += 1
-						if AX25Decoder[1]['UniqueFlag'] == True:
-							AX25Decoder[1]['UniquePackets'] -= 1
-							AX25Decoder[1]['UniqueFlag'] = False
-						if AX25Decoder[2]['UniqueFlag'] == True:
-							AX25Decoder[2]['UniquePackets'] -= 1
-							AX25Decoder[2]['UniqueFlag'] = False
-						print('Decoder 1 Duplicate 2, bit delay: ', AX25Decoder[2]['CRCAge'])
-					if (AX25Decoder[1]['CRC'][0] == AX25Decoder[3]['CRC'][0]) and AX25Decoder[3]['CRCAge'] <= 10:
-						duplicate_packets += 1
-						if AX25Decoder[1]['UniqueFlag'] == True:
-							AX25Decoder[1]['UniquePackets'] -= 1
-							AX25Decoder[1]['UniqueFlag'] = False
-						if AX25Decoder[3]['UniqueFlag'] == True:
-							AX25Decoder[3]['UniquePackets'] -= 1
-							AX25Decoder[3]['UniqueFlag'] = False
-						print('Decoder 1 Duplicate 3, bit delay: ', AX25Decoder[3]['CRCAge'])
-		if DemodulatorCount > 1:
-			DataSlicer[2]['NewSample'] = AFSKDemodulator[2]['Result'][index]
-			DataSlicer[2] = demod.ProgSliceData(DataSlicer[2])
-			for data_bit in DataSlicer[2]['Result']:
-				DifferentialDecoder[2]['NewBit'] = data_bit
-				DifferentialDecoder[2] = demod.ProgDifferentialDecode(DifferentialDecoder[2])
-				AX25Decoder[2]['NewBit'] = DifferentialDecoder[2]['Result']
-				# if losing_index != 2:
-				AX25Decoder[2] = demod.ProgDecodeAX25(AX25Decoder[2])
-				if AX25Decoder[2]['OutputTrigger'] == True:
-					AX25Decoder[2]['OutputTrigger'] = False
-					# Check for uniqueness
-					if ((AX25Decoder[1]['CRCAge'] > 10) and (AX25Decoder[3]['CRCAge'] > 10)) or ((AX25Decoder[2]['CRC'][0] != AX25Decoder[1]['CRC'][0]) and (AX25Decoder[2]['CRC'] != AX25Decoder[3]['CRC'])):
+		for demod_index in range(1, DemodulatorCount + 1):
+			DataSlicer[demod_index]['NewSample'] = AFSKDemodulator[demod_index]['Result'][index]
+			DataSlicer[demod_index] = demod.ProgSliceData(DataSlicer[demod_index])
+			for data_bit in DataSlicer[demod_index]['Result']:
+				DifferentialDecoder[demod_index]['NewBit'] = data_bit
+				DifferentialDecoder[demod_index] = demod.ProgDifferentialDecode(DifferentialDecoder[demod_index])
+				AX25Decoder[demod_index]['NewBit'] = DifferentialDecoder[demod_index]['Result']
+				AX25Decoder[demod_index] = demod.ProgDecodeAX25(AX25Decoder[demod_index])
+				if AX25Decoder[demod_index]['OutputTrigger'] == True:
+					AX25Decoder[demod_index]['OutputTrigger'] = False
+					AX25Decoder[demod_index]['LastPacketSampleIndex'] = DataSlicer[demod_index]['SampleIndex']
+					# Check for unioqueness
+					unique = True
+					others_old = True
+					for index2 in range(1, DemodulatorCount + 1):
+						if index2 != demod_index:
+							try:
+								if abs(AX25Decoder[index2]['LastPacketSampleIndex'] - AX25Decoder[demod_index]['LastPacketSampleIndex']) < 100:
+									others_old = False
+							except:
+								pass
+					# others_old = False
+					if others_old == False:
+						# there is another new packet. Need to check it.
+						for index2 in range(1, DemodulatorCount + 1):
+							if index2 != demod_index:
+								if AX25Decoder[demod_index]['CRC'][0] == AX25Decoder[index2]['CRC'][0]:
+									# print(AX25Decoder[demod_index]['CRC'][0])
+									# print(AX25Decoder[index2]['CRC'][0])
+									AX25Decoder[index2]['UniquePackets'] -= 1
+									unique = False
+					if unique == True:
+					# if ((AX25Decoder[2]['CRCAge'] > 10) and (AX25Decoder[3]['CRCAge'] > 10)) or ((AX25Decoder[1]['CRC'][0] != AX25Decoder[2]['CRC'][0]) and (AX25Decoder[1]['CRC'] != AX25Decoder[3]['CRC'])):
 						total_packets += 1
-						CRC = AX25Decoder[2]['CRC'][0]
-						decodernum = '2'
-						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-						print(f'{dirname+filename} {DataSlicer[1]["AvgPhaseError"]} {DataSlicer[2]["AvgPhaseError"]} {DataSlicer[3]["AvgPhaseError"]} ')
+						AX25Decoder[demod_index]['UniquePackets'] += 1
+						CRC = AX25Decoder[demod_index]['CRC'][0]
+						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
+						print(f'{dirname+filename}')
 						# try:
 						# 	bin_file = open(dirname + filename + '.bin', '+wb')
 						# except:
@@ -384,70 +365,7 @@ if DemodulatorType == 'afsk':
 						# 	for byte in AX25Decoder[2]['Output']:
 						# 		bin_file.write(byte.astype('uint8'))
 						# 	bin_file.close()
-					else:
-						if (AX25Decoder[2]['CRC'][0] == AX25Decoder[1]['CRC'][0]) and AX25Decoder[1]['CRCAge'] <= 10:
-							duplicate_packets += 1
-							if AX25Decoder[2]['UniqueFlag'] == True:
-								AX25Decoder[2]['UniquePackets'] -= 1
-								AX25Decoder[2]['UniqueFlag'] = False
-							if AX25Decoder[1]['UniqueFlag'] == True:
-								AX25Decoder[1]['UniquePackets'] -= 1
-								AX25Decoder[1]['UniqueFlag'] = False
-							print('Decoder 2 Duplicate 1, bit delay: ', AX25Decoder[1]['CRCAge'])
-						if (AX25Decoder[2]['CRC'][0] == AX25Decoder[3]['CRC'][0]) and AX25Decoder[3]['CRCAge'] <= 10:
-							duplicate_packets += 1
-							if AX25Decoder[2]['UniqueFlag'] == True:
-								AX25Decoder[2]['UniquePackets'] -= 1
-								AX25Decoder[2]['UniqueFlag'] = False
-							if AX25Decoder[3]['UniqueFlag'] == True:
-								AX25Decoder[3]['UniquePackets'] -= 1
-								AX25Decoder[3]['UniqueFlag'] = False
-							print('Decoder 2 Duplicate 3, bit delay: ', AX25Decoder[3]['CRCAge'])
-		if DemodulatorCount > 2:
-			DataSlicer[3]['NewSample'] = AFSKDemodulator[3]['Result'][index]
-			DataSlicer[3] = demod.ProgSliceData(DataSlicer[3])
-			for data_bit in DataSlicer[3]['Result']:
-				DifferentialDecoder[3]['NewBit'] = data_bit
-				DifferentialDecoder[3] = demod.ProgDifferentialDecode(DifferentialDecoder[3])
-				AX25Decoder[3]['NewBit'] = DifferentialDecoder[3]['Result']
-				# if losing_index != 3:
-				AX25Decoder[3] = demod.ProgDecodeAX25(AX25Decoder[3])
-				if AX25Decoder[3]['OutputTrigger'] == True:
-					AX25Decoder[3]['OutputTrigger'] = False
-					# Check for uniqueness
-					if ((AX25Decoder[1]['CRCAge'] > 10) and (AX25Decoder[2]['CRCAge'] > 10)) or ((AX25Decoder[3]['CRC'][0] != AX25Decoder[1]['CRC'][0]) and (AX25Decoder[3]['CRC'] != AX25Decoder[2]['CRC'])):
-						total_packets += 1
-						CRC = AX25Decoder[2]['CRC'][0]
-						decodernum = '3'
-						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index1}'
-						print(f'{dirname+filename} {DataSlicer[1]["AvgPhaseError"]} {DataSlicer[2]["AvgPhaseError"]} {DataSlicer[3]["AvgPhaseError"]} ')
-						# try:
-						# 	bin_file = open(dirname + filename + '.bin', '+wb')
-						# except:
-						# 	pass
-						# with bin_file:
-						# 	for byte in AX25Decoder[2]['Output']:
-						# 		bin_file.write(byte.astype('uint8'))
-						# 	bin_file.close()
-					else:
-						if (AX25Decoder[3]['CRC'][0] == AX25Decoder[1]['CRC'][0]) and AX25Decoder[1]['CRCAge'] <= 10:
-							duplicate_packets += 1
-							if AX25Decoder[3]['UniqueFlag'] == True:
-								AX25Decoder[3]['UniquePackets'] -= 1
-								AX25Decoder[3]['UniqueFlag'] = False
-							if AX25Decoder[1]['UniqueFlag'] == True:
-								AX25Decoder[1]['UniquePackets'] -= 1
-								AX25Decoder[1]['UniqueFlag'] = False
-							print('Decoder 3 Duplicate 1, bit delay: ', AX25Decoder[1]['CRCAge'])
-						if (AX25Decoder[3]['CRC'][0] == AX25Decoder[2]['CRC'][0]) and AX25Decoder[2]['CRCAge'] <= 10:
-							duplicate_packets += 1
-							if AX25Decoder[3]['UniqueFlag'] == True:
-								AX25Decoder[3]['UniquePackets'] -= 1
-								AX25Decoder[3]['UniqueFlag'] = False
-							if AX25Decoder[2]['UniqueFlag'] == True:
-								AX25Decoder[2]['UniquePackets'] -= 1
-								AX25Decoder[2]['UniqueFlag'] = False
-							print('Decoder 3 Duplicate 2, bit delay: ', AX25Decoder[2]['CRCAge'])
+
 
 	# scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
@@ -474,119 +392,68 @@ if DemodulatorType == 'afsk':
 
 		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-		report_file.write(fo.GenInt16ArrayC('MarkCorCos1', AFSKDemodulator[1]['MarkCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('MarkCorSin1', AFSKDemodulator[1]['MarkSIN'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorCos1', AFSKDemodulator[1]['SpaceCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorSin1', AFSKDemodulator[1]['SpaceSIN'], 32))
-		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC('MarkCorCos2', AFSKDemodulator[2]['MarkCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('MarkCorSin2', AFSKDemodulator[2]['MarkSIN'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorCos2', AFSKDemodulator[2]['SpaceCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorSin2', AFSKDemodulator[2]['SpaceSIN'], 32))
-		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC('MarkCorCos3', AFSKDemodulator[3]['MarkCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('MarkCorSin3', AFSKDemodulator[3]['MarkSIN'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorCos3', AFSKDemodulator[3]['SpaceCOS'], 32))
-		report_file.write(fo.GenInt16ArrayC('SpaceCorSin3', AFSKDemodulator[3]['SpaceSIN'], 32))
 
-		report_file.write('\nMaximum correlation values:')
 		tstep = 1.0 / AFSKDemodulator[1]['InputSampleRate']
+
 		time = np.arange(0, tstep * AFSKDemodulator[1]['CorrelatorTapCount'], tstep)
-		max_mark_cos_input = np.rint(24576 * (np.cos(2 * AFSKDemodulator[1]['MarkFreq'] * np.pi * time)))
-		max_mark_sin_input = np.rint(24576 * (np.sin(2 * AFSKDemodulator[1]['MarkFreq'] * np.pi * time)))
-		max_space_cos_input = np.rint(24576 * (np.cos(2 * AFSKDemodulator[1]['SpaceFreq'] * np.pi * time)))
-		max_space_sin_input = np.rint(24576 * (np.sin(2 * AFSKDemodulator[1]['SpaceFreq'] * np.pi * time)))
 
-		mark_sin_1 = np.convolve(max_mark_sin_input, AFSKDemodulator[1]["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator[1]['CorrelatorShift']))
-		mark_cos_1 = np.convolve(max_mark_sin_input, AFSKDemodulator[1]["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator[1]['CorrelatorShift']))
-		mark_square_sum_1 = mark_sin_1**2 + mark_cos_1**2
+		index = 0
+		while index < DemodulatorCount:
+			index += 1
+			report_file.write(fo.GenInt16ArrayC(f'MarkCorCos{index}', AFSKDemodulator[index]['MarkCOS'], 8))
+			report_file.write(fo.GenInt16ArrayC(f'MarkCorSin{index}', AFSKDemodulator[index]['MarkSIN'], 8))
+			report_file.write(fo.GenInt16ArrayC(f'SpaceCorCos{index}', AFSKDemodulator[index]['SpaceCOS'], 8))
+			report_file.write(fo.GenInt16ArrayC(f'SpaceCorSin{index}', AFSKDemodulator[index]['SpaceSIN'], 8))
+			report_file.write('\n')
 
-		space_sin_1 = np.convolve(max_space_sin_input, AFSKDemodulator[1]["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator[1]['CorrelatorShift']))
-		space_cos_1 = np.convolve(max_space_sin_input, AFSKDemodulator[1]["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator[1]['CorrelatorShift']))
-		space_square_sum_1 = space_sin_1**2 + space_cos_1**2
+			max_mark_cos_input = np.rint(24576 * (np.cos(2 * AFSKDemodulator[index]['MarkFreq'] * np.pi * time)))
+			max_mark_sin_input = np.rint(24576 * (np.sin(2 * AFSKDemodulator[index]['MarkFreq'] * np.pi * time)))
+			max_space_cos_input = np.rint(24576 * (np.cos(2 * AFSKDemodulator[index]['SpaceFreq'] * np.pi * time)))
+			max_space_sin_input = np.rint(24576 * (np.sin(2 * AFSKDemodulator[index]['SpaceFreq'] * np.pi * time)))
 
-		mark_sin_2 = np.convolve(max_mark_sin_input, AFSKDemodulator[2]["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		mark_cos_2 = np.convolve(max_mark_sin_input, AFSKDemodulator[2]["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		mark_square_sum_2 = mark_sin_2**2 + mark_cos_2**2
+			mark_sin = np.convolve(max_mark_sin_input, AFSKDemodulator[index]["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator[index]['CorrelatorShift']))
+			mark_cos = np.convolve(max_mark_sin_input, AFSKDemodulator[index]["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator[index]['CorrelatorShift']))
+			mark_square_sum = mark_sin**2 + mark_cos**2
 
-		space_sin_2 = np.convolve(max_space_sin_input, AFSKDemodulator[2]["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		space_cos_2 = np.convolve(max_space_sin_input, AFSKDemodulator[2]["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		space_square_sum_2 = space_sin_2**2 + space_cos_2**2
+			space_sin = np.convolve(max_space_sin_input, AFSKDemodulator[index]["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator[index]['CorrelatorShift']))
+			space_cos = np.convolve(max_space_sin_input, AFSKDemodulator[index]["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator[index]['CorrelatorShift']))
+			space_square_sum = space_sin**2 + space_cos**2
 
-		mark_sin_3 = np.convolve(max_mark_sin_input, AFSKDemodulator[3]["MarkSIN"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		mark_cos_3 = np.convolve(max_mark_sin_input, AFSKDemodulator[3]["MarkCOS"], "valid") / pow(2, (16 + AFSKDemodulator[2]['CorrelatorShift']))
-		mark_square_sum_3 = mark_sin_2**2 + mark_cos_2**2
+			report_file.write(f'\nMaximum correlation values Demodulator {index}:')
+			report_file.write('\n')
+			report_file.write(f'\nMark Sin Correlator: {int(np.rint(mark_sin[0]))}')
+			report_file.write(f'\nMark Cos Correlator: {int(np.rint(mark_cos[0]))}')
+			report_file.write(f'\nMark Square Sum Correlator: {int(np.rint(mark_square_sum[0]))}')
+			report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(mark_square_sum[0] / AFSKDemodulator[index]["SquareScale"]))}')
+			# report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_1[0] // 2**AFSKDemodulator[1]["SqrtBitCount"]):.2f}')
 
-		space_sin_3 = np.convolve(max_space_sin_input, AFSKDemodulator[3]["SpaceSIN"], "valid") / pow(2, (16 + AFSKDemodulator[3]['CorrelatorShift']))
-		space_cos_3 = np.convolve(max_space_sin_input, AFSKDemodulator[3]["SpaceCOS"], "valid") / pow(2, (16 + AFSKDemodulator[3]['CorrelatorShift']))
-		space_square_sum_3 = space_sin_3**2 + space_cos_3**2
+			report_file.write('\n')
+			report_file.write(f'\nSpace Sin Correlator: {int(np.rint(space_sin[0]))}')
+			report_file.write(f'\nSpace Cos Correlator: {int(np.rint(space_cos[0]))}')
+			report_file.write(f'\nSpace Square Sum Correlator: {int(np.rint(space_square_sum[0]))}')
+			report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(space_square_sum[0] / AFSKDemodulator[index]["SquareScale"]))}')
+			# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_1[0] // 2**AFSKDemodulator[1]["SqrtBitCount"]):.2f}')
 
-		report_file.write('\n')
-		report_file.write(f'\nMark Sin Correlator 1: {int(np.rint(mark_sin_1[0]))}')
-		report_file.write(f'\nMark Cos Correlator 1: {int(np.rint(mark_cos_1[0]))}')
-		report_file.write(f'\nMark Square Sum Correlator 1: {int(np.rint(mark_square_sum_1[0]))}')
-		report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(mark_square_sum_1[0] / AFSKDemodulator[1]["SquareScale"]))}')
-		# report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_1[0] // 2**AFSKDemodulator[1]["SqrtBitCount"]):.2f}')
+			report_file.write('\n\n')
+			report_file.write(f'Square Scale {index}: {AFSKDemodulator[index]["SquareScale"]}')
 
-		report_file.write('\n')
-		report_file.write(f'\nSpace Sin Correlator 1: {int(np.rint(space_sin_1[0]))}')
-		report_file.write(f'\nSpace Cos Correlator 1: {int(np.rint(space_cos_1[0]))}')
-		report_file.write(f'\nSpace Square Sum Correlator 1: {int(np.rint(space_square_sum_1[0]))}')
-		report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(space_square_sum_1[0] / AFSKDemodulator[1]["SquareScale"]))}')
-		# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_1[0] // 2**AFSKDemodulator[1]["SqrtBitCount"]):.2f}')
+			report_file.write('\n\n')
+			report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator[index]["SqrtBitCount"]}', AFSKDemodulator[1]['SqrtTable'], 16))
 
-		report_file.write('\n')
-		report_file.write(f'\nMark Sin Correlator 2: {int(np.rint(mark_sin_2[0]))}')
-		report_file.write(f'\nMark Cos Correlator 2: {int(np.rint(mark_cos_2[0]))}')
-		report_file.write(f'\nMark Square Sum Correlator 2: {int(np.rint(mark_square_sum_2[0]))}')
-		report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(mark_square_sum_2[0] / AFSKDemodulator[2]["SquareScale"]))}')
-		# report_file.write(f'\n Log2(Mark Square Sum / Sqrt Table Size): {np.log2(mark_square_sum_2[0] // 2**AFSKDemodulator[2]["SqrtBitCount"]):.2f}')
+			report_file.write(f'# Demodulator index unique packets: {AX25Decoder[index]["UniquePackets"] // 2}')
+			report_file.write('\n')
+			report_file.write(f'# Demodulator index total packets: {AX25Decoder[index]["PacketCount"]}')
+			report_file.write('\n')
 
-		report_file.write('\n')
-		report_file.write(f'\nSpace Sin Correlator 2: {int(np.rint(space_sin_2[0]))}')
-		report_file.write(f'\nSpace Cos Correlator 2: {int(np.rint(space_cos_2[0]))}')
-		report_file.write(f'\nSpace Square Sum Correlator 2: {int(np.rint(space_square_sum_2[0]))}')
-		report_file.write(f'\nMark Square Sum / Square Scale: {int(np.rint(space_square_sum_2[0] / AFSKDemodulator[2]["SquareScale"]))}')
-		# report_file.write(f'\n Log2(Space Square Sum / Sqrt Table Size): {np.log2(space_square_sum_2[0] // 2**AFSKDemodulator[2]["SqrtBitCount"]):.2f}')
-
-
-		report_file.write('\n\n')
-		report_file.write(f'Square Scale 1: {AFSKDemodulator[1]["SquareScale"]}')
-
-		report_file.write('\n')
-		report_file.write(f'Square Scale 2: {AFSKDemodulator[2]["SquareScale"]}')
-
-		report_file.write('\n\n')
-		report_file.write(fo.GenInt16ArrayC(f'SquareRoot{AFSKDemodulator[1]["SqrtBitCount"]}', AFSKDemodulator[1]['SqrtTable'], 16))
+			# print(f'Decoder {index} unique packets: ', AX25Decoder[index]['UniquePackets'])
+			print(f'Decoder {index} total packets: ', AX25Decoder[index]['PacketCount'])
 
 		report_file.write('\n\n# Demodulator performance:\n')
 		report_file.write('\n')
 		report_file.write(f'# Total packets: {total_packets}')
 		report_file.write('\n')
-		report_file.write(f'# Duplicate packets: {duplicate_packets}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 1 unique packets: {AX25Decoder[1]["UniquePackets"] // 2}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 1 total packets: {AX25Decoder[1]["PacketCount"]}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 2 unique packets: {AX25Decoder[2]["UniquePackets"] // 2}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 2 total packets: {AX25Decoder[2]["PacketCount"]}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 3 unique packets: {AX25Decoder[3]["UniquePackets"] // 2}')
-		report_file.write('\n')
-		report_file.write(f'# Demodulator 3 total packets: {AX25Decoder[3]["PacketCount"]}')
-		report_file.write('\n')
-		report_file.close()
 
 	print('total packets: ', total_packets)
-	print('duplicate_packets: ', duplicate_packets)
-	print('Decoder 1 unique packets: ', AX25Decoder[1]['UniquePackets'] // 2)
-	print('Decoder 1 total packets: ', AX25Decoder[1]['PacketCount'])
-	print('Decoder 2 unique packets: ', AX25Decoder[2]['UniquePackets'] // 2)
-	print('Decoder 2 total packets: ', AX25Decoder[2]['PacketCount'])
-	print('Decoder 3 unique packets: ', AX25Decoder[3]['UniquePackets'] // 2)
-	print('Decoder 3 total packets: ', AX25Decoder[3]['PacketCount'])
 	print('made new directory: ', dirname)
 	print('done')
 

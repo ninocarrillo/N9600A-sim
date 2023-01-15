@@ -1,0 +1,37 @@
+1111 150 IL2P
+1110 150 AX.25
+1101 300 IL2P
+1100 300 AX.25
+1011 
+1010
+1001
+1000
+
+1111 BPSK/QPSK 
+1110 Character Mode
+1101 IL2P-
+1100 IL2P-
+1011 150 IL2P
+1010 150 AX.25
+1001 300 IL2P
+1000 300 AX.25
+
+
+1111 300 Baud AFSK AX.25 (compatible with HF APRS)
+1110 300 Baud AFSK IL2P (I believe Direwolf already supports this)
+1101 300 Baud AFSK IL2P with rate 1/2 convolution and Viterbi detection (about 150 bps)
+1100 150 Baud AFSK with increased Reed Solomon FEC, block interleaving, and rate 1/2 convolution (about 40 bps)
+
+Possible FTM-3100R mods
+data injection points:
+
+|
++-D1012 1SV323 VariCap
+| 
++-L1014 1uH Inductor
+|
++-C1334 39pF Cap
+
+Improve SSB AFSK demodulator performance in detuned situations
+- Add multiple demodulator streams
+- Investigate correlator pattern modifications to widen tone detection bandwidth

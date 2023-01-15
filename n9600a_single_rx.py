@@ -284,18 +284,17 @@ if DemodulatorType == 'afsk':
 			AFSKDemodulator[DemodulatorNumber] = GetAFSKDemodulatorConfig(config, DemodulatorNumber)
 			AFSKDemodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			try:
-				DataSlicer[DemodulatorNumber]['BitRate'] = int(config['Data Slicer 1']['slicer bit rate'])
+				DataSlicer[DemodulatorNumber]['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
 			except:
-				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer bit rate\' is missing or invalid')
+				print(f'{sys.argv[1]} [Data Slicer DemodulatorNumber] \'slicer bit rate\' is missing or invalid')
 				sys.exit(-2)
 			try:
-				DataSlicer[DemodulatorNumber]['Rate'] = float(config['Data Slicer 1']['slicer lock rate'])
+				DataSlicer[DemodulatorNumber]['Rate'] = float(config[f'Data Slicer {DemodulatorNumber}']['slicer lock rate'])
 			except:
-				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
+				print(f'{sys.argv[1]} [Data Slicer DemodulatorNumber] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
 
 			AFSKDemodulator[DemodulatorNumber] = demod.InitAFSKDemod(AFSKDemodulator[DemodulatorNumber])
-
 			DataSlicer[DemodulatorNumber]['InputSampleRate'] = AFSKDemodulator[DemodulatorNumber]['OutputSampleRate']
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 

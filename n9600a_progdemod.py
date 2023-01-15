@@ -2,9 +2,10 @@ import numpy as np
 import n9600a_crc as crc
 
 def InitAX25Decoder():
-	decoder = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([0,0]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
+	decoder = {'NewBit':0, 'BitIndex':0, 'Ones':0, 'ByteCount':0, 'WorkingByte':np.uint16(0), 'Result':np.array([]).astype('uint16'), 'CRC':np.array([-65536,-65536]), 'PacketCount':0, 'Verbose':0, 'OutputTrigger':False, 'CRCAge':1000000, 'UniquePackets':0}
 	decoder['UniqueFlag'] = False
 	decoder['LastChop'] = 0
+
 	return decoder
 
 def InitDifferentialDecoder():
@@ -54,6 +55,7 @@ def InitDataSlicer(data_slicer):
 	data_slicer['AvgPhaseError'] = 0
 	data_slicer['PhaseErrorHistory'] = np.zeros(45)
 	data_slicer['PhaseErrorFilter'] = np.ones(45) * 1
+	data_slicer['SampleIndex'] = 0
 	return data_slicer
 
 def InitFilterDecimator(filter_decimator):
@@ -81,12 +83,35 @@ def InitAFSKDemod(demodulator):
 	tstep = 1.0 / demodulator['InputSampleRate']
 	time = np.arange(0, tstep * demodulator['CorrelatorTapCount'], tstep)
 	# demodulator['SpaceAmplitude'] = np.rint(demodulator['MarkAmplitude'] * demodulator['SpaceRatio'])
+	demodulator['SpaceCOS'] = np.zeros(demodulator['CorrelatorTapCount'])
+	demodulator['SpaceSIN'] = np.zeros(demodulator['CorrelatorTapCount'])
+	demodulator['MarkCOS'] = np.zeros(demodulator['CorrelatorTapCount'])
+	demodulator['MarkSIN'] = np.zeros(demodulator['CorrelatorTapCount'])
 
 	demodulator['SpaceAmplitude'] = demodulator['MarkAmplitude']
-	demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
-	demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
-	demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
-	demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
+	space_phase = 0
+	mark_phase = 0
+	freq_span = 0
+	space_freq = demodulator['SpaceFreq'] - (freq_span / 2)
+	mark_freq = demodulator['MarkFreq'] - (freq_span / 2)
+	mark_amplitude = demodulator['MarkAmplitude']
+	space_amplitude = demodulator['SpaceAmplitude']
+	freq_step = freq_span / demodulator['CorrelatorTapCount']
+
+	for index in range(demodulator['CorrelatorTapCount']):
+		demodulator['SpaceCOS'][index] = np.rint(space_amplitude * np.cos(space_phase))
+		demodulator['SpaceSIN'][index] = np.rint(space_amplitude * np.sin(space_phase))
+		demodulator['MarkCOS'][index] = np.rint(mark_amplitude * np.cos(mark_phase))
+		demodulator['MarkSIN'][index] = np.rint(mark_amplitude * np.sin(mark_phase))
+		space_phase += 2 * np.pi * space_freq * tstep
+		mark_phase += 2 * np.pi * mark_freq * tstep
+
+
+
+	# demodulator['SpaceCOS'] = np.rint(demodulator['SpaceAmplitude'] * (np.cos(2 * demodulator['SpaceFreq'] * np.pi * time)))
+	# demodulator['SpaceSIN'] = np.rint(demodulator['SpaceAmplitude'] * (np.sin(2 * demodulator['SpaceFreq'] * np.pi * time)))
+	# demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
+	# demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
 	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 1) - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
@@ -415,8 +440,6 @@ def ProgDecodeAX25(decoder):
 				if decoder['CRC'][1] == 1:
 					decoder['CRCAge'] = 0
 					decoder['PacketCount'] += 1
-					decoder['UniquePackets'] += 1
-					decoder['UniqueFlag'] = True
 					decoder['Output'] = decoder['Result'][:-2]
 					decoder['OutputTrigger'] = True
 					if decoder['Verbose'] == 1:
@@ -465,15 +488,19 @@ def SliceData(slicer):
 def ProgSliceData(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
 	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
+	slicer['SampleIndex'] += 1
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
+	slicer['OutputTrigger'] = False
 	slicer['PLLClock'] += slicer['PLLStep']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
 			slicer['Result'] = np.array([1])
+			slicer['OutputTrigger'] = True
 		else:
 			slicer['Result'] = np.array([0])
+			slicer['OutputTrigger'] = True
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
