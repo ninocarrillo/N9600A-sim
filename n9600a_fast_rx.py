@@ -305,14 +305,21 @@ if DemodulatorType == 'afsk':
 	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
 	print(f'\nDemodulating audio. ')
+	loop_count = 0
 	for index in range(1, DemodulatorCount + 1):
 		AFSKDemodulator[index]['CorrelatorBuffer'] = FilterDecimator['FilterBuffer']
 		AFSKDemodulator[index] = demod.DemodulateAFSK(AFSKDemodulator[index])
-		if index == 1:
-			loop_count = len(AFSKDemodulator[index]['Result'])
-		else:
-			if loop_count > len(AFSKDemodulator[index]['Result']):
+		if loop_count == 0:
+			try:
 				loop_count = len(AFSKDemodulator[index]['Result'])
+			except:
+				pass
+		else:
+			try:
+				if loop_count > len(AFSKDemodulator[index]['Result']):
+					loop_count = len(AFSKDemodulator[index]['Result'])
+			except:
+				pass
 
 	print(f'Done.')
 
@@ -320,51 +327,52 @@ if DemodulatorType == 'afsk':
 
 	for index in range(loop_count):
 		for demod_index in range(1, DemodulatorCount + 1):
-			DataSlicer[demod_index]['NewSample'] = AFSKDemodulator[demod_index]['Result'][index]
-			DataSlicer[demod_index] = demod.ProgSliceData(DataSlicer[demod_index])
-			for data_bit in DataSlicer[demod_index]['Result']:
-				DifferentialDecoder[demod_index]['NewBit'] = data_bit
-				DifferentialDecoder[demod_index] = demod.ProgDifferentialDecode(DifferentialDecoder[demod_index])
-				AX25Decoder[demod_index]['NewBit'] = DifferentialDecoder[demod_index]['Result']
-				AX25Decoder[demod_index] = demod.ProgDecodeAX25(AX25Decoder[demod_index])
-				if AX25Decoder[demod_index]['OutputTrigger'] == True:
-					AX25Decoder[demod_index]['OutputTrigger'] = False
-					AX25Decoder[demod_index]['LastPacketSampleIndex'] = DataSlicer[demod_index]['SampleIndex']
-					# Check for unioqueness
-					unique = True
-					others_old = True
-					for index2 in range(1, DemodulatorCount + 1):
-						if index2 != demod_index:
-							try:
-								if abs(AX25Decoder[index2]['LastPacketSampleIndex'] - AX25Decoder[demod_index]['LastPacketSampleIndex']) < 100:
-									others_old = False
-							except:
-								pass
-					# others_old = False
-					if others_old == False:
-						# there is another new packet. Need to check it.
+			if AFSKDemodulator[demod_index]['Enabled'] == True:
+				DataSlicer[demod_index]['NewSample'] = AFSKDemodulator[demod_index]['Result'][index]
+				DataSlicer[demod_index] = demod.ProgSliceData(DataSlicer[demod_index])
+				for data_bit in DataSlicer[demod_index]['Result']:
+					DifferentialDecoder[demod_index]['NewBit'] = data_bit
+					DifferentialDecoder[demod_index] = demod.ProgDifferentialDecode(DifferentialDecoder[demod_index])
+					AX25Decoder[demod_index]['NewBit'] = DifferentialDecoder[demod_index]['Result']
+					AX25Decoder[demod_index] = demod.ProgDecodeAX25(AX25Decoder[demod_index])
+					if AX25Decoder[demod_index]['OutputTrigger'] == True:
+						AX25Decoder[demod_index]['OutputTrigger'] = False
+						AX25Decoder[demod_index]['LastPacketSampleIndex'] = DataSlicer[demod_index]['SampleIndex']
+						# Check for unioqueness
+						unique = True
+						others_old = True
 						for index2 in range(1, DemodulatorCount + 1):
 							if index2 != demod_index:
-								if AX25Decoder[demod_index]['CRC'][0] == AX25Decoder[index2]['CRC'][0]:
-									# print(AX25Decoder[demod_index]['CRC'][0])
-									# print(AX25Decoder[index2]['CRC'][0])
-									AX25Decoder[index2]['UniquePackets'] -= 1
-									unique = False
-					if unique == True:
-					# if ((AX25Decoder[2]['CRCAge'] > 10) and (AX25Decoder[3]['CRCAge'] > 10)) or ((AX25Decoder[1]['CRC'][0] != AX25Decoder[2]['CRC'][0]) and (AX25Decoder[1]['CRC'] != AX25Decoder[3]['CRC'])):
-						total_packets += 1
-						AX25Decoder[demod_index]['UniquePackets'] += 1
-						CRC = AX25Decoder[demod_index]['CRC'][0]
-						filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
-						print(f'{dirname+filename}')
-						# try:
-						# 	bin_file = open(dirname + filename + '.bin', '+wb')
-						# except:
-						# 	pass
-						# with bin_file:
-						# 	for byte in AX25Decoder[2]['Output']:
-						# 		bin_file.write(byte.astype('uint8'))
-						# 	bin_file.close()
+								try:
+									if abs(AX25Decoder[index2]['LastPacketSampleIndex'] - AX25Decoder[demod_index]['LastPacketSampleIndex']) < 100:
+										others_old = False
+								except:
+									pass
+						# others_old = False
+						if others_old == False:
+							# there is another new packet. Need to check it.
+							for index2 in range(1, DemodulatorCount + 1):
+								if index2 != demod_index:
+									if AX25Decoder[demod_index]['CRC'][0] == AX25Decoder[index2]['CRC'][0]:
+										# print(AX25Decoder[demod_index]['CRC'][0])
+										# print(AX25Decoder[index2]['CRC'][0])
+										AX25Decoder[index2]['UniquePackets'] -= 1
+										unique = False
+						if unique == True:
+						# if ((AX25Decoder[2]['CRCAge'] > 10) and (AX25Decoder[3]['CRCAge'] > 10)) or ((AX25Decoder[1]['CRC'][0] != AX25Decoder[2]['CRC'][0]) and (AX25Decoder[1]['CRC'] != AX25Decoder[3]['CRC'])):
+							total_packets += 1
+							AX25Decoder[demod_index]['UniquePackets'] += 1
+							CRC = AX25Decoder[demod_index]['CRC'][0]
+							filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
+							print(f'{dirname+filename}')
+							# try:
+							# 	bin_file = open(dirname + filename + '.bin', '+wb')
+							# except:
+							# 	pass
+							# with bin_file:
+							# 	for byte in AX25Decoder[2]['Output']:
+							# 		bin_file.write(byte.astype('uint8'))
+							# 	bin_file.close()
 
 
 	# scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
