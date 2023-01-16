@@ -33,5 +33,6 @@ data injection points:
 +-C1334 39pF Cap
 
 Improve SSB AFSK demodulator performance in detuned situations
-- Add multiple demodulator streams
-- Investigate correlator pattern modifications to widen tone detection bandwidth
+- Add multiple demodulator streams - This worked. Two demodulators spaced 10 Hz above and below center (without a center demod) gives better performance than a single demodulator at center for both tuned and detuned scenarios
+- Investigate correlator pattern modifications to widen tone detection bandwidth-- *** Did not work. Tried sweeping the correlator frequency and it made everything worse."
+
