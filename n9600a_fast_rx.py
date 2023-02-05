@@ -548,9 +548,12 @@ elif DemodulatorType == 'dpsk':
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 	loop_count = len(DPSKDemodulator[1]['Result'])
+	PhaseAccumulator = np.zeros(loop_count)
+	
 	for index in range(loop_count):
 		DataSlicer[1]['NewSample'] = DPSKDemodulator[1]['Result'][index]
 		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
+		PhaseAccumulator[index] = DataSlicer[1]['PLLClock']
 		for data_bit in DataSlicer[1]['Result']:
 			DifferentialDecoder[1]['NewBit'] = data_bit
 			DifferentialDecoder[1] = demod.ProgDifferentialDecode(DifferentialDecoder[1])
@@ -575,6 +578,7 @@ elif DemodulatorType == 'dpsk':
 				# 	bin_file.close()
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
+	scipy.io.wavfile.write(dirname+"PhaseAccumulator.wav", FilterDecimator['OutputSampleRate'], PhaseAccumulator.astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 

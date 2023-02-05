@@ -53,10 +53,11 @@ def InitDataSlicer(data_slicer):
 	data_slicer['CrossingsInSync'] = 0
 	data_slicer['CrossingPhase'] = 0
 	data_slicer['ZeroCrossing'] = False
-	data_slicer['AvgPhaseError'] = 0
-	data_slicer['PhaseErrorHistory'] = np.zeros(45)
-	data_slicer['PhaseErrorFilter'] = np.ones(45) * 1
+	data_slicer['PhaseBufferN'] = 100
+	data_slicer['PhaseBuffer'] = np.zeros(data_slicer['PhaseBufferN'])
+	data_slicer['PhaseIndex'] = 0
 	data_slicer['SampleIndex'] = 0
+	data_slicer['PLLControl'] = 0
 	return data_slicer
 
 def InitFilterDecimator(filter_decimator):
@@ -493,7 +494,7 @@ def ProgSliceData(slicer):
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += slicer['PLLStep']
+	slicer['PLLClock'] += slicer['PLLStep'] + slicer['PLLControl']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
@@ -519,9 +520,6 @@ def ProgSliceData(slicer):
 		if slicer['DCD'] < (slicer['DCDLoad'] / 2):
 			slicer['PhaseTolerance'] = slicer['TightPhaseTolerance']
 		slicer['PhaseError'] = abs(slicer['Phase'] - slicer['CrossingPhase'])
-		slicer['PhaseErrorHistory'] = slicer['PhaseErrorHistory'][1:]
-		slicer['PhaseErrorHistory'] = np.append(slicer['PhaseErrorHistory'], np.array([slicer['PhaseError']]))
-		slicer['AvgPhaseError'] = np.convolve(slicer['PhaseErrorHistory'], slicer['PhaseErrorFilter'], 'valid')[0]
 		if slicer['PhaseError'] < slicer['PhaseTolerance']:
 			slicer['CrossingsInSync'] += 1
 			if slicer['CrossingsInSync'] > slicer['CrossingsInSyncThreshold']:
