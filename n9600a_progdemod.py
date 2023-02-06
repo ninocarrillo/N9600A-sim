@@ -58,24 +58,12 @@ def InitDataSlicer(data_slicer):
 
 def InitDataSlicer2(data_slicer):
 	data_slicer['PLLClock'] = 0
-	data_slicer['PLLStep'] = 32
-	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['Rate'] * 64)
 	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * data_slicer['PLLStep']
 	data_slicer['LastSample'] = 0
 	data_slicer['NewSample'] = 0
 	data_slicer['Result'] = 0
 	data_slicer['Midpoint'] = 0
-	data_slicer['LoosePhaseTolerance'] = 2
-	data_slicer['TightPhaseTolerance'] = 1
-	data_slicer['DCD'] = 0
-	data_slicer['DCDLoad'] = 80
-	data_slicer['Phase'] = 0
-	data_slicer['PhaseError'] = 0
-	data_slicer['PhaseTolerance'] = data_slicer['TightPhaseTolerance']
-	data_slicer['CrossingsInSyncThreshold'] = 4
-	data_slicer['CrossingsInSync'] = 0
-	data_slicer['CrossingPhase'] = 0
 	data_slicer['ZeroCrossing'] = False
 	data_slicer['PhaseBufferN'] = len(data_slicer['LoopFilter'])
 	data_slicer['PhaseBuffer'] = np.zeros(data_slicer['PhaseBufferN'])
@@ -517,7 +505,7 @@ def ProgSliceData2(slicer):
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * 0.001))
+	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * slicer['PLLFeedbackGain']))
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
@@ -544,10 +532,10 @@ def ProgSliceData2(slicer):
 
 		slicer['PhaseError'] = slicer['PLLClock']
 
-		slicer['PLLControl'] = -slicer['PhaseError']
-		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
-		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
-		#slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
+		#slicer['PLLControl'] = -slicer['PhaseError']
+		slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+		slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
 	#else:
 		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
 		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))

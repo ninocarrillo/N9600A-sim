@@ -632,9 +632,14 @@ elif DemodulatorType == 'dpsk2':
 				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer bit rate\' is missing or invalid')
 				sys.exit(-2)
 			try:
-				DataSlicer[DemodulatorNumber]['Rate'] = float(config['Data Slicer 1']['slicer lock rate'])
+				DataSlicer[DemodulatorNumber]['PLLStep'] = int(config['Data Slicer 1']['pll clock step'])
 			except:
-				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
+				print(f'{sys.argv[1]} [Data Slicer 1] \'pll clock step\' is missing or invalid')
+				sys.exit(-2)
+			try:
+				DataSlicer[DemodulatorNumber]['PLLFeedbackGain'] = float(config['Data Slicer 1']['pll feedback gain'])
+			except:
+				print(f'{sys.argv[1]} [Data Slicer 1] \'pll feedback gain\' is missing or invalid')
 				sys.exit(-2)
 
 			try:
@@ -705,7 +710,7 @@ elif DemodulatorType == 'dpsk2':
 
 	for index in range(loop_count):
 		DataSlicer[1]['NewSample'] = DPSKDemodulator[1]['Result'][index]
-		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
+		DataSlicer[1] = demod.ProgSliceData2(DataSlicer[1])
 		#print(f'{DataSlicer[1]["PLLControl"]}')
 		PhaseAccumulator[index] = DataSlicer[1]['PLLClock']
 		PLLControl[index] = DataSlicer[1]['PLLControl']
