@@ -494,7 +494,7 @@ def ProgSliceData(slicer):
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * 0.001))
+	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * 0.0005))
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
