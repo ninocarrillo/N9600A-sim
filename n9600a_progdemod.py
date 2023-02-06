@@ -559,11 +559,11 @@ def ProgSliceData2(slicer):
 def ProgSliceData(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
 	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
-	slicer['SampleIndex'] += 1
+
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += slicer['PLLStep'] + slicer['PLLControl']
+	slicer['PLLClock'] += slicer['PLLStep']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
