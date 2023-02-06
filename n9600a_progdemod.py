@@ -507,7 +507,9 @@ def ProgSliceData(slicer):
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
 			slicer['ZeroCrossing'] = True
-			slicer['PLLClock'] *= slicer['Rate']
+			#slicer['PLLClock'] *= slicer['Rate']
+			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			slicer['PLLClock'] //= 64
 	else:
 		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
