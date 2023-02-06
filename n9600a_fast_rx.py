@@ -645,19 +645,16 @@ elif DemodulatorType == 'dpsk2':
 
 			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			DPSKDemodulator[DemodulatorNumber] = demod.InitDPSKDemod(DPSKDemodulator[DemodulatorNumber])
-			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
+			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer2(DataSlicer[DemodulatorNumber])
 
 	DifferentialDecoderA = [{}]
-	DifferentialDecoderB = [{}]
-
 	AX25Decoder = [{}]
+	
 	for index in range(1,DemodulatorCount+1):
 		print(f'Initializing DifferentialDecoder {index} and AX25Decoder {index}')
 		DifferentialDecoderA.append({})
-		DifferentialDecoderB.append({})
-		AX25Decoder.append({})
 		DifferentialDecoderA[index] = demod.InitDifferentialDecoder()
-		DifferentialDecoderB[index] = demod.InitDifferentialDecoder()
+		AX25Decoder.append({})
 		AX25Decoder[index] = demod.InitAX25Decoder()
 
 	try:
@@ -715,8 +712,6 @@ elif DemodulatorType == 'dpsk2':
 		for data_bit in DataSlicer[1]['Result']:
 			DifferentialDecoderA[1]['NewBit'] = data_bit
 			DifferentialDecoderA[1] = demod.ProgDifferentialDecode(DifferentialDecoderA[1])
-			DifferentialDecoderB[1]['NewBit'] = DifferentialDecoderA[1]['Result']
-			DifferentialDecoderB[1] = demod.ProgDifferentialDecode(DifferentialDecoderB[1])
 			AX25Decoder[1]['NewBit'] = DifferentialDecoderA[1]['Result']
 			# if losing_index != 1:
 			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
