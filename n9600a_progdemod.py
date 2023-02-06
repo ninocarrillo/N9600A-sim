@@ -34,7 +34,7 @@ def InitDescrambler():
 
 def InitDataSlicer(data_slicer):
 	data_slicer['PLLClock'] = 0
-	data_slicer['PLLStep'] = 32
+	data_slicer['PLLStep'] = 1024
 	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['Rate'] * 64)
 	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * data_slicer['PLLStep']
@@ -47,15 +47,15 @@ def InitDataSlicer(data_slicer):
 	data_slicer['DCD'] = 0
 	data_slicer['DCDLoad'] = 80
 	data_slicer['Phase'] = 0
+	data_slicer['AbsPhaseError'] = 0
 	data_slicer['PhaseError'] = 0
 	data_slicer['PhaseTolerance'] = data_slicer['TightPhaseTolerance']
 	data_slicer['CrossingsInSyncThreshold'] = 4
 	data_slicer['CrossingsInSync'] = 0
 	data_slicer['CrossingPhase'] = 0
 	data_slicer['ZeroCrossing'] = False
-	data_slicer['PhaseBufferN'] = 100
+	data_slicer['PhaseBufferN'] = len(data_slicer['LoopFilter'])
 	data_slicer['PhaseBuffer'] = np.zeros(data_slicer['PhaseBufferN'])
-	data_slicer['PhaseIndex'] = 0
 	data_slicer['SampleIndex'] = 0
 	data_slicer['PLLControl'] = 0
 	return data_slicer
@@ -494,7 +494,7 @@ def ProgSliceData(slicer):
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += slicer['PLLStep'] + slicer['PLLControl']
+	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * 0.0032))
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
@@ -507,32 +507,30 @@ def ProgSliceData(slicer):
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
 			slicer['ZeroCrossing'] = True
-			slicer['PLLClock'] *= slicer['Rate']
+			#slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			#slicer['PLLClock'] //= 64
 	else:
 		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
 			slicer['ZeroCrossing'] = True
-			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
-			slicer['PLLClock'] //= 64
+			#slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			#slicer['PLLClock'] //= 64
 
 	if slicer['ZeroCrossing'] == True:
 		slicer['ZeroCrossing'] = False
-		if slicer['DCD'] < (slicer['DCDLoad'] / 2):
-			slicer['PhaseTolerance'] = slicer['TightPhaseTolerance']
-		slicer['PhaseError'] = abs(slicer['Phase'] - slicer['CrossingPhase'])
-		if slicer['PhaseError'] < slicer['PhaseTolerance']:
-			slicer['CrossingsInSync'] += 1
-			if slicer['CrossingsInSync'] > slicer['CrossingsInSyncThreshold']:
-				slicer['DCD'] = slicer['DCDLoad']
-				slicer['PhaseTolerance'] = slicer['LoosePhaseTolerance']
-		else:
-			slicer['CrossingsInSync'] //= 2
-		slicer['CrossingPhase'] = slicer['Phase']
+
+		slicer['PhaseError'] = slicer['PLLClock']
+		
+		slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+		slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
+	#else:
+		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+
 
 	slicer['LastSample'] = slicer['NewSample']
-	slicer['Phase'] += 1
-	if slicer['Phase'] >= slicer['Oversample']:
-		slicer['Phase'] = 0
+
 	return slicer
 
 def DemodulateAFSKSSB(demodulator):

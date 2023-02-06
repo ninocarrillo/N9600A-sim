@@ -491,18 +491,28 @@ elif DemodulatorType == 'dpsk':
 			except:
 				print(f'{sys.argv[1]} [Data Slicer 1] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
+			
+			try:
+				DataSlicer[DemodulatorNumber]['LoopFilter'] = StringToIntArray(config['Data Slicer 1']['loop filter taps'])
+			except:
+				print(f'{sys.argv[1]} [Data Slicer 1] \'loop filter taps\' is missing or invalid')
+				sys.exit(-2)
 
 			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			DPSKDemodulator[DemodulatorNumber] = demod.InitDPSKDemod(DPSKDemodulator[DemodulatorNumber])
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
-	DifferentialDecoder = [{}]
+	DifferentialDecoderA = [{}]
+	DifferentialDecoderB = [{}]
+	
 	AX25Decoder = [{}]
 	for index in range(1,DemodulatorCount+1):
 		print(f'Initializing DifferentialDecoder {index} and AX25Decoder {index}')
-		DifferentialDecoder.append({})
+		DifferentialDecoderA.append({})
+		DifferentialDecoderB.append({})
 		AX25Decoder.append({})
-		DifferentialDecoder[index] = demod.InitDifferentialDecoder()
+		DifferentialDecoderA[index] = demod.InitDifferentialDecoder()
+		DifferentialDecoderB[index] = demod.InitDifferentialDecoder()
 		AX25Decoder[index] = demod.InitAX25Decoder()
 
 	try:
@@ -549,15 +559,20 @@ elif DemodulatorType == 'dpsk':
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 	loop_count = len(DPSKDemodulator[1]['Result'])
 	PhaseAccumulator = np.zeros(loop_count)
+	PLLControl = np.zeros(loop_count)
 	
 	for index in range(loop_count):
 		DataSlicer[1]['NewSample'] = DPSKDemodulator[1]['Result'][index]
 		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
+		#print(f'{DataSlicer[1]["PLLControl"]}')
 		PhaseAccumulator[index] = DataSlicer[1]['PLLClock']
+		PLLControl[index] = DataSlicer[1]['PLLControl']
 		for data_bit in DataSlicer[1]['Result']:
-			DifferentialDecoder[1]['NewBit'] = data_bit
-			DifferentialDecoder[1] = demod.ProgDifferentialDecode(DifferentialDecoder[1])
-			AX25Decoder[1]['NewBit'] = DifferentialDecoder[1]['Result']
+			DifferentialDecoderA[1]['NewBit'] = data_bit
+			DifferentialDecoderA[1] = demod.ProgDifferentialDecode(DifferentialDecoderA[1])
+			DifferentialDecoderB[1]['NewBit'] = DifferentialDecoderA[1]['Result']
+			DifferentialDecoderB[1] = demod.ProgDifferentialDecode(DifferentialDecoderB[1])
+			AX25Decoder[1]['NewBit'] = DifferentialDecoderA[1]['Result']
 			# if losing_index != 1:
 			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
 			if AX25Decoder[1]['OutputTrigger'] == True:
@@ -579,6 +594,7 @@ elif DemodulatorType == 'dpsk':
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"PhaseAccumulator.wav", FilterDecimator['OutputSampleRate'], PhaseAccumulator.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"PLLControl.wav", FilterDecimator['OutputSampleRate'], PLLControl.astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
