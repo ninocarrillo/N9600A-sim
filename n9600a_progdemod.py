@@ -544,9 +544,10 @@ def ProgSliceData2(slicer):
 
 		slicer['PhaseError'] = slicer['PLLClock']
 
-		slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
-		slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
-		slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
+		slicer['PLLControl'] = -slicer['PhaseError']
+		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+		#slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
 	#else:
 		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
 		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
