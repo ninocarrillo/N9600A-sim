@@ -11,17 +11,6 @@ def InitAX25Decoder():
 def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
-	
-def InitNCO(this):
-	this.NormalizationFactor = np.rint(this.DesignSampleRate / this.WavetableSize)
-	this.InPhase = 0
-	this.QuadraturePhase = this.InPhase + np.rint(this.DesignSampleRate / 4)
-	this.Control = 0
-	this.Amplitude = pow(2,this.WavetableResolutionBits - 1) - 1
-	this.WaveTable = np.zeros(this.WaveTableSize)
-	for i in range(this.WavetableSize):
-		this.WaveTable[i] = np.rint(this.Amplitude * sin(i * 2 * np.pi / this.WavetableSize))
-	return this
 
 def InitDescrambler():
 	descrambler = {}
