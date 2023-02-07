@@ -64,6 +64,7 @@ def InitDataSlicer(data_slicer):
 	data_slicer['CrossingsInSync'] = 0
 	data_slicer['CrossingPhase'] = 0
 	data_slicer['ZeroCrossing'] = False
+	data_slicer['SampleIndex'] = 0
 
 	return data_slicer
 
@@ -559,7 +560,7 @@ def ProgSliceData2(slicer):
 def ProgSliceData(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
 	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
-
+	slicer['SampleIndex'] += 1
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
