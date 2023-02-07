@@ -56,7 +56,7 @@ def GetNCOConfig(config, num):
 	return this
 
 def InitNCO(this):
-	this['NormalizationFactor'] = int(np.rint(this['design sample rate'] / this['wavetable size']))
+	this['NormalizationFactor'] = int(np.ceil(this['design sample rate'] / this['wavetable size']))
 	this['InPhase'] = 0
 	this['QuadraturePhaseOffset'] = int(np.rint(this['design sample rate'] / 4))
 	this['Control'] = 0
