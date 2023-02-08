@@ -140,7 +140,7 @@ def FullProcess(state):
 		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
 		if AX25Decoder[1]['OutputTrigger'] == True:
 			AX25Decoder[1]['OutputTrigger'] = False
-			# Check for unioqueness
+			# Check for uniqueness
 			total_packets += 1
 			CRC = AX25Decoder[1]['CRC'][0]
 			decodernum = '1'
