@@ -140,7 +140,7 @@ def DemodulateDPSK3(this):
 			this['ThirdMixer'][index] = np.rint(this['OutputFilter']['Output'] * this['LoopFilter']['Output'] / 4096)
 			
 			# scale the NCO control signal
-			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 2)
+			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 4)
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
 			
