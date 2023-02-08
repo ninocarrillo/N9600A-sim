@@ -58,9 +58,12 @@ def InitNCO(this):
 	this['NormalizationFactor'] = int(np.ceil(this['design sample rate'] / this['wavetable size']))
 	this['InPhase'] = 0
 	this['QuadraturePhaseOffset'] = int(np.rint(this['design sample rate'] / 4))
+	this['QuadraturePhase'] = this['QuadraturePhaseOffset']
 	this['Control'] = 0
 	this['Amplitude'] = pow(2,this['amplitude bits'] - 1) - 1
 	this['WaveTable'] = np.zeros(this['wavetable size'])
+	this['InPhaseRollover'] = False
+	this['QuadraturePhaseRollover'] = False
 	for i in range(this['wavetable size']):
 		this['WaveTable'][i] = np.rint(this['Amplitude'] * np.sin(i * 2 * np.pi / this['wavetable size']))
 	return this
@@ -72,26 +75,40 @@ def UpdateNCO(this):
 		this['Dither'] = 0
 
 	this['InPhase'] += this['set frequency'] + this['Control']
-	while this['InPhase'] < 0:
-		this['InPhase'] += this['design sample rate']
-	while this['InPhase'] >= this['design sample rate']:
+	if this['InPhase'] >= this['design sample rate']:
 		this['InPhase'] -= this['design sample rate']
+		this['InPhaseRollover'] = True
+	else:
+		this['InPhaseRollover'] = False
+	
+	this['QuadraturePhase'] += this['set frequency'] + this['Control']
+	if this['QuadraturePhase'] >= this['design sample rate']:
+		this['QuadraturePhase'] -= this['design sample rate']
+		this['QuadraturePhaseRollover'] = True
+	else:
+		this['QuadraturePhaseRollover'] = False
 
+	# now add dither and enter the lookup table
 	inphase = this['InPhase'] + this['Dither']
 	quadraturephase = inphase + this['QuadraturePhaseOffset']
 
+	# scale by the normalization factor
+	inphase = int(inphase // this['NormalizationFactor'])
+	quadraturephase = int(quadraturephase // this['NormalizationFactor'])
+	
+	# bound to the wavetable
 	while inphase < 0:
-		inphase += this['design sample rate']
-	while inphase >= this['design sample rate']:
-		inphase -= this['design sample rate']
+		inphase += this['wavetable size']
+	while inphase >= this['wavetable size']:
+		inphase -= this['wavetable size']
 
 	while quadraturephase < 0:
-		quadraturephase += this['design	sample rate']
-	while quadraturephase >= this['design sample rate']:
-		quadraturephase -= this['design sample rate']
+		quadraturephase += this['wavetable size']
+	while quadraturephase >= this['wavetable size']:
+		quadraturephase -= this['wavetable size']
 
-	this['Sine'] = this['WaveTable'][int(inphase // this['NormalizationFactor'])]
-	this['Cosine'] = this['WaveTable'][int(quadraturephase // this['NormalizationFactor'])]
+	this['Sine'] = this['WaveTable'][inphase]
+	this['Cosine'] = this['WaveTable'][quadraturephase]
 	return this
 
 def Test(state):
