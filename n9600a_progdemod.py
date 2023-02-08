@@ -267,7 +267,7 @@ def DemodulateDPSK2(demodulator):
 
 	return demodulator
 
-def DemodulateDPSK3(demodulator):
+def DemodulateDPSK2(demodulator):
 	if demodulator['Enabled'] == True:
 
 		index = 0

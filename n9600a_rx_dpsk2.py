@@ -42,7 +42,7 @@ def GetDPSKDemodulatorConfig(config, num):
 def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
-	
+
 	print(f'Started DPSK2 process')
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
@@ -86,7 +86,7 @@ def FullProcess(state):
 
 	DifferentialDecoderA = [{}]
 	AX25Decoder = [{}]
-	
+
 	for index in range(1,DemodulatorCount+1):
 		print(f'Initializing DifferentialDecoder {index} and AX25Decoder {index}')
 		DifferentialDecoderA.append({})
@@ -132,7 +132,7 @@ def FullProcess(state):
 
 	print(f'\nDemodulating audio. ')
 	DPSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
-	DPSKDemodulator[1] = demod.DemodulateDPSK3(DPSKDemodulator[1])
+	DPSKDemodulator[1] = demod.DemodulateDPSK2(DPSKDemodulator[1])
 	print(f'Done.')
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
