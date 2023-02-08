@@ -97,19 +97,35 @@ def InitDPSK3(this):
 def DemodulateDPSK3(this):
 	this['Result'] = []
 	this['FirstMixer'] = np.zeros(len(this['InputBuffer']))
+	this['SecondMixer'] = np.zeros(len(this['InputBuffer']))
+	this['ThirdMixer'] = np.zeros(len(this['InputBuffer']))
 	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
+	this['DataFilterOutput'] = np.zeros(len(this['InputBuffer']))
 	index = 0
 	if this['enabled'] == True:
 		for sample in this['InputBuffer']:
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
+			
 			# mix sample stream with NCO negative sin output to create carrier error
 			this['FirstMixer'][index] = np.rint(sample * (-this['NCO']['Sine']) / 65536)
+			
 			# LPF carrier error
 			this['LoopFilter'] = fir.UpdateFIR(this['LoopFilter'], this['FirstMixer'][index])
 			this['LoopFilterOutput'][index] = this['LoopFilter']['Output']
-			# mix data output with carrier error to create NCO control signal
+			
 			# mix sample stream with NCO cosine to create data output
+			this['SecondMixer'][index] = np.rint(sample * this['NCO']['Cosine'] / 65536)
+			
 			# LPF data output
+			this['OutputFilter'] = fir.UpdateFIR(this['OutputFilter'], this['SecondMixer'][index])
+			this['DataFilterOutput'][index] = this['OutputFilter']['Output']
+			
+			# mix data output with carrier error to create NCO control signal
+			this['ThirdMixer'][index] = np.rint(this['OutputFilter']['Output'] * this['LoopFilter']['Output'] / 4096)
+			
+			# scale the NCO control signal
+			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 2)
+
 			# Downsample and threshold data output and save as Result
 			this['Result'] =  np.append(this['Result'],np.array([1]))
 			index += 1
@@ -213,8 +229,8 @@ def FullProcess(state):
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],DPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
-	#scipy.io.wavfile.write(dirname+"PLLControl.wav", FilterDecimator['OutputSampleRate'], PLLControl.astype(np.int16))
-	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"DataFilter.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['DataFilterOutput'].astype(np.int16))
+	scipy.io.wavfile.write(dirname+"ThirdMixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['ThirdMixer'].astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
 
