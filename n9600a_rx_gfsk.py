@@ -21,7 +21,7 @@ def GetGFSKDemodulatorConfig(config, num):
 def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
-	
+
 	print(f'Started AFSK process')
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
@@ -63,6 +63,7 @@ def FullProcess(state):
 		Descrambler.append({})
 		DifferentialDecoder[index] = demod.InitDifferentialDecoder()
 		AX25Decoder[index] = demod.InitAX25Decoder()
+		Descrambler[index]['Polynomial'] = int('0x63003',16) # G3RUH poly * differential decoding
 		Descrambler[index] = demod.InitDescrambler()
 
 	try:

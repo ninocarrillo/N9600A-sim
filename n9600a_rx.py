@@ -1,6 +1,7 @@
 import sys
 import configparser
 import struct
+import n9600a_dpsk3 as dpsk3
 import n9600a_rx_afsk as afsk
 import n9600a_rx_dpsk2 as dpsk2
 import n9600a_rx_dpsk as dpsk
@@ -43,6 +44,9 @@ elif DemodulatorType == 'dpsk2':
 
 elif DemodulatorType == 'gfsk':
 	gfsk.FullProcess(state)
-	
+
 elif DemodulatorType == 'ncotest':
 	nco.Test(state)
+
+elif DemodulatorType == 'dpsk3':
+	dpsk3.FullProcess(state)

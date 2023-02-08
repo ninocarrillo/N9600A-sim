@@ -8,10 +8,10 @@ import n9600a_progdemod as demod
 import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
+import n9600a_nco as nco
 
-def GetNCOConfig(config, num):
+def GetNCOConfig(config, num, id_string):
 	this = {}
-	id_string = "NCO "
 	key_string = "enabled"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
@@ -117,7 +117,7 @@ def Test(state):
 
 	NCO.append({})
 	NCO.append({})
-	NCO[1] = GetNCOConfig(config, 1)
+	NCO[1] = GetNCOConfig(config, 1, "NCO ")
 	NCO[1] = InitNCO(NCO[1])
 	print(NCO[1])
 

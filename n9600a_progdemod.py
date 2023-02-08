@@ -12,9 +12,8 @@ def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
 
-def InitDescrambler():
-	descrambler = {}
-	descrambler['Polynomial'] = int('0x63003',16)
+def InitDescrambler(descrambler):
+	#descrambler['Polynomial'] = int('0x63003',16)
 	descrambler['Tap'] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	descrambler['Invert'] = True
 	descrambler['TapCount'] = 0
