@@ -142,12 +142,9 @@ def DemodulateDPSK3(this):
 			# scale the NCO control signal
 			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 2)
 
-
-			
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
 			
 			index += 1
-	print(this)
 	return this
 
 
@@ -197,7 +194,7 @@ def FullProcess(state):
 		AX25Decoder[index] = demod.InitAX25Decoder()
 		Descrambler[index]['Polynomial'] = int('0x5',16) # double differential decoding
 		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
-		print(Descrambler[index])
+
 	try:
 		samplerate, audio = scipy.io.wavfile.read(argv[2])
 		# Take two bits of resolution away
