@@ -64,7 +64,7 @@ def FullProcess(state):
 		DifferentialDecoder[index] = demod.InitDifferentialDecoder()
 		AX25Decoder[index] = demod.InitAX25Decoder()
 		Descrambler[index]['Polynomial'] = int('0x63003',16) # G3RUH poly * differential decoding
-		Descrambler[index] = demod.InitDescrambler()
+		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(sys.argv[2])

@@ -57,6 +57,9 @@ def GetDPSK3Config(config, num, id_string):
 def InitDPSK3(this):
 	return this
 
+def DemodulateDPSK3(this):
+	return this
+
 
 def FullProcess(state):
 	argv = state['argv']
@@ -114,5 +117,17 @@ def FullProcess(state):
 		sys.exit(-2)
 
 	print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
+
+	print(f'\nFiltering and decimating audio. ')
+	FilterDecimator['FilterBuffer'] = audio
+	FilterDecimator = demod.FilterDecimate(FilterDecimator)
+	print(f'Done.')
+
+	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
+
+	print(f'\nDemodulating audio. ')
+	DPSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
+	DPSKDemodulator[1] = DemodulateDPSK3(DPSKDemodulator[1])
+	print(f'Done.')
 
 	return
