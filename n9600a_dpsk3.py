@@ -130,4 +130,36 @@ def FullProcess(state):
 	DPSKDemodulator[1] = DemodulateDPSK3(DPSKDemodulator[1])
 	print(f'Done.')
 
+	print(f'\nDifferential decoding and AX25 decoding data. ')
+
+	for data_bit in DPSKDemodulator[1]['Result']:
+		Descrambler[1]['NewBit'] = data_bit
+		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
+		AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
+		# if losing_index != 1:
+		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
+		if AX25Decoder[1]['OutputTrigger'] == True:
+			AX25Decoder[1]['OutputTrigger'] = False
+			# Check for unioqueness
+			total_packets += 1
+			CRC = AX25Decoder[1]['CRC'][0]
+			decodernum = '1'
+			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
+			print(f'{dirname+filename}')
+			# try:
+			# 	bin_file = open(dirname + filename + '.bin', '+wb')
+			# except:
+			# 	pass
+			# with bin_file:
+			# 	for byte in AX25Decoder[2]['Output']:
+			# 		bin_file.write(byte.astype('uint8'))
+			# 	bin_file.close()
+
+	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
+	#scipy.io.wavfile.write(dirname+"PhaseAccumulator.wav", FilterDecimator['OutputSampleRate'], PhaseAccumulator.astype(np.int16))
+	#scipy.io.wavfile.write(dirname+"PLLControl.wav", FilterDecimator['OutputSampleRate'], PLLControl.astype(np.int16))
+	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
+	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
+
+
 	return
