@@ -58,6 +58,8 @@ def InitDPSK3(this):
 	return this
 
 def DemodulateDPSK3(this):
+	if this['enabled'] == True:
+		
 	return this
 
 
