@@ -95,16 +95,16 @@ def InitDPSK3(this):
 	return this
 
 def DemodulateDPSK3(this):
-	this['Result'] = []
 	this['FirstMixer'] = np.zeros(len(this['InputBuffer']))
 	this['SecondMixer'] = np.zeros(len(this['InputBuffer']))
 	this['ThirdMixer'] = np.zeros(len(this['InputBuffer']))
 	this['PhaseAccumulator'] = np.zeros(len(this['InputBuffer']))
 	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
 	this['DataFilterOutput'] = np.zeros(len(this['InputBuffer']))
-	
 	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
+	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['set frequency'] / this['NCO']['design sample rate']))
 	index = 0
+	databit_index = 0
 	if this['enabled'] == True:
 		for sample in this['InputBuffer']:
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
@@ -113,11 +113,12 @@ def DemodulateDPSK3(this):
 			if this['NCO']['QuadraturePhaseRollover'] == True:
 				this['NCO']['QuadraturePhaseRollover'] = False
 				if this['OutputFilter']['Output'] > 0:
-					this['Result'] =  np.append(this['Result'],np.array([1]))
+					this['Result'][databit_index] =  1
 					this['SamplePulse'][index] = 1000
 				else:
-					this['Result'] =  np.append(this['Result'],np.array([0]))
+					this['Result'][databit_index] = 0
 					this['SamplePulse'][index] = -1000
+				databit_index += 1
 			else:
 				this['SamplePulse'][index] = 0
 			
@@ -194,9 +195,9 @@ def FullProcess(state):
 		AX25Decoder.append({})
 		Descrambler.append({})
 		AX25Decoder[index] = demod.InitAX25Decoder()
-		Descrambler[index]['Polynomial'] = int('b101',16) # double differential decoding
+		Descrambler[index]['Polynomial'] = int('0x5',16) # double differential decoding
 		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
-
+		print(Descrambler[index])
 	try:
 		samplerate, audio = scipy.io.wavfile.read(argv[2])
 		# Take two bits of resolution away
@@ -220,6 +221,8 @@ def FullProcess(state):
 	print(f'Done.')
 
 	print(f'\nDifferential decoding and AX25 decoding data. ')
+
+	total_packets = 0
 
 	for data_bit in DPSKDemodulator[1]['Result']:
 		Descrambler[1]['NewBit'] = data_bit
