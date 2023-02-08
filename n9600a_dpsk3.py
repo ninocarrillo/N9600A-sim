@@ -8,9 +8,11 @@ import n9600a_progdemod as demod
 import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
+import n9600a_nco as nco
 
 def GetDPSK3Config(config, num, id_string):
 	this = {}
+	this['NCO'] = {}
 	key_string = "enabled"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
@@ -20,46 +22,56 @@ def GetDPSK3Config(config, num, id_string):
 
 	key_string = "design sample rate"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
 	key_string = "wavetable size"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
 	key_string = "set frequency"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
 	key_string = "amplitude bits"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
 	key_string = "phase dither bits"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 	return this
 
 def InitDPSK3(this):
+	this['NCO'] = nco.InitNCO(this['NCO'])
 	return this
 
 def DemodulateDPSK3(this):
+	this['Result'] = []
 	if this['enabled'] == True:
-		
+		for sample in this['InputBuffer']:
+			# mix sample stream with NCO negative sin output to create carrier error
+			# LPF carrier error
+			# mix data output with carrier error to create NCO control signal
+			# mix sample stream with NCO cosine to create data output
+			# LPF data output
+			# Downsample and threshold data output and save as Result
+			this['Result'] =  np.append(this['Result'],np.array([1]))
+	print(this)
 	return this
 
 

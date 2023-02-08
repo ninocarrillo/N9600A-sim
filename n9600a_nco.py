@@ -8,7 +8,6 @@ import n9600a_progdemod as demod
 import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
-import n9600a_nco as nco
 
 def GetNCOConfig(config, num, id_string):
 	this = {}
