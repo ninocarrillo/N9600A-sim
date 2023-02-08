@@ -9,10 +9,13 @@ import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_nco as nco
+import n9600a_fir as fir
 
 def GetDPSK3Config(config, num, id_string):
 	this = {}
 	this['NCO'] = {}
+	this['LoopFilter'] = {}
+	this['OutputFilter'] = {}
 	key_string = "enabled"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
@@ -54,23 +57,62 @@ def GetDPSK3Config(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+		
+	key_string = "loop filter shift"
+	try:
+		this['LoopFilter']['OutputShift'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "output filter shift"
+	try:
+		this['OutputFilter']['OutputShift'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+	
+	key_string = "loop filter taps"
+	try:
+		this['LoopFilter']['Taps'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "output filter taps"
+	try:
+		this['OutputFilter']['Taps'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitDPSK3(this):
 	this['NCO'] = nco.InitNCO(this['NCO'])
+	this['LoopFilter'] = fir.InitFIR(this['LoopFilter'])
+	this['OutputFilter'] = fir.InitFIR(this['OutputFilter'])
 	return this
 
 def DemodulateDPSK3(this):
 	this['Result'] = []
+	this['FirstMixer'] = np.zeros(len(this['InputBuffer']))
+	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
+	index = 0
 	if this['enabled'] == True:
 		for sample in this['InputBuffer']:
+			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			# mix sample stream with NCO negative sin output to create carrier error
+			this['FirstMixer'][index] = np.rint(sample * (-this['NCO']['Sine']) / 65536)
 			# LPF carrier error
+			this['LoopFilter'] = fir.UpdateFIR(this['LoopFilter'], this['FirstMixer'][index])
+			this['LoopFilterOutput'][index] = this['LoopFilter']['Output']
 			# mix data output with carrier error to create NCO control signal
 			# mix sample stream with NCO cosine to create data output
 			# LPF data output
 			# Downsample and threshold data output and save as Result
 			this['Result'] =  np.append(this['Result'],np.array([1]))
+			index += 1
 	print(this)
 	return this
 
@@ -170,7 +212,7 @@ def FullProcess(state):
 			# 	bin_file.close()
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
-	#scipy.io.wavfile.write(dirname+"PhaseAccumulator.wav", FilterDecimator['OutputSampleRate'], PhaseAccumulator.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],DPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"PLLControl.wav", FilterDecimator['OutputSampleRate'], PLLControl.astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
