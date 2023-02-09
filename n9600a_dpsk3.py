@@ -139,10 +139,10 @@ def DemodulateDPSK3(this):
 			this['DataFilterOutput'][index] = this['OutputFilter']['Output']
 
 			# mix data output with carrier error to create NCO control signal
-			this['ThirdMixer'][index] = np.rint(this['OutputFilter']['Output'] * this['LoopFilter']['Output'] / 4096)
+			this['ThirdMixer'][index] = np.rint(this['OutputFilter']['Output'] * this['LoopFilter']['Output']) / 4096
 
 			# scale the NCO control signal
-			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 4)
+			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index])
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
 
@@ -257,8 +257,11 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"FirstMixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['FirstMixer'].astype(np.int16))
 
 	x = np.arange(len(DPSKDemodulator[1]['DataFilterOutput']))
-	fig,ax = plt.subplots()
-	ax.plot(DPSKDemodulator[1]['DataFilterOutput'])
-	ax.plot(DPSKDemodulator[1]['SamplePulse'])
+	fig1,ax1 = plt.subplots()
+	ax1.plot(DPSKDemodulator[1]['DataFilterOutput'])
+	ax1.plot(DPSKDemodulator[1]['SamplePulse'])
+	plt.show()
+	fig2,ax2 = plt.subplots()
+	ax2.plot(DPSKDemodulator[1]['ThirdMixer'])
 	plt.show()
 	return

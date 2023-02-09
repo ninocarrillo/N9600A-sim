@@ -69,6 +69,12 @@ def InitNCO(this):
 	return this
 
 def UpdateNCO(this):
+	control = this['Control']
+	# if control > this['set frequency'] / 4:
+	# 	control = this['set frequency'] / 4
+	# if control < -this['set frequency'] / 4:
+	# 	control = -this['set frequency'] / 4
+
 	if this['phase dither bits'] > 0:
 		this['Dither'] = np.floor(np.random.rand() * pow(2,this['phase dither bits'])) - pow(2,this['phase dither bits'] - 1)
 	else:
@@ -80,7 +86,7 @@ def UpdateNCO(this):
 		this['InPhaseRollover'] = True
 	else:
 		this['InPhaseRollover'] = False
-	
+
 	this['QuadraturePhase'] += this['set frequency'] + this['Control']
 	if this['QuadraturePhase'] >= this['design sample rate']:
 		this['QuadraturePhase'] -= this['design sample rate']
@@ -95,7 +101,7 @@ def UpdateNCO(this):
 	# scale by the normalization factor
 	inphase = int(inphase // this['NormalizationFactor'])
 	quadraturephase = int(quadraturephase // this['NormalizationFactor'])
-	
+
 	# bound to the wavetable
 	while inphase < 0:
 		inphase += this['wavetable size']
