@@ -10,6 +10,8 @@ import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_nco as nco
 import n9600a_fir as fir
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 def GetDPSK3Config(config, num, id_string):
 	this = {}
@@ -57,7 +59,7 @@ def GetDPSK3Config(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "loop filter shift"
 	try:
 		this['LoopFilter']['OutputShift'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -71,14 +73,14 @@ def GetDPSK3Config(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-	
+
 	key_string = "loop filter taps"
 	try:
 		this['LoopFilter']['Taps'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "output filter taps"
 	try:
 		this['OutputFilter']['Taps'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
@@ -108,7 +110,7 @@ def DemodulateDPSK3(this):
 	if this['enabled'] == True:
 		for sample in this['InputBuffer']:
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
-			
+
 			# Downsample and threshold data output and save as Result
 			if this['NCO']['QuadraturePhaseRollover'] == True:
 				this['NCO']['QuadraturePhaseRollover'] = False
@@ -121,29 +123,29 @@ def DemodulateDPSK3(this):
 				databit_index += 1
 			else:
 				this['SamplePulse'][index] = 0
-			
+
 			# mix sample stream with NCO negative sin output to create carrier error
 			this['FirstMixer'][index] = np.rint(sample * (-this['NCO']['Sine']) / 65536)
-			
+
 			# LPF carrier error
 			this['LoopFilter'] = fir.UpdateFIR(this['LoopFilter'], this['FirstMixer'][index])
 			this['LoopFilterOutput'][index] = this['LoopFilter']['Output']
-			
+
 			# mix sample stream with NCO cosine to create data output
 			this['SecondMixer'][index] = np.rint(sample * this['NCO']['Cosine'] / 65536)
-			
+
 			# LPF data output
 			this['OutputFilter'] = fir.UpdateFIR(this['OutputFilter'], this['SecondMixer'][index])
 			this['DataFilterOutput'][index] = this['OutputFilter']['Output']
-			
+
 			# mix data output with carrier error to create NCO control signal
 			this['ThirdMixer'][index] = np.rint(this['OutputFilter']['Output'] * this['LoopFilter']['Output'] / 4096)
-			
+
 			# scale the NCO control signal
 			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index] / 4)
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
-			
+
 			index += 1
 	return this
 
@@ -248,11 +250,15 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"DataFilter.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['DataFilterOutput'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"ThirdMixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['ThirdMixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"PhaseAccumulator.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['PhaseAccumulator'].astype(np.int16))
-	
+
 	scipy.io.wavfile.write(dirname+"SamplePulse.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['SamplePulse'].astype(np.int16))
 
 	scipy.io.wavfile.write(dirname+"SecondMixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['SecondMixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"FirstMixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['FirstMixer'].astype(np.int16))
 
-
+	x = np.arange(len(DPSKDemodulator[1]['DataFilterOutput']))
+	fig,ax = plt.subplots()
+	ax.plot(DPSKDemodulator[1]['DataFilterOutput'])
+	ax.plot(DPSKDemodulator[1]['SamplePulse'])
+	plt.show()
 	return
