@@ -111,18 +111,6 @@ def DemodulateDPSK3(this):
 		for sample in this['InputBuffer']:
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 
-			# Downsample and threshold data output and save as Result
-			if this['NCO']['QuadraturePhaseRollover'] == True:
-				this['NCO']['QuadraturePhaseRollover'] = False
-				if this['OutputFilter']['Output'] > 0:
-					this['Result'][databit_index] =  1
-					this['SamplePulse'][index] = 1000
-				else:
-					this['Result'][databit_index] = 0
-					this['SamplePulse'][index] = -1000
-				databit_index += 1
-			else:
-				this['SamplePulse'][index] = 0
 
 			# mix sample stream with NCO negative sin output to create carrier error
 			this['FirstMixer'][index] = np.rint(sample * (-this['NCO']['Sine']) / 65536)
@@ -144,7 +132,24 @@ def DemodulateDPSK3(this):
 			# scale the NCO control signal
 			this['NCO']['Control'] = np.rint(this['ThirdMixer'][index])
 
+
+			# Downsample and threshold data output and save as Result
+			if this['NCO']['QuadraturePhaseRollover'] == True:
+				this['NCO']['QuadraturePhaseRollover'] = False
+				if this['OutputFilter']['Output'] > 0:
+					this['Result'][databit_index] =  1
+					this['SamplePulse'][index] = 1000
+				else:
+					this['Result'][databit_index] = 0
+					this['SamplePulse'][index] = -1000
+				databit_index += 1
+			else:
+				this['SamplePulse'][index] = 0
+
+
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
+
+
 
 			index += 1
 	return this
