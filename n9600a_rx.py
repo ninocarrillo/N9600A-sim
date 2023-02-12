@@ -7,11 +7,12 @@ import n9600a_rx_dpsk2 as dpsk2
 import n9600a_rx_dpsk as dpsk
 import n9600a_rx_gfsk as gfsk
 import n9600a_nco as nco
+import n9600a_filters as filters
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
 	sys.exit(-1)
-	
+
 # read demodulator description from ini file:
 config = configparser.ConfigParser()
 try:
@@ -50,3 +51,6 @@ elif DemodulatorType == 'ncotest':
 
 elif DemodulatorType == 'dpsk3':
 	dpsk3.FullProcess(state)
+
+elif DemodulatorType == 'iirtest':
+	filters.IIRTest(state)

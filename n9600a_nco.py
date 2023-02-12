@@ -18,35 +18,35 @@ def GetNCOConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "design sample rate"
+	key_string = "nco design sample rate"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "wavetable size"
+	key_string = "nco wavetable size"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "set frequency"
+	key_string = "nco set frequency"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "amplitude bits"
+	key_string = "nco amplitude bits"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "phase dither bits"
+	key_string = "nco phase dither bits"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
@@ -55,17 +55,17 @@ def GetNCOConfig(config, num, id_string):
 	return this
 
 def InitNCO(this):
-	this['NormalizationFactor'] = int(np.ceil(this['design sample rate'] / this['wavetable size']))
+	this['NormalizationFactor'] = int(np.ceil(this['nco design sample rate'] / this['nco wavetable size']))
 	this['InPhase'] = 0
-	this['QuadraturePhaseOffset'] = int(np.rint(this['design sample rate'] / 4))
+	this['QuadraturePhaseOffset'] = int(np.rint(this['nco design sample rate'] / 4))
 	this['QuadraturePhase'] = this['QuadraturePhaseOffset']
 	this['Control'] = 0
-	this['Amplitude'] = pow(2,this['amplitude bits'] - 1) - 1
-	this['WaveTable'] = np.zeros(this['wavetable size'])
+	this['Amplitude'] = pow(2,this['nco amplitude bits'] - 1) - 1
+	this['WaveTable'] = np.zeros(this['nco wavetable size'])
 	this['InPhaseRollover'] = False
 	this['QuadraturePhaseRollover'] = False
-	for i in range(this['wavetable size']):
-		this['WaveTable'][i] = np.rint(this['Amplitude'] * np.sin(i * 2 * np.pi / this['wavetable size']))
+	for i in range(this['nco wavetable size']):
+		this['WaveTable'][i] = np.rint(this['Amplitude'] * np.sin(i * 2 * np.pi / this['nco wavetable size']))
 	return this
 
 def UpdateNCO(this):
@@ -75,21 +75,21 @@ def UpdateNCO(this):
 	# if control < -this['set frequency'] / 4:
 	# 	control = -this['set frequency'] / 4
 
-	if this['phase dither bits'] > 0:
-		this['Dither'] = np.floor(np.random.rand() * pow(2,this['phase dither bits'])) - pow(2,this['phase dither bits'] - 1)
+	if this['nco phase dither bits'] > 0:
+		this['Dither'] = np.floor(np.random.rand() * pow(2,this['nco phase dither bits'])) - pow(2,this['nco phase dither bits'] - 1)
 	else:
 		this['Dither'] = 0
 
-	this['InPhase'] += this['set frequency'] + this['Control']
-	if this['InPhase'] >= this['design sample rate']:
-		this['InPhase'] -= this['design sample rate']
+	this['InPhase'] += this['nco set frequency'] + this['Control']
+	if this['InPhase'] >= this['nco design sample rate']:
+		this['InPhase'] -= this['nco design sample rate']
 		this['InPhaseRollover'] = True
 	else:
 		this['InPhaseRollover'] = False
 
-	this['QuadraturePhase'] += this['set frequency'] + this['Control']
-	if this['QuadraturePhase'] >= this['design sample rate']:
-		this['QuadraturePhase'] -= this['design sample rate']
+	this['QuadraturePhase'] += this['nco set frequency'] + this['Control']
+	if this['QuadraturePhase'] >= this['nco design sample rate']:
+		this['QuadraturePhase'] -= this['nco design sample rate']
 		this['QuadraturePhaseRollover'] = True
 	else:
 		this['QuadraturePhaseRollover'] = False
@@ -104,14 +104,14 @@ def UpdateNCO(this):
 
 	# bound to the wavetable
 	while inphase < 0:
-		inphase += this['wavetable size']
-	while inphase >= this['wavetable size']:
-		inphase -= this['wavetable size']
+		inphase += this['nco wavetable size']
+	while inphase >= this['nco wavetable size']:
+		inphase -= this['nco wavetable size']
 
 	while quadraturephase < 0:
-		quadraturephase += this['wavetable size']
-	while quadraturephase >= this['wavetable size']:
-		quadraturephase -= this['wavetable size']
+		quadraturephase += this['nco wavetable size']
+	while quadraturephase >= this['nco wavetable size']:
+		quadraturephase -= this['nco wavetable size']
 
 	this['Sine'] = this['WaveTable'][inphase]
 	this['Cosine'] = this['WaveTable'][quadraturephase]
@@ -143,11 +143,11 @@ def Test(state):
 	NCO[1] = InitNCO(NCO[1])
 	print(NCO[1])
 
-	scipy.io.wavfile.write(dirname+"Wavetable.wav", NCO[1]['design sample rate'], NCO[1]['WaveTable'].astype(np.int16))
+	scipy.io.wavfile.write(dirname+"Wavetable.wav", NCO[1]['nco design sample rate'], NCO[1]['WaveTable'].astype(np.int16))
 
 
 	# generate 3 seconds of set frequency
-	samples = NCO[1]['design sample rate'] * 3
+	samples = NCO[1]['nco design sample rate'] * 3
 	AudioSine = np.zeros(samples)
 	AudioCosine = np.zeros(samples)
 	AudioDither = np.zeros(samples)

@@ -9,7 +9,7 @@ import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_nco as nco
-import n9600a_fir as fir
+import n9600a_filters as filters
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -25,35 +25,35 @@ def GetDPSK3Config(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "design sample rate"
+	key_string = "nco design sample rate"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "wavetable size"
+	key_string = "nco wavetable size"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "set frequency"
+	key_string = "nco set frequency"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "amplitude bits"
+	key_string = "nco amplitude bits"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "phase dither bits"
+	key_string = "nco phase dither bits"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
@@ -92,8 +92,8 @@ def GetDPSK3Config(config, num, id_string):
 
 def InitDPSK3(this):
 	this['NCO'] = nco.InitNCO(this['NCO'])
-	this['LoopFilter'] = fir.InitFIR(this['LoopFilter'])
-	this['OutputFilter'] = fir.InitFIR(this['OutputFilter'])
+	this['LoopFilter'] = filters.InitFIR(this['LoopFilter'])
+	this['OutputFilter'] = filters.InitFIR(this['OutputFilter'])
 	return this
 
 def DemodulateDPSK3(this):
@@ -104,7 +104,7 @@ def DemodulateDPSK3(this):
 	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
 	this['DataFilterOutput'] = np.zeros(len(this['InputBuffer']))
 	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
-	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['set frequency'] / this['NCO']['design sample rate']))
+	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
 	index = 0
 	databit_index = 0
 	if this['enabled'] == True:
@@ -116,14 +116,14 @@ def DemodulateDPSK3(this):
 			this['FirstMixer'][index] = np.rint(sample * (-this['NCO']['Sine']) / 65536)
 
 			# LPF carrier error
-			this['LoopFilter'] = fir.UpdateFIR(this['LoopFilter'], this['FirstMixer'][index])
+			this['LoopFilter'] = filters.UpdateFIR(this['LoopFilter'], this['FirstMixer'][index])
 			this['LoopFilterOutput'][index] = this['LoopFilter']['Output']
 
 			# mix sample stream with NCO cosine to create data output
 			this['SecondMixer'][index] = np.rint(sample * this['NCO']['Cosine'] / 65536)
 
 			# LPF data output
-			this['OutputFilter'] = fir.UpdateFIR(this['OutputFilter'], this['SecondMixer'][index])
+			this['OutputFilter'] = filters.UpdateFIR(this['OutputFilter'], this['SecondMixer'][index])
 			this['DataFilterOutput'][index] = this['OutputFilter']['Output']
 
 			# mix data output with carrier error to create NCO control signal
