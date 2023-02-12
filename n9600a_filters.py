@@ -1,5 +1,50 @@
 import struct
 import numpy as np
+import sys
+import os
+import n9600a_strings as strings
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+def GetIIRConfig(config, num, id_string):
+	this = {}
+
+	key_string = "iir order"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "iir scale bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "iir saturation bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "iir b coefs"
+	try:
+	 	this[f'{key_string}'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "iir a coefs"
+	try:
+	 	this[f'{key_string}'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	return this
 
 def InitFIR(this):
 	this['Buffer'] = np.zeros(len(this['Taps']))
@@ -12,31 +57,39 @@ def UpdateFIR(this, sample):
 	return this
 
 def InitCanonicIIR(this):
+	this['NegativeSaturation'] = -pow(2,this['iir saturation bits'] - 1)
+	this['PositiveSaturation'] = pow(2,this['iir saturation bits'] - 1) - 1
+	this['Output'] = 0
+	this['W'] = np.zeros(this['iir order'] + 1)
 	return this
 
-def MultiplySaturateScale(val1, val2, saturation_bits, scale_bits):
-	pos_sat = pow(2,saturation_bits - 1) - 1
-	neg_sat = -pow(2,saturation_bits - 1)
+def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 	result = val1 * val2
 	if result > pos_sat:
 		result = pos_sat
 	elif result < neg_sat:
 		result = neg_sat
-	result = result >> scale_bits
+	try:
+		result = int(result) >> int(scale_bits)
+	except:
+		print(f'scale_bits {scale_bits}')
+		print(f'result {result}')
+		sys.exit(3)
 	return result
 
 def UpdateCanonicIIR(this, sample):
 	# Multiply, scale, accumulate the 'a' factors with the delayed intermediate values
 	accumulator = sample
-	for index in range(1,this['Order']):
-		accumulator += MultiplySaturateScale(this['a'][index], this['w'][index], this['saturation bits'], this['scale bits'])
+	for index in range(1,this['iir order'] + 1):
+		accumulator += MultiplySaturateScale(this['iir a coefs'][index], this['W'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
 	# Save this intermediate sum
-	this['w'][0] = accumulator
-	for index in range(this['Order']):
-		accumulator += MultiplySaturateScale(this['b'][index], this['w'][index], this['saturation bits'], this['scale bits'])
+	this['W'][0] = accumulator
+	accumulator = 0
+	for index in range(this['iir order'] + 1):
+		accumulator += MultiplySaturateScale(this['iir b coefs'][index], this['W'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
 	# update the delay registers
-	for index in range(this['Order'],1,-1):
-		this['w'][index] = this['w'][index - 1]
+	for index in range(this['iir order'],0,-1):
+		this['W'][index] = this['W'][index - 1]
 	this['Output'] = accumulator
 	return this
 
@@ -57,5 +110,28 @@ def IIRTest(state):
 			continue
 		break
 
-		
+
+	IIR = InitCanonicIIR(GetIIRConfig(config, 1, "IIR "))
+
+	print(IIR)
+
+	# generate a step waveform
+	count = 1000
+	mag = 20000
+	y = np.zeros(count)
+	z = np.zeros(count)
+	for i in range(count // 2, count):
+		y[i] = mag
+
+	for i in range(count):
+		IIR = UpdateCanonicIIR(IIR, y[i])
+		z[i] = IIR['Output']
+
+	print(IIR)
+
+	fig1,ax1 = plt.subplots()
+	ax1.plot(y)
+	ax1.plot(z)
+	plt.show()
+
 	return
