@@ -63,6 +63,14 @@ def InitCanonicIIR(this):
 	this['W'] = np.zeros(this['iir order'] + 1)
 	return this
 
+def InitIIR(this):
+	this['NegativeSaturation'] = -pow(2,this['iir saturation bits'] - 1)
+	this['PositiveSaturation'] = pow(2,this['iir saturation bits'] - 1) - 1
+	this['Output'] = 0
+	this['X'] = np.zeros(this['iir order'] + 1)
+	this['Y'] = np.zeros(this['iir order'] + 1)
+	return this
+
 def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 	result = val1 * val2
 	if result > pos_sat:
@@ -75,6 +83,14 @@ def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 		print(f'scale_bits {scale_bits}')
 		print(f'result {result}')
 		sys.exit(3)
+	return result
+
+def MultiplySaturate(val1, val2, pos_sat, neg_sat):
+	result = val1 * val2
+	if result > pos_sat:
+		result = pos_sat
+	elif result < neg_sat:
+		result = neg_sat
 	return result
 
 def UpdateCanonicIIR(this, sample):
@@ -91,6 +107,25 @@ def UpdateCanonicIIR(this, sample):
 	for index in range(this['iir order'],0,-1):
 		this['W'][index] = this['W'][index - 1]
 	this['Output'] = accumulator
+	return this
+
+def UpdateIIR(this, sample):
+	# Update the input delay registers
+	for index in range(this['iir order'], 0, -1):
+		this['X'][index] = this['X'][index - 1]
+	this['X'][0] = sample
+	# Calculate the intermediate sum
+	v = 0
+	for index in range(this['iir order'] + 1):
+		v += MultiplySaturateScale(this['X'][index], this['iir b coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+	# Update the output delay registers
+	for index in range(this['iir order'], 0, -1):
+		this['Y'][index] = this['Y'][index - 1]
+	# Calculate the final sum
+	for index in range(1, this['iir order'] + 1):
+		v -= MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+	this['Y'][0] = v
+	this['Output'] = v
 	return this
 
 def IIRTest(state):
@@ -111,7 +146,7 @@ def IIRTest(state):
 		break
 
 
-	IIR = InitCanonicIIR(GetIIRConfig(config, 1, "IIR "))
+	IIR = InitIIR(GetIIRConfig(config, 1, "IIR "))
 
 	print(IIR)
 
@@ -120,11 +155,12 @@ def IIRTest(state):
 	mag = 20000
 	y = np.zeros(count)
 	z = np.zeros(count)
+	# y[500] = mag
 	for i in range(count // 2, count):
 		y[i] = mag
 
 	for i in range(count):
-		IIR = UpdateCanonicIIR(IIR, y[i])
+		IIR = UpdateIIR(IIR, y[i])
 		z[i] = IIR['Output']
 
 	print(IIR)
