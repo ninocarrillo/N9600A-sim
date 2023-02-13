@@ -147,6 +147,7 @@ def IIRTest(state):
 
 
 	IIR = InitIIR(GetIIRConfig(config, 1, "IIR "))
+	IIR2 = InitIIR(GetIIRConfig(config, 1, "IIR "))
 
 	print(IIR)
 
@@ -172,8 +173,10 @@ def IIRTest(state):
 				data = True
 		IIR = UpdateIIR(IIR, y[i])
 		z[i] = IIR['Output']
+		IIR2 = UpdateIIR(IIR2, z[i])
+		z[i] = IIR2['Output']
 
-	print(IIR)
+	print(IIR2)
 
 	fig1,ax1 = plt.subplots()
 	ax1.plot(y)
