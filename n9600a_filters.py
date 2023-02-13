@@ -123,7 +123,7 @@ def UpdateIIR(this, sample):
 		this['Y'][index] = this['Y'][index - 1]
 	# Calculate the final sum
 	for index in range(1, this['iir order'] + 1):
-		v -= MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+		v += MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
 	this['Y'][0] = v
 	this['Output'] = v
 	return this
@@ -151,7 +151,7 @@ def IIRTest(state):
 	print(IIR)
 
 	# generate a square wave
-	count = 1000
+	count = 300
 	mag = 20000
 	y = np.zeros(count)
 	z = np.zeros(count)
