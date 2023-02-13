@@ -150,16 +150,26 @@ def IIRTest(state):
 
 	print(IIR)
 
-	# generate a step waveform
+	# generate a square wave
 	count = 1000
 	mag = 20000
 	y = np.zeros(count)
 	z = np.zeros(count)
-	# y[500] = mag
-	for i in range(count // 2, count):
-		y[i] = mag
 
+	j = 0
+	data = True
 	for i in range(count):
+		if data == True:
+			y[i] = mag
+		else:
+			y[i] = 0
+		j += 1
+		if j == 24:
+			j = 0
+			if data == True:
+				data = False
+			else:
+				data = True
 		IIR = UpdateIIR(IIR, y[i])
 		z[i] = IIR['Output']
 
