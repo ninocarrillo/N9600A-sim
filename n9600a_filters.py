@@ -147,15 +147,18 @@ def IIRTest(state):
 
 
 	IIR = InitIIR(GetIIRConfig(config, 1, "IIR "))
-	IIR2 = InitIIR(GetIIRConfig(config, 1, "IIR "))
+	IIRB = InitIIR(GetIIRConfig(config, 1, "IIR "))
+	LF = InitIIR(GetIIRConfig(config,2, "IIR "))
 
 	print(IIR)
+	print(LF)
 
 	# generate a square wave
 	count = 300
 	mag = 20000
 	y = np.zeros(count)
 	z = np.zeros(count)
+	q = np.zeros(count)
 
 	j = 0
 	data = True
@@ -173,14 +176,18 @@ def IIRTest(state):
 				data = True
 		IIR = UpdateIIR(IIR, y[i])
 		z[i] = IIR['Output']
-		IIR2 = UpdateIIR(IIR2, z[i])
-		z[i] = IIR2['Output']
+		IIRB = UpdateIIR(IIRB, z[i])
+		z[i] = IIRB['Output']
 
-	print(IIR2)
+		LF = UpdateIIR(LF, z[i])
+		q[i] = LF['Output']
+
+	print(IIRB)
 
 	fig1,ax1 = plt.subplots()
 	ax1.plot(y)
 	ax1.plot(z)
+	ax1.plot(q)
 	plt.show()
 
 	return
