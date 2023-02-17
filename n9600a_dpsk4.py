@@ -217,10 +217,10 @@ def DemodulateDPSK4(this):
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
 			this['NCO']['Control'] = this['LoopFilterOutput'][index]
-			# if this['NCO']['Control'] > 400:
-			# 	this['NCO']['Control'] = 400
-			# elif this['NCO']['Control'] < -400:
-			# 	this['NCO']['Control'] = -400
+			# if this['NCO']['Control'] > 250:
+			# 	this['NCO']['Control'] = 250
+			# elif this['NCO']['Control'] < -250:
+			# 	this['NCO']['Control'] = -250
 			# print(this['NCO']['Control'])
 
 
@@ -363,14 +363,14 @@ def FullProcess(state):
 			decodernum = '1'
 			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
 			print(f'{dirname+filename}')
-			# try:
-			# 	bin_file = open(dirname + filename + '.bin', '+wb')
-			# except:
-			# 	pass
-			# with bin_file:
-			# 	for byte in AX25Decoder[2]['Output']:
-			# 		bin_file.write(byte.astype('uint8'))
-			# 	bin_file.close()
+			try:
+				bin_file = open(dirname + filename + '.bin', '+wb')
+			except:
+				pass
+			with bin_file:
+				for byte in AX25Decoder[1]['Output']:
+					bin_file.write(byte.astype('uint8'))
+				bin_file.close()
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Result'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],DPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
