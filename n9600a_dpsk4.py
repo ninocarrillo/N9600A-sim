@@ -173,6 +173,7 @@ def InitDPSK4(this):
 	this['LoopFilter'] = filters.InitIIR(this['LoopFilter'])
 	this['I_LPF'] = filters.InitIIR(this['I_LPF'])
 	this['Q_LPF'] = filters.InitIIR(this['Q_LPF'])
+	this['BitAccumulator'] = 0
 	return this
 
 def DemodulateDPSK4(this):
@@ -184,6 +185,8 @@ def DemodulateDPSK4(this):
 	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
 	this['PhaseAccumulator'] = np.zeros(len(this['InputBuffer']))
 	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
+	this['SineOutput'] = np.zeros(len(this['InputBuffer']))
+	this['CosineOutput'] = np.zeros(len(this['InputBuffer']))
 	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
 	index = 0
 	databit_index = 0
@@ -191,22 +194,25 @@ def DemodulateDPSK4(this):
 		for sample in this['InputBuffer']:
 			# print(f'{index}')
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
-
+			this['SineOutput'][index] = this['NCO']['Sine']
+			this['CosineOutput'][index] = this['NCO']['Cosine']
 			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.rint(sample * (2 * this['NCO']['Sine']) / 65536)
+			this['I_Mixer'][index] = np.rint(sample * (2*this['NCO']['Sine']) / 65536)
 			# low-pass filter the mix product
 			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
 			# print(this)
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.rint(sample * (2 * this['NCO']['Cosine']) / 65536)
+			this['Q_Mixer'][index] = np.rint(sample * (2*this['NCO']['Cosine']) / 65536)
 			# low-pass filter the mix product
 			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
 
 			# mix the I and Q branch
-			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 150000)
+			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 140000) # proportional feedback
+			# this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 280000) # proportional feedback
+			# this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 34000)
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
@@ -240,6 +246,27 @@ def DemodulateDPSK4(this):
 				databit_index += 1
 			else:
 				this['SamplePulse'][index] = 0
+
+			# this['BitAccumulator'] += this['I_LPF']['Output']
+			#
+			# if this['NCO']['InPhaseRollover'] == True:
+			# 	this['NCO']['InPhaseRollover'] = False
+			# 	if this['BitAccumulator'] > 0:
+			# 		try:
+			# 			this['Result'][databit_index] =  1
+			# 		except:
+			# 			pass
+			# 		this['SamplePulse'][index] = this['BitAccumulator']
+			# 	else:
+			# 		try:
+			# 			this['Result'][databit_index] = 0
+			# 		except:
+			# 			pass
+			# 		this['SamplePulse'][index] = this['BitAccumulator']
+			# 	databit_index += 1
+			# 	this['BitAccumulator'] = 0
+			# else:
+			# 	this['SamplePulse'][index] = 0
 
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
@@ -355,13 +382,22 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	x = np.arange(len(DPSKDemodulator[1]['I_LPFOutput']))
-	fig1,ax1 = plt.subplots()
-	ax1.plot(DPSKDemodulator[1]['I_LPFOutput'])
-	ax1.plot(DPSKDemodulator[1]['SamplePulse'])
-	plt.show()
-	fig2,ax2 = plt.subplots()
-	ax2.plot(DPSKDemodulator[1]['LoopMixer'])
-	ax2.plot(DPSKDemodulator[1]['LoopFilterOutput'])
+	plt.figure()
+	plt.subplot(221)
+	plt.plot(FilterDecimator['FilterBuffer'])
+	plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
+	plt.plot(DPSKDemodulator[1]['Q_LPFOutput'])
+	plt.title('I and Q LPF Outputs')
+	plt.subplot(222)
+	plt.plot(DPSKDemodulator[1]['LoopFilterOutput'])
+	plt.title('Loop Filter Output')
+	plt.subplot(223)
+	plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
+	plt.plot(DPSKDemodulator[1]['SamplePulse'])
+	plt.title('I Output and Sample Pulse')
+	plt.subplot(224)
+	plt.plot(DPSKDemodulator[1]['SineOutput'])
+	plt.plot(DPSKDemodulator[1]['CosineOutput'])
+	plt.title('NCO Outputs')
 	plt.show()
 	return
