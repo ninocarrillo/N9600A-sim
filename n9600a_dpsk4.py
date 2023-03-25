@@ -12,6 +12,7 @@ import n9600a_nco as nco
 import n9600a_filters as filters
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import time
 
 def GetDPSK4Config(config, num, id_string):
 	this = {}
@@ -189,9 +190,21 @@ def DemodulateDPSK4(this):
 	this['CosineOutput'] = np.zeros(len(this['InputBuffer']))
 	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
 	index = 0
+	last_progress_print = -1
+	progress_steps = 10000
+	sample_count = len(this['InputBuffer']) // progress_steps
 	databit_index = 0
+	start_time = time.time()
 	if this['enabled'] == True:
 		for sample in this['InputBuffer']:
+			progress = index // sample_count
+			if progress != last_progress_print:
+				interval_time = time.time() - start_time
+				start_time = time.time()
+				time_remaining = np.rint(interval_time * (progress_steps - progress))
+				last_progress_print = progress
+				print(f'Interval: {progress}, Time Remaining: {time_remaining}')
+				print(this['NCO']['Control'])
 			# print(f'{index}')
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
@@ -218,9 +231,9 @@ def DemodulateDPSK4(this):
 			# scale the NCO control signal
 			this['NCO']['Control'] = this['LoopFilterOutput'][index]
 			# if this['NCO']['Control'] > 250:
-			# 	this['NCO']['Control'] = 250
+				# this['NCO']['Control'] = 250
 			# elif this['NCO']['Control'] < -250:
-			# 	this['NCO']['Control'] = -250
+				# this['NCO']['Control'] = -250
 			# print(this['NCO']['Control'])
 
 
@@ -233,7 +246,7 @@ def DemodulateDPSK4(this):
 				this['NCO']['QuadraturePhaseRollover'] = False
 				if this['I_LPF']['Output'] > 0:
 					try:
-						this['Result'][databit_index] =  1
+						this['Result'][databit_index] =	 1
 					except:
 						pass
 					this['SamplePulse'][index] = 3000
@@ -250,23 +263,23 @@ def DemodulateDPSK4(this):
 			# this['BitAccumulator'] += this['I_LPF']['Output']
 			#
 			# if this['NCO']['InPhaseRollover'] == True:
-			# 	this['NCO']['InPhaseRollover'] = False
-			# 	if this['BitAccumulator'] > 0:
-			# 		try:
-			# 			this['Result'][databit_index] =  1
-			# 		except:
-			# 			pass
-			# 		this['SamplePulse'][index] = this['BitAccumulator']
-			# 	else:
-			# 		try:
-			# 			this['Result'][databit_index] = 0
-			# 		except:
-			# 			pass
-			# 		this['SamplePulse'][index] = this['BitAccumulator']
-			# 	databit_index += 1
-			# 	this['BitAccumulator'] = 0
+			#	this['NCO']['InPhaseRollover'] = False
+			#	if this['BitAccumulator'] > 0:
+			#		try:
+			#			this['Result'][databit_index] =	 1
+			#		except:
+			#			pass
+			#		this['SamplePulse'][index] = this['BitAccumulator']
+			#	else:
+			#		try:
+			#			this['Result'][databit_index] = 0
+			#		except:
+			#			pass
+			#		this['SamplePulse'][index] = this['BitAccumulator']
+			#	databit_index += 1
+			#	this['BitAccumulator'] = 0
 			# else:
-			# 	this['SamplePulse'][index] = 0
+			#	this['SamplePulse'][index] = 0
 
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
