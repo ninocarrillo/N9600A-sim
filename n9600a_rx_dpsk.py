@@ -120,7 +120,7 @@ def FullProcess(state):
 
 	print(f'\nDemodulating audio. ')
 	DPSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
-	DPSKDemodulator[1] = demod.DemodulateDPSK3(DPSKDemodulator[1])
+	DPSKDemodulator[1] = demod.DemodulateDPSK(DPSKDemodulator[1])
 	print(f'Done.')
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
