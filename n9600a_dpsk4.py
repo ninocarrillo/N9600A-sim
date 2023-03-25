@@ -61,6 +61,20 @@ def GetDPSK4Config(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+		
+	key_string = "nco control low"
+	try:
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+	
+	key_string = "nco control high"
+	try:
+		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 
 	key_string = "i lpf iir order"
 	try:
@@ -191,7 +205,7 @@ def DemodulateDPSK4(this):
 	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
 	index = 0
 	last_progress_print = -1
-	progress_steps = 10000
+	progress_steps = 100
 	sample_count = len(this['InputBuffer']) // progress_steps
 	databit_index = 0
 	start_time = time.time()
@@ -199,12 +213,12 @@ def DemodulateDPSK4(this):
 		for sample in this['InputBuffer']:
 			progress = index // sample_count
 			if progress != last_progress_print:
-				interval_time = time.time() - start_time
-				start_time = time.time()
-				time_remaining = np.rint(interval_time * (progress_steps - progress))
 				last_progress_print = progress
-				print(f'Interval: {progress}, Time Remaining: {time_remaining}')
-				print(this['NCO']['Control'])
+				interval_time = time.time() - start_time
+				if (progress > 0):
+					time_remaining = np.rint(interval_time * (progress_steps - progress) / progress)
+					print(f'Interval: {progress}, Time Remaining: {time_remaining}')
+					print(this['NCO']['Control'])
 			# print(f'{index}')
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
@@ -230,11 +244,10 @@ def DemodulateDPSK4(this):
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
 			this['NCO']['Control'] = this['LoopFilterOutput'][index]
-			# if this['NCO']['Control'] > 250:
-				# this['NCO']['Control'] = 250
-			# elif this['NCO']['Control'] < -250:
-				# this['NCO']['Control'] = -250
-			# print(this['NCO']['Control'])
+			if this['NCO']['Control'] > this['NCO']['nco control high']:
+				this['NCO']['Control'] = this['NCO']['nco control high']
+			elif this['NCO']['Control'] < this['NCO']['nco control low']:
+				this['NCO']['Control'] = this['NCO']['nco control low']
 
 
 			# save the data signal
