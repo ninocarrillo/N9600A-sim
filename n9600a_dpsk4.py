@@ -61,14 +61,14 @@ def GetDPSK4Config(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "nco control low"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-	
+
 	key_string = "nco control high"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -181,6 +181,13 @@ def GetDPSK4Config(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "loop filter gain"
+	try:
+		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitDPSK4(this):
@@ -243,7 +250,7 @@ def DemodulateDPSK4(this):
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
-			this['NCO']['Control'] = this['LoopFilterOutput'][index]
+			this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
 			if this['NCO']['Control'] > this['NCO']['nco control high']:
 				this['NCO']['Control'] = this['NCO']['nco control high']
 			elif this['NCO']['Control'] < this['NCO']['nco control low']:
@@ -408,22 +415,22 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], DPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	plt.figure()
-	plt.subplot(221)
-	plt.plot(FilterDecimator['FilterBuffer'])
-	plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
-	plt.plot(DPSKDemodulator[1]['Q_LPFOutput'])
-	plt.title('I and Q LPF Outputs')
-	plt.subplot(222)
-	plt.plot(DPSKDemodulator[1]['LoopFilterOutput'])
-	plt.title('Loop Filter Output')
-	plt.subplot(223)
-	plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
-	plt.plot(DPSKDemodulator[1]['SamplePulse'])
-	plt.title('I Output and Sample Pulse')
-	plt.subplot(224)
-	plt.plot(DPSKDemodulator[1]['SineOutput'])
-	plt.plot(DPSKDemodulator[1]['CosineOutput'])
-	plt.title('NCO Outputs')
-	plt.show()
+	# plt.figure()
+	# plt.subplot(221)
+	# plt.plot(FilterDecimator['FilterBuffer'])
+	# plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
+	# plt.plot(DPSKDemodulator[1]['Q_LPFOutput'])
+	# plt.title('I and Q LPF Outputs')
+	# plt.subplot(222)
+	# plt.plot(DPSKDemodulator[1]['LoopFilterOutput'])
+	# plt.title('Loop Filter Output')
+	# plt.subplot(223)
+	# plt.plot(DPSKDemodulator[1]['I_LPFOutput'])
+	# plt.plot(DPSKDemodulator[1]['SamplePulse'])
+	# plt.title('I Output and Sample Pulse')
+	# plt.subplot(224)
+	# plt.plot(DPSKDemodulator[1]['SineOutput'])
+	# plt.plot(DPSKDemodulator[1]['CosineOutput'])
+	# plt.title('NCO Outputs')
+	# plt.show()
 	return
