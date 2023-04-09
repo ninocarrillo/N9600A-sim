@@ -9,22 +9,13 @@ import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_pulse_filter as pulse_filter
 
-def GetShaped4FSKModulatorConfig(config, num):
-	shaped4fsk_modulator = {}
-	try:
-		shaped4fsk_modulator['Enabled'] = config[f'Shaped 4FSK Modulator {num}'].getboolean('enabled')
-	except:
-		print(f'{sys.argv[1]} [Shaped 4FSK Modulator {num}] \'enabled\' is missing or invalid')
-		sys.exit(-2)
-	return shaped4fsk_modulator
-
 def ModulateRRC(state):
 	argv = state['argv']
 	config = state['config']
-
 	print(f'Started Shaped 4FSK Modulator process')
-	print(f'Reading settings for Pulse Shaping Filter')
-	#PulseFilter = pulse_filter.GetFilterConfig(state)
+	print(f'Reading settings for RRC Pulse Shaping Filter')
+	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
+	print(PulseFilter)
 	#PulseFilter = pulse_filter.InitFilter(state)
 
 	# GFSKDemodulator = []
