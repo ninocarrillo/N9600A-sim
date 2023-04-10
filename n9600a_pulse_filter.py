@@ -95,6 +95,13 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "BT"
+	try:
+		this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	key_string = "symbol span"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
@@ -114,9 +121,12 @@ def InitGaussFilter(this):
 	this['SymbolTicks'] = np.arange(-this['symbol span'] / 2, this['symbol span'] / 2, 1)
 	this['Taps'] = np.zeros(this['TapCount'])
 
+	alpha = pow(np.log(2) / 2, 0.5) / this['BT']
+	print('alpha ', alpha)
 	index = 0
 	for time in this['Time']:
-		numerator = np.exp(-this['alpha'] * pow(time, 2))
+		#numerator = np.exp(-this['alpha'] * pow(time, 2))
+		numerator = np.exp(-pow(np.pi,2) * pow(time, 2) / pow(alpha, 2))
 		try:
 			this['Taps'][index] = numerator
 		except:
