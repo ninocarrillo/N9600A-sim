@@ -10,6 +10,7 @@ import n9600a_input_filter as input_filter
 import n9600a_pulse_filter as pulse_filter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq
 
 def ModulateRRC(state):
 	argv = state['argv']
@@ -25,24 +26,30 @@ def ModulateRRC(state):
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
 	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
+	plt.subplot(221)
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
 	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
-	plt.show()
 
-	plt.figure()
+	plt.subplot(222)
 	plt.plot(waveform, 'b')
 	plt.plot(waveform_2, 'r')
-	plt.show()
 
-	eye_data = pulse_filter.GenEyeData(waveform_2, PulseFilter['Oversample'], PulseFilter['TapCount'])
-	print(eye_data)
-	plt.figure()
-	plt.scatter(eye_data['x'], eye_data['y'])
-	plt.show()
+	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], PulseFilter['Oversample'] // 2)
+	plt.subplot(223)
+	plt.plot(eye_data)
 
+	fft_n = len(waveform)
+	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
+	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
+	waveform_fft = fft(waveform)
+	plt.subplot(224)
+	plt.plot(x_fft, 10*np.log(2.0/fft_n * np.abs(waveform_fft[0:fft_n//2])))
+	plt.xlim(0,10000)
+	plt.ylim(-100,10)
+	plt.show()
 	# GFSKDemodulator = []
 	# DataSlicer = []
 	# DemodulatorCount = 0
@@ -198,25 +205,34 @@ def ModulateGauss(state):
 	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
 	waveform = np.convolve(PulseFilter['Taps'], BitStream)
-	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	ReceiveFilter = np.ones(17) / 17
+	waveform_2 = np.convolve(ReceiveFilter, waveform)
 	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
+	plt.subplot(221)
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
-	plt.show()
 
-	plt.figure()
+	plt.subplot(222)
 	plt.plot(waveform, 'b')
 	plt.plot(waveform_2, 'r')
-	plt.show()
 
-	eye_data = pulse_filter.GenEyeData(waveform_2, PulseFilter['Oversample'], PulseFilter['TapCount'])
-	print(eye_data)
-	plt.figure()
-	plt.scatter(eye_data['x'], eye_data['y'])
-	plt.show()
 
+	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 0)
+	plt.subplot(223)
+	plt.plot(eye_data)
+
+
+	fft_n = len(waveform)
+	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
+	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
+	waveform_fft = fft(waveform)
+	plt.subplot(224)
+	plt.plot(x_fft, 10*np.log(2.0/fft_n * np.abs(waveform_fft[0:fft_n//2])))
+	plt.xlim(0,10000)
+	plt.ylim(-100,10)
+	plt.show()
 	return

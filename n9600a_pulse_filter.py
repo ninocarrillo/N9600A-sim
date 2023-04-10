@@ -205,6 +205,22 @@ def ExpandSampleStream(data, filter):
 		sample_index += 1
 	return samples
 
+def GenEyeData2(samples, oversample, delay):
+	trace_count = int(np.floor((len(samples) - delay) / oversample))
+	#print(trace_count)
+	samples = samples[delay:]
+	traces = np.zeros([oversample, trace_count])
+	index = 0
+	for trace_number in range(trace_count):
+		for sub_index in range(oversample):
+			try:
+				traces[sub_index,trace_number] = samples[index]
+			except:
+				pass
+			index += 1
+	print(traces)
+	return traces
+
 def GenEyeData(samples, oversample, delay):
 	#samples = samples[delay:]
 	#samples = samples[:delay]
