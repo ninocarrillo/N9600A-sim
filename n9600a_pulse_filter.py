@@ -178,11 +178,12 @@ def ExpandSampleStream(data, filter):
 	samples = np.zeros(sample_count + flush_count)
 	sample_index = 0
 	symbols_per_byte = 8 // filter['SymbolMap']['symbol bits']
+	symbol_mask = int(pow(2,filter['SymbolMap']['symbol bits']) - 1)
 	if filter['SymbolMap']['expander'] == 'impulse':
 		for byte in data:
 			byte = int(byte)
 			for byte_index in range(symbols_per_byte):
-				symbol = np.bitwise_and(byte, 3)
+				symbol = np.bitwise_and(byte, symbol_mask)
 				byte = np.right_shift(byte, filter['SymbolMap']['symbol bits'])
 				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
 				sample_index += 1
