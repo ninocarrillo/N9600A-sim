@@ -10,6 +10,8 @@ import n9600a_rx_gfsk as gfsk
 import n9600a_shaped4fsk as shaped4fsk
 import n9600a_nco as nco
 import n9600a_filters as filters
+import os
+import numpy as np
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_tx.py <ini file> <input bin file> <output wav file>")
@@ -35,6 +37,23 @@ print(f'Modulator type is {ModulatorType}')
 state = {}
 state['argv'] = sys.argv
 state['config'] = config
+
+try:
+	with open(sys.argv[2], 'rb') as f:
+		file_size = os.path.getsize(sys.argv[2])
+		print("File Size: ", file_size)
+		state['InputData'] = np.zeros(file_size)
+		index = 0
+		while(byte := f.read(1)):
+			state['InputData'][index] = int.from_bytes(byte, "big")
+			index += 1
+		f.close()
+		print(state['InputData'])
+except:
+	print(f'Unable to open input file {sys.argv[2]}')
+	sys.exit(-3)
+		
+
 
 if ModulatorType == 'afsk':
 	afsk.Modulate(state)

@@ -1,7 +1,21 @@
 import numpy as np
 import sys
 import n9600a_strings as strings
+import math
 
+def GetSymbolMap(state):
+	argv = state['argv']
+	config = state['config']
+	this = {}
+	id_string = "Symbol Map"
+	key_string = "symbol map"
+	try:
+		this[key_string] = strings.StringToIntArray(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+	return this
+	
 def GetRRCFilterConfig(state):
 	argv = state['argv']
 	config = state['config']
@@ -49,8 +63,12 @@ def InitRRCFilter(this):
 	# discontinuity:
 	# print(this['TimeStep'] / (4 * this['rolloff rate']))
 	index = 0
+	try:
+		asymptote = this['SymbolTime'] / (4 * this['rolloff rate'])
+	except:
+		asymptote = False
 	for time in this['Time']:
-		if time == -this['SymbolTime'] / (4 * this['rolloff rate']) or time == this['SymbolTime'] / (4 * this['rolloff rate']):
+		if math.isclose(time,-asymptote) or math.isclose(time, asymptote):
 			numerator = this['rolloff rate'] * ((1 + 2 / np.pi) * np.sin(np.pi/(4 * this['rolloff rate'])) + (1 - (2 / np.pi)) * np.cos(np.pi / (4 * this['rolloff rate'])))
 			denominator = this['SymbolTime'] * pow(2, 0.5)
 			this['Taps'][index] = numerator / denominator
@@ -62,5 +80,5 @@ def InitRRCFilter(this):
 			except:
 				pass
 		index += 1
-
+	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
 	return this

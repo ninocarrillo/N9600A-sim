@@ -18,12 +18,17 @@ def ModulateRRC(state):
 	print(f'Reading settings for RRC Pulse Shaping Filter')
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
-	print(PulseFilter)
+	SymbolMap = pulse_filter.GetSymbolMap(state)
+	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
-	plt.plot(PulseFilter['Time'], PulseFilter['Taps'])
+	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
+	plt.show()
+
+
 	plt.show()
 
 	# GFSKDemodulator = []
