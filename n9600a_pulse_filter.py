@@ -211,7 +211,7 @@ def GenEyeData(samples, oversample, delay):
 	y_data = np.zeros(len(samples))
 	x_data = np.zeros(len(samples))
 	index = 0
-	offset = 0
+	offset = oversample / 2
 	for sample in samples:
 		for sub_index in range(oversample):
 			try:
