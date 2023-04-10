@@ -21,6 +21,9 @@ def ModulateRRC(state):
 	print(PulseFilter)
 	plt.figure()
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'])
+	plt.xticks(PulseFilter['SymbolTicks'])
+	plt.xticks(color='w')
+	plt.grid(True)
 	plt.show()
 
 	# GFSKDemodulator = []
