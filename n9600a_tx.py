@@ -48,11 +48,10 @@ try:
 			state['InputData'][index] = int.from_bytes(byte, "big")
 			index += 1
 		f.close()
-		print(state['InputData'])
 except:
 	print(f'Unable to open input file {sys.argv[2]}')
 	sys.exit(-3)
-		
+
 
 
 if ModulatorType == 'afsk':
@@ -60,7 +59,7 @@ if ModulatorType == 'afsk':
 
 elif ModulatorType == 'dpsk':
 	dpsk.Modulate(state)
-	
+
 elif ModulatorType == 'gfsk':
 	gfsk.Modulate(state)
 

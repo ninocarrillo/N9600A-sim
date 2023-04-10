@@ -18,10 +18,10 @@ def ModulateRRC(state):
 	print(f'Reading settings for RRC Pulse Shaping Filter')
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
-	SymbolMap = pulse_filter.GetSymbolMap(state)
-	
-	data = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	waveform = np.convolve(PulseFilter['Taps'], data)
+	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
+	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+
+	waveform = np.convolve(PulseFilter['Taps'], BitStream)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
 	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
@@ -35,6 +35,12 @@ def ModulateRRC(state):
 	plt.figure()
 	plt.plot(waveform, 'b')
 	plt.plot(waveform_2, 'r')
+	plt.show()
+
+	eye_data = pulse_filter.GenEyeData(waveform_2, PulseFilter['Oversample'], PulseFilter['TapCount'])
+	print(eye_data)
+	plt.figure()
+	plt.scatter(eye_data['x'], eye_data['y'])
 	plt.show()
 
 	# GFSKDemodulator = []
