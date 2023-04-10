@@ -68,6 +68,63 @@ def GetRRCFilterConfig(state):
 
 	return this
 
+def GetGaussFilterConfig(state):
+	argv = state['argv']
+	config = state['config']
+	this = {}
+	id_string = "Pulse Filter"
+
+	key_string = "sample rate"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "symbol rate"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "alpha"
+	try:
+		this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "symbol span"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	return this
+
+def InitGaussFilter(this):
+	this['Oversample'] = this['sample rate'] // this['symbol rate']
+	this['TapCount'] = this['symbol span'] * this['Oversample']
+	this['TimeStep'] = 1 / this['sample rate']
+	this['SymbolTime'] = 1 / this['symbol rate']
+	# generate normalized time
+	this['Time'] = np.arange(0, this['symbol span'], 1 / this['Oversample']) - (this['symbol span'] / 2)
+	this['SymbolTicks'] = np.arange(-this['symbol span'] / 2, this['symbol span'] / 2, 1)
+	this['Taps'] = np.zeros(this['TapCount'])
+
+	index = 0
+	for time in this['Time']:
+		numerator = np.exp(-this['alpha'] * pow(time, 2))
+		try:
+			this['Taps'][index] = numerator
+		except:
+			pass
+		index += 1
+	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	return this
+
 def InitRRCFilter(this):
 	this['Oversample'] = this['sample rate'] // this['symbol rate']
 	this['TapCount'] = this['symbol span'] * this['Oversample']
@@ -139,12 +196,12 @@ def ExpandSampleStream(data, filter):
 	return samples
 
 def GenEyeData(samples, oversample, delay):
-	samples = samples[delay:]
-	samples = samples[:delay]
+	#samples = samples[delay:]
+	#samples = samples[:delay]
 	y_data = np.zeros(len(samples))
 	x_data = np.zeros(len(samples))
 	index = 0
-	offset = oversample // 2
+	offset = 0
 	for sample in samples:
 		for sub_index in range(oversample):
 			try:

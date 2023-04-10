@@ -66,3 +66,7 @@ elif ModulatorType == 'gfsk':
 elif ModulatorType == 'rrc4fsk':
 	print('starting RRC4FSK modulator')
 	shaped4fsk.ModulateRRC(state)
+
+elif ModulatorType == 'gauss4fsk':
+	print('starting Gauss4FSK modulator')
+	shaped4fsk.ModulateGauss(state)

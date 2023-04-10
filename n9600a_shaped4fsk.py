@@ -186,3 +186,37 @@ def ModulateRRC(state):
 	# print('done')
 
 	return
+
+def ModulateGauss(state):
+	argv = state['argv']
+	config = state['config']
+	print(f'Started Shaped 4FSK Modulator process')
+	print(f'Reading settings for Gauss Pulse Shaping Filter')
+	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
+	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
+	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
+	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+
+	waveform = np.convolve(PulseFilter['Taps'], BitStream)
+	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
+	plt.figure()
+	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	plt.xticks(PulseFilter['SymbolTicks'])
+	plt.xticks(color='w')
+	plt.grid(True)
+	plt.show()
+
+	plt.figure()
+	plt.plot(waveform, 'b')
+	plt.plot(waveform_2, 'r')
+	plt.show()
+
+	eye_data = pulse_filter.GenEyeData(waveform_2, PulseFilter['Oversample'], PulseFilter['TapCount'])
+	print(eye_data)
+	plt.figure()
+	plt.scatter(eye_data['x'], eye_data['y'])
+	plt.show()
+
+	return
