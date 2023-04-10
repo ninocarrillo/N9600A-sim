@@ -37,3 +37,24 @@ def GetRRCFilterConfig(state):
 		sys.exit(-2)
 		
 	return this
+	
+def InitRRCFilter(this):
+	this['TapCount'] = this['symbol span'] * this['sample rate'] // this['symbol rate']
+	this['TimeStep'] = 1 / this['sample rate']
+	this['SymbolTime'] = 1 / this['symbol rate']
+	this['Time'] = np.arange(0, this['TapCount'] * this['TimeStep'], this['TimeStep']) - (this['TapCount'] * this['TimeStep'] / 2) + (this['TimeStep'] / 2)
+	this['Taps'] = np.zeros(this['TapCount'])
+
+	# discontinuity:
+	# print(this['TimeStep'] / (4 * this['rolloff rate']))
+	index = 0
+	for time in this['Time']:
+		numerator = np.sin(np.pi * time * (1 - this['rolloff rate']) / this['SymbolTime']) + 4 * this['rolloff rate'] * time * np.cos(np.pi * time * (1 + this['rolloff rate']) / this['SymbolTime']) / this['SymbolTime']
+		denominator = np.pi * time * (1 - pow(4 * this['rolloff rate'] * time / this['SymbolTime'], 2)) / this['SymbolTime']
+		try:
+			this['Taps'][index] = numerator / (denominator * this['SymbolTime'])
+		except:
+			pass
+		index += 1
+
+	return this

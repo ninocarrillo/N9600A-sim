@@ -8,6 +8,8 @@ import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_pulse_filter as pulse_filter
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 def ModulateRRC(state):
 	argv = state['argv']
@@ -15,8 +17,11 @@ def ModulateRRC(state):
 	print(f'Started Shaped 4FSK Modulator process')
 	print(f'Reading settings for RRC Pulse Shaping Filter')
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
+	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	print(PulseFilter)
-	#PulseFilter = pulse_filter.InitFilter(state)
+	plt.figure()
+	plt.plot(PulseFilter['Time'], PulseFilter['Taps'])
+	plt.show()
 
 	# GFSKDemodulator = []
 	# DataSlicer = []
