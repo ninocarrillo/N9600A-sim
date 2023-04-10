@@ -45,8 +45,10 @@ def ModulateRRC(state):
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
 	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
 	waveform_fft = fft(waveform)
+	fft_max = max(abs(waveform_fft))
+	waveform_fft = waveform_fft / fft_max
 	plt.subplot(224)
-	plt.plot(x_fft, 10*np.log(2.0/fft_n * np.abs(waveform_fft[0:fft_n//2])))
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
 	plt.show()
@@ -230,8 +232,11 @@ def ModulateGauss(state):
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
 	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
 	waveform_fft = fft(waveform)
+	waveform_fft = fft(waveform)
+	fft_max = max(abs(waveform_fft))
+	waveform_fft = waveform_fft / fft_max
 	plt.subplot(224)
-	plt.plot(x_fft, 10*np.log(2.0/fft_n * np.abs(waveform_fft[0:fft_n//2])))
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
 	plt.show()
