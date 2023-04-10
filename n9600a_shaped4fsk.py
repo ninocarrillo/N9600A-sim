@@ -19,6 +19,10 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	SymbolMap = pulse_filter.GetSymbolMap(state)
+	
+	data = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	waveform = np.convolve(PulseFilter['Taps'], data)
+	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
 	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
@@ -28,7 +32,9 @@ def ModulateRRC(state):
 	plt.grid(True)
 	plt.show()
 
-
+	plt.figure()
+	plt.plot(waveform, 'b')
+	plt.plot(waveform_2, 'r')
 	plt.show()
 
 	# GFSKDemodulator = []
