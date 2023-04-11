@@ -219,7 +219,6 @@ def GenEyeData2(samples, oversample, delay):
 			except:
 				pass
 			index += 1
-	print(traces)
 	return traces
 
 def GenEyeData(samples, oversample, delay):
