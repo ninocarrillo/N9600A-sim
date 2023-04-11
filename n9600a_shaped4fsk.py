@@ -34,12 +34,14 @@ def ModulateRRC(state):
 	plt.xticks(color='w')
 	#plt.xlabel("Symbol Intervals")
 	plt.title("Impulse Response")
+	plt.legend(["RRC", "RC"])
 	plt.grid(True)
 
 	plt.subplot(222)
 	plt.plot(waveform, 'b')
 	plt.plot(waveform_2, 'r')
 	plt.title("Modulation Waveform")
+	plt.legend(["Post Transmit Filter", "Post Receive Filter"])
 
 	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], PulseFilter['Oversample'] // 2)
 	plt.subplot(223)
@@ -102,9 +104,9 @@ def ModulateRRC(state):
 
 		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-		report_file.write('\n\n# Filter\n')
+		report_file.write('\n\n# RRC Pulse Filter\n')
 		report_file.write('\n')
-		report_file.write(f"# Filter Taps: {PulseFilter['Taps']}")
+		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'] * 65536, 8))
 		report_file.write('\n')
 		report_file.close()
 
