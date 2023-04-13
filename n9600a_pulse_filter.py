@@ -66,6 +66,13 @@ def GetRRCFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "bit count"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def GetGaussFilterConfig(state):
@@ -143,7 +150,6 @@ def InitRRCFilter(this):
 	this['Time'] = np.arange(0, this['TapCount'] * this['TimeStep'], this['TimeStep']) - (this['TapCount'] * this['TimeStep'] / 2) + (this['TimeStep'] / 2)
 	this['SymbolTicks'] = np.arange(this['Time'][0] - (this['TimeStep'] / 2), this['Time'][this['TapCount'] - 1], this['SymbolTime'])
 	this['Taps'] = np.zeros(this['TapCount'])
-
 	# discontinuity:
 	# print(this['TimeStep'] / (4 * this['rolloff rate']))
 	index = 0
@@ -165,6 +171,7 @@ def InitRRCFilter(this):
 				pass
 		index += 1
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	this['RC'] = np.convolve(this['Taps'], this['Taps'], 'same')
 	return this
 
 def ExpandSampleStream(data, filter):

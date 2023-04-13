@@ -24,7 +24,7 @@ def ModulateRRC(state):
 
 	waveform = np.convolve(PulseFilter['Taps'], BitStream)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
-	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
+	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)

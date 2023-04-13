@@ -9,6 +9,9 @@ import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
 import n9600a_pulse_filter as pulse_filter
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from scipy.fft import fft, fftfreq
 
 def GetRRCDemodulatorConfig(config, num):
 	this = {}
@@ -81,14 +84,30 @@ def FullProcess(state):
 	try:
 		samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
 		# Take two bits of resolution away
-		audio = audio >> (16 - FilterDecimator['InputBitCount'])
+		audio = audio >> (16 - PulseFilter['bit count'])
 	except:
 		print(f'Unable to open wave file {sys.argv[2]}.')
 		sys.exit(-2)
 
 	print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
 
+	# filter input data
+	filtered_audio = np.convolve(audio, PulseFilter['Taps'], 'valid')
+	plt.figure()
+	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
+	plt.subplot(221)
+	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	plt.xticks(PulseFilter['SymbolTicks'])
+	plt.xticks(color='w')
+	#plt.xlabel("Symbol Intervals")
+	plt.title("Impulse Response")
+	plt.legend(["RRC", "RC"])
+	plt.grid(True)
 
+	plt.subplot(222)
+	plt.plot(filtered_audio)
+	plt.show()
 
 
 	return
