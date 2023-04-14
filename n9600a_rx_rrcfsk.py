@@ -109,5 +109,8 @@ def FullProcess(state):
 	plt.plot(filtered_audio)
 	plt.show()
 
+	# Slice symbols
+	
+
 
 	return
