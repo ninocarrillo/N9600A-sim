@@ -42,6 +42,13 @@ def GetSlicerConfig(config, num):
 		print(f'{sys.argv[1]} [{id_string} {num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "sample rate"
+	try:
+		this[key_string] = int(config[f'{id_string} {num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string} {num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	id_string = "Symbol Map"
 	key_string = "symbol bits"
 	try:
@@ -55,6 +62,8 @@ def GetSlicerConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+		
+
 
 	return this
 
@@ -78,6 +87,8 @@ def FullProcess(state):
 			DemodulatorCount += 1
 			Demodulator[DemodulatorNumber] = GetRRCDemodulatorConfig(config, DemodulatorNumber)
 			DataSlicer[DemodulatorNumber] = GetSlicerConfig(config, DemodulatorNumber)
+			DataSlicer[DemodulatorNumber] = demod.InitDataSlicerN(DataSlicer[DemodulatorNumber])
+			print(DataSlicer[DemodulatorNumber])
 
 			#DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
@@ -110,7 +121,11 @@ def FullProcess(state):
 	plt.show()
 
 	# Slice symbols
-	
-
+	for demod_index in range(1, DemodulatorCount + 1):
+		for sample in filtered_audio:
+			DataSlicer[demod_index]['NewSample'] = sample
+			DataSlicer[demod_index] = demod.ProgSliceDataN(DataSlicer[demod_index])
+			for data_bit in DataSlicer[demod_index]['Result']:
+				print(data_bit)
 
 	return
