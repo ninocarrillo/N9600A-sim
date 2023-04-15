@@ -79,7 +79,7 @@ def FullProcess(state):
 	# Read only AGC settings into FilterDecimator
 	FilterDecimator = pulse_filter.GetAGCConfig(state)
 	# Transfer the calculated RRC taps to filter
-	FilterDecimator['Filter'] = PulseFilter['Taps']
+	FilterDecimator['Filter'] = np.rint(PulseFilter['Taps'] * 32768)
 	FilterDecimator['InputSampleRate'] = PulseFilter['sample rate']
 	FilterDecimator['InputAGCEnabled'] = True
 	FilterDecimator['DecimationRate'] = FilterDecimator['decimation']
@@ -103,8 +103,10 @@ def FullProcess(state):
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
+		print(max(audio))
 		# Take two bits of resolution away
 		audio = audio >> (16 - PulseFilter['bit count'])
+		print(max(audio))
 	except:
 		print(f'Unable to open wave file {sys.argv[2]}.')
 		sys.exit(-2)
@@ -113,8 +115,9 @@ def FullProcess(state):
 
 	# filter input data
 	print(f'\nFiltering and decimating audio. ')
+	print(FilterDecimator)
 	FilterDecimator['FilterBuffer'] = audio
-	FilterDecimator = demod.FilterDecimate(FilterDecimator)
+	FilterDecimator = pulse_filter.FilterDecimate2(FilterDecimator)
 	print(f'Done.')
 
 
@@ -135,6 +138,10 @@ def FullProcess(state):
 	plt.subplot(222)
 	plt.plot(filtered_audio)
 	plt.plot(FilterDecimator['EnvelopeBuffer'])
+	plt.plot(FilterDecimator['ThreshBuffer'])
+	plt.plot(-FilterDecimator['ThreshBuffer'])
+	plt.plot(-FilterDecimator['EnvelopeBuffer'])
+	plt.grid(True)
 	plt.show()
 
 	# Slice symbols

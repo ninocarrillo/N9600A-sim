@@ -57,6 +57,13 @@ def GetAGCConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+		
+	key_string = "agc high thresh"
+	try:
+		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 	
 	id_string = "Decimator"
 	key_string = "decimation"
@@ -294,3 +301,47 @@ def GenEyeData(samples, oversample, delay):
 	data['x'] = x_data
 	data['y'] = y_data
 	return(data)
+
+def PeakDetect2(signal_value, detector):
+	signal_value = abs(signal_value)
+	delta = signal_value - detector['Envelope']
+	if delta > 0:
+		detector['Envelope'] = detector['Envelope'] + np.rint((delta * detector['AttackRate'] / 128))
+		if detector['Envelope'] > signal_value:
+			detector['Envelope'] = signal_value
+		detector['SustainCount'] = 0
+	if detector['SustainCount'] >= detector['SustainPeriod']:
+		detector['Envelope'] = detector['Envelope'] - detector['DecayRate']
+		if detector['Envelope'] < 0:
+			detector['Envelope'] = 0
+			detector['SustainCount'] = 0
+	detector['SustainCount'] = detector['SustainCount'] + 1
+	return detector
+
+def FilterDecimate2(filter):
+	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
+	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	filter['ThreshBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	index = 0
+	for data in filter['FilterBuffer']:
+		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
+		filter['ThreshBuffer'][index] = np.rint(filter['PeakDetector']['Envelope'] * filter['agc high thresh'] / 128)
+		data = data // pow(2, (16 + filter['FilterShift']))
+		filter['FilterBuffer'][index] = data
+		index += 1
+		if filter['InputAGCEnabled'] == True:
+			filter['PeakDetector'] = PeakDetect2(data, filter['PeakDetector'])
+			filter['GainChange'] = 0
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
+	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
+	return filter
