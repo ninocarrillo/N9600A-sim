@@ -78,8 +78,12 @@ def ModulateRRC(state):
 
 	waveform = waveform / max(waveform)
 	waveform = waveform * 32767
+	
+	waveform_2 = waveform_2 / max(waveform_2)
+	waveform_2 = waveform_2 * 32767
 
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"DemodSignal.wav", PulseFilter['sample rate'], waveform_2.astype(np.int16))
 	# # scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	# #scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
@@ -158,4 +162,21 @@ def ModulateGauss(state):
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
 	plt.show()
+	
+	#generate a new directory for the reports
+	run_number = 0
+	print('trying to make a new directory')
+	while True:
+		run_number = run_number + 1
+		dirname = f'./run{run_number}/'
+		try:
+			os.mkdir(dirname)
+		except:
+			print(dirname + ' exists')
+			continue
+		break
+	
+	waveform = waveform / max(waveform)
+	waveform = waveform * 32767	
+	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
 	return

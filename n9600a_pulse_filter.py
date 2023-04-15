@@ -29,6 +29,42 @@ def GetSymbolMapConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+	return this
+	
+def GetAGCConfig(state):
+	this = {}
+	argv = state['argv']
+	config = state['config']
+	id_string = "AGC"
+	
+	key_string = "agc attack rate"
+	try:
+		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+	
+	key_string = "agc sustain period"
+	try:
+		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "agc decay rate"
+	try:
+		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+	
+	id_string = "Decimator"
+	key_string = "decimation"
+	try:
+		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 
 	return this
 
@@ -117,6 +153,16 @@ def GetGaussFilterConfig(state):
 		sys.exit(-2)
 
 	return this
+	
+def InitFilterDecimator(filter_decimator):
+	filter_decimator['FilterBuffer'] = np.zeros(len(filter_decimator['Filter']))
+	filter_decimator['DataBuffer'] = np.array([])
+	filter_decimator['FilterShift'] = -5
+	filter_decimator['DecimationCounter'] = 0
+	filter_decimator['NewSample'] = 0
+	filter_decimator['PeakDetector'] = {'AttackRate':filter_decimator['agc attack rate'], 'SustainPeriod': filter_decimator['agc sustain period'], 'DecayRate':filter_decimator['agc decay rate'], 'SustainCount':0, 'Envelope':0}
+	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['decimation']
+	return filter_decimator
 
 def InitGaussFilter(this):
 	this['Oversample'] = this['sample rate'] // this['symbol rate']

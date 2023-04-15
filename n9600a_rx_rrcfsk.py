@@ -75,6 +75,15 @@ def FullProcess(state):
 	print(f'Reading settings for Pulse Filter')
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
+	
+	# Read only AGC settings into FilterDecimator
+	FilterDecimator = pulse_filter.GetAGCConfig(state)
+	# Transfer the calculated RRC taps to filter
+	FilterDecimator['Filter'] = PulseFilter['Taps']
+	FilterDecimator['InputSampleRate'] = PulseFilter['sample rate']
+	FilterDecimator['InputAGCEnabled'] = True
+	FilterDecimator['DecimationRate'] = FilterDecimator['decimation']
+	FilterDecimator = pulse_filter.InitFilterDecimator(FilterDecimator)
 
 	Demodulator = []
 	DataSlicer = []
@@ -103,7 +112,14 @@ def FullProcess(state):
 	print("Opened file. \r\nSample rate:", samplerate, "\r\nLength:", len(audio))
 
 	# filter input data
-	filtered_audio = np.convolve(audio, PulseFilter['Taps'], 'valid')
+	print(f'\nFiltering and decimating audio. ')
+	FilterDecimator['FilterBuffer'] = audio
+	FilterDecimator = demod.FilterDecimate(FilterDecimator)
+	print(f'Done.')
+
+
+	#filtered_audio = np.convolve(audio, PulseFilter['Taps'], 'valid')
+	filtered_audio = FilterDecimator['FilterBuffer']
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
@@ -118,6 +134,7 @@ def FullProcess(state):
 
 	plt.subplot(222)
 	plt.plot(filtered_audio)
+	plt.plot(FilterDecimator['EnvelopeBuffer'])
 	plt.show()
 
 	# Slice symbols

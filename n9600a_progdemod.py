@@ -222,8 +222,10 @@ def PeakDetect(signal_value, detector):
 def FilterDecimate(filter):
 	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
 	index = 0
 	for data in filter['FilterBuffer']:
+		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
 		data = data // pow(2, (16 + filter['FilterShift']))
 		filter['FilterBuffer'][index] = data
 		index += 1
