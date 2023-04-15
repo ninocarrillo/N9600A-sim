@@ -655,12 +655,18 @@ def ProgSliceDataN(slicer):
 	slicer['PLLClock'] += slicer['PLLStep']
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
-		if slicer['NewSample'] > slicer['Midpoint']:
+		slicer['OutputTrigger'] = True
+		# Slice and record symbol
+		slicer['LastSlice'] = slicer['NewSample']
+		if slicer['NewSample'] > slicer['Threshold']:
+			slicer['Result'] = np.array([3])
+		elif slicer['NewSample'] > slicer['Midpoint']:
 			slicer['Result'] = np.array([1])
-			slicer['OutputTrigger'] = True
+		elif slicer['NewSample'] > -slicer['Threshold']:
+			slicer['Result'] = np.array([-1])
 		else:
-			slicer['Result'] = np.array([0])
-			slicer['OutputTrigger'] = True
+			slicer['Result'] = np.array([-3])
+			
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing

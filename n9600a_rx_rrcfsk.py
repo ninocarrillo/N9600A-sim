@@ -103,10 +103,10 @@ def FullProcess(state):
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(sys.argv[2])
-		print(max(audio))
+		#print(max(audio))
 		# Take two bits of resolution away
 		audio = audio >> (16 - PulseFilter['bit count'])
-		print(max(audio))
+		#print(max(audio))
 	except:
 		print(f'Unable to open wave file {sys.argv[2]}.')
 		sys.exit(-2)
@@ -115,7 +115,7 @@ def FullProcess(state):
 
 	# filter input data
 	print(f'\nFiltering and decimating audio. ')
-	print(FilterDecimator)
+	#print(FilterDecimator)
 	FilterDecimator['FilterBuffer'] = audio
 	FilterDecimator = pulse_filter.FilterDecimate2(FilterDecimator)
 	print(f'Done.')
@@ -123,6 +123,29 @@ def FullProcess(state):
 
 	#filtered_audio = np.convolve(audio, PulseFilter['Taps'], 'valid')
 	filtered_audio = FilterDecimator['FilterBuffer']
+
+	# Slice symbols
+	sliced_samples = np.zeros(len(filtered_audio) // DataSlicer[1]['Oversample'])
+	sliced_data = np.zeros(len(filtered_audio) // DataSlicer[1]['Oversample'])
+	for demod_index in range(1, DemodulatorCount + 1):
+		index = 0
+		index2 = 0
+		index3 = 0
+		for sample in filtered_audio:
+			DataSlicer[demod_index]['NewSample'] = sample
+			DataSlicer[demod_index]['Threshold'] = FilterDecimator['ThreshBuffer'][index]
+			DataSlicer[demod_index] = demod.ProgSliceDataN(DataSlicer[demod_index])
+			for data_symbol in DataSlicer[demod_index]['Result']:
+				print(data_symbol, end=',')
+				try:
+					sliced_data[index2] = DataSlicer[demod_index]['Result']
+					sliced_samples[index2] = DataSlicer[demod_index]['LastSlice'] / DataSlicer[demod_index]['Threshold']
+				except:
+					pass
+				index2 += 1
+			index += 1
+			
+			
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
@@ -142,14 +165,10 @@ def FullProcess(state):
 	plt.plot(-FilterDecimator['ThreshBuffer'])
 	plt.plot(-FilterDecimator['EnvelopeBuffer'])
 	plt.grid(True)
+	
+	plt.subplot(223)
+	plt.scatter(sliced_data, sliced_samples,s=1)
+	plt.grid(True)
 	plt.show()
-
-	# Slice symbols
-	for demod_index in range(1, DemodulatorCount + 1):
-		for sample in filtered_audio:
-			DataSlicer[demod_index]['NewSample'] = sample
-			DataSlicer[demod_index] = demod.ProgSliceDataN(DataSlicer[demod_index])
-			for data_bit in DataSlicer[demod_index]['Result']:
-				print(data_bit)
-
+	
 	return
