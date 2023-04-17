@@ -7,6 +7,7 @@ import n9600a_rx_afsk as afsk
 import n9600a_rx_dpsk2 as dpsk2
 import n9600a_rx_dpsk as dpsk
 import n9600a_rx_gfsk as gfsk
+import n9600a_rx_gfsk2 as gfsk2
 import n9600a_rx_rrcfsk as rrcfsk
 import n9600a_nco as nco
 import n9600a_filters as filters
@@ -47,6 +48,9 @@ elif DemodulatorType == 'dpsk2':
 
 elif DemodulatorType == 'gfsk':
 	gfsk.FullProcess(state)
+	
+elif DemodulatorType == 'gfsk2':
+	gfsk2.FullProcess(state)
 
 elif DemodulatorType == 'ncotest':
 	nco.Test(state)

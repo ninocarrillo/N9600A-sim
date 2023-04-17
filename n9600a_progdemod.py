@@ -710,3 +710,47 @@ def DemodulateAFSKSSB(demodulator):
 		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
 		demodulator['Result'] = demodulator['Result'][::demodulator['OutputFilterDecimationRate']]
 	return demodulator
+
+def PeakDetect2(signal_value, detector):
+	signal_value = abs(signal_value)
+	delta = signal_value - detector['Envelope']
+	if delta > 0:
+		detector['Envelope'] = detector['Envelope'] + np.rint((delta * detector['AttackRate'] / 128))
+		if detector['Envelope'] > signal_value:
+			detector['Envelope'] = signal_value
+		detector['SustainCount'] = 0
+	if detector['SustainCount'] >= detector['SustainPeriod']:
+		detector['Envelope'] = detector['Envelope'] - detector['DecayRate']
+		if detector['Envelope'] < 0:
+			detector['Envelope'] = 0
+			detector['SustainCount'] = 0
+	detector['SustainCount'] = detector['SustainCount'] + 1
+	return detector
+
+def FilterDecimate2(filter):
+	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
+	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	filter['ThreshBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	index = 0
+	for data in filter['FilterBuffer']:
+		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
+		filter['ThreshBuffer'][index] = np.rint(filter['PeakDetector']['Envelope'] * filter['agc high thresh'] / 128)
+		data = data // pow(2, (16 + filter['FilterShift']))
+		filter['FilterBuffer'][index] = data
+		index += 1
+		if filter['InputAGCEnabled'] == True:
+			filter['PeakDetector'] = PeakDetect2(data, filter['PeakDetector'])
+			filter['GainChange'] = 0
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
+	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
+	return filter
