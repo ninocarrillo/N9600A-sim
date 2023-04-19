@@ -30,41 +30,41 @@ def GetSymbolMapConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 	return this
-	
+
 def GetAGCConfig(state):
 	this = {}
 	argv = state['argv']
 	config = state['config']
 	id_string = "AGC"
-	
+
 	key_string = "agc attack rate"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-	
+
 	key_string = "agc sustain period"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "agc decay rate"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "agc high thresh"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-	
+
 	id_string = "Decimator"
 	key_string = "decimation"
 	try:
@@ -138,12 +138,12 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "alpha"
-	try:
-		this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
+	# key_string = "alpha"
+	# try:
+	# 	this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	# except:
+	# 	print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+	# 	sys.exit(-2)
 
 	key_string = "BT"
 	try:
@@ -160,7 +160,7 @@ def GetGaussFilterConfig(state):
 		sys.exit(-2)
 
 	return this
-	
+
 def InitFilterDecimator(filter_decimator):
 	filter_decimator['FilterBuffer'] = np.zeros(len(filter_decimator['Filter']))
 	filter_decimator['DataBuffer'] = np.array([])

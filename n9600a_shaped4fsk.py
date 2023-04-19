@@ -78,7 +78,7 @@ def ModulateRRC(state):
 
 	waveform = waveform / max(waveform)
 	waveform = waveform * 32767
-	
+
 	waveform_2 = waveform_2 / max(waveform_2)
 	waveform_2 = waveform_2 * 32767
 
@@ -162,7 +162,7 @@ def ModulateGauss(state):
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
 	plt.show()
-	
+
 	#generate a new directory for the reports
 	run_number = 0
 	print('trying to make a new directory')
@@ -175,8 +175,94 @@ def ModulateGauss(state):
 			print(dirname + ' exists')
 			continue
 		break
-	
+
 	waveform = waveform / max(waveform)
-	waveform = waveform * 32767	
+	waveform = waveform * 32767
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
 	return
+
+def GaussFilterGen(state):
+	argv = state['argv']
+	config = state['config']
+	print(f'Started GaussFilterGen')
+	print(f'Reading settings for Gauss Pulse Shaping Filter')
+	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
+	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
+
+	# Adjust gain of filter:
+	FilterSum = np.sum(PulseFilter['Taps'])
+	FilterAdj = 65536 / FilterSum
+	PulseFilter['Taps'] = np.rint(FilterAdj * PulseFilter['Taps'])
+	PulseFilter['TapsTrimmed'] = np.trim_zeros(PulseFilter['Taps'], trim='fb')
+	# i = 0
+	# for tap in PulseFilter['Taps']:
+	# 	PulseFilter['Taps'][i] = np.rint(tap * FilterAdj)
+
+	#generate a new directory for the reports
+	run_number = 0
+	print('trying to make a new directory')
+	while True:
+		run_number = run_number + 1
+		dirname = f'./run{run_number}/'
+		try:
+			os.mkdir(dirname)
+		except:
+			print(dirname + ' exists')
+			continue
+		break
+
+	# Generate and save report file
+	report_file_name = f'run{run_number}_report.txt'
+	try:
+		report_file = open(dirname + report_file_name, 'w+')
+	except:
+		print('Unable to create report file.')
+	with report_file:
+		report_file.write('# Command line: ')
+		for argument in sys.argv:
+			report_file.write(f'{argument} ')
+		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+		try:
+			ini_file = open(sys.argv[1])
+		except:
+			report_file.write('Unable to open .ini file.')
+		with ini_file:
+			for character in ini_file:
+				report_file.write(character)
+
+		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+
+		report_file.write('\n\n#Gauss Filter Taps\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'GaussFilter', PulseFilter['TapsTrimmed'], 8))
+		report_file.write('\n\n')
+		report_file.write(f'Filter Tap Sum: {np.sum(PulseFilter["TapsTrimmed"])}')
+		report_file.close()
+
+		plt.figure()
+		plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+		#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+		plt.xticks(PulseFilter['SymbolTicks'])
+		plt.xticks(color='w')
+		plt.grid(True)
+		#plt.show()
+
+		LastTone = 1600
+		SetTone = 1800
+		p = 0.01
+		i = 0.0001
+		y = np.zeros(576)
+		integral = 0
+		for x in range(576):
+			y[x] = SetTone
+			delta = SetTone-LastTone
+			integral = integral + delta
+			increment = np.rint(delta*p) + np.rint(integral * i)
+			LastTone = LastTone + increment
+			if x > 287:
+				SetTone = 1600
+
+		y = np.convolve(y, PulseFilter['Taps'], 'valid') / 65536
+		plt.figure()
+		plt.plot(y)
+		plt.show()

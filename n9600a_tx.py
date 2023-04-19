@@ -70,3 +70,6 @@ elif ModulatorType == 'rrcfsk':
 elif ModulatorType == 'gauss4fsk':
 	print('starting Gauss4FSK modulator')
 	shaped4fsk.ModulateGauss(state)
+
+elif ModulatorType == 'gaussfiltergen':
+	shaped4fsk.GaussFilterGen(state)
