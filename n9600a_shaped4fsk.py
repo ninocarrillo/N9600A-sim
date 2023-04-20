@@ -191,8 +191,8 @@ def GaussFilterGen(state):
 
 	# Adjust gain of filter:
 	FilterSum = np.sum(PulseFilter['Taps'])
-	FilterAdj = 65536 / FilterSum
-	PulseFilter['Taps'] = np.rint(FilterAdj * PulseFilter['Taps'])
+	FilterAdj = 1 / FilterSum
+	PulseFilter['Taps'] = FilterAdj * PulseFilter['Taps']
 	PulseFilter['TapsTrimmed'] = np.trim_zeros(PulseFilter['Taps'], trim='fb')
 	# i = 0
 	# for tap in PulseFilter['Taps']:
@@ -262,7 +262,7 @@ def GaussFilterGen(state):
 			if x > 287:
 				SetTone = 1600
 
-		y = np.convolve(y, PulseFilter['Taps'], 'valid') / 65536
+		y = np.convolve(y, PulseFilter['Taps'], 'valid')
 		plt.figure()
 		plt.plot(y)
 		plt.show()
