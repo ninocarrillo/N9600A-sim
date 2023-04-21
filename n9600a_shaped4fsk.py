@@ -192,8 +192,10 @@ def GaussFilterGen(state):
 	# Adjust gain of filter:
 	FilterSum = np.sum(PulseFilter['Taps'])
 	FilterAdj = 1 / FilterSum
-	PulseFilter['Taps'] = FilterAdj * PulseFilter['Taps']
 	PulseFilter['TapsTrimmed'] = np.trim_zeros(PulseFilter['Taps'], trim='fb')
+	
+	PulseFilter['Taps'] = FilterAdj * PulseFilter['Taps']
+
 	# i = 0
 	# for tap in PulseFilter['Taps']:
 	# 	PulseFilter['Taps'][i] = np.rint(tap * FilterAdj)
@@ -237,7 +239,6 @@ def GaussFilterGen(state):
 		report_file.write(fo.GenInt16ArrayC(f'GaussFilter', PulseFilter['TapsTrimmed'], 8))
 		report_file.write('\n\n')
 		report_file.write(f'Filter Tap Sum: {np.sum(PulseFilter["TapsTrimmed"])}')
-		report_file.close()
 
 		plt.figure()
 		plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
@@ -247,22 +248,23 @@ def GaussFilterGen(state):
 		plt.grid(True)
 		#plt.show()
 
-		LastTone = 1600
-		SetTone = 1800
-		p = 0.01
-		i = 0.0001
-		y = np.zeros(576)
-		integral = 0
-		for x in range(576):
-			y[x] = SetTone
-			delta = SetTone-LastTone
-			integral = integral + delta
-			increment = np.rint(delta*p) + np.rint(integral * i)
-			LastTone = LastTone + increment
-			if x > 287:
-				SetTone = 1600
+		# Generate a 0-1-0 step function 
+		y = np.arange(864)
+		for i in y:
+			if i < 287:
+				y[i] = 1600
+			else:
+				y[i] = 1800
 
-		y = np.convolve(y, PulseFilter['Taps'], 'valid')
+
+		y = np.rint(np.convolve(y, PulseFilter['Taps']))
+		print(y)
 		plt.figure()
 		plt.plot(y)
 		plt.show()
+		
+
+		report_file.write('\n\n#0-1 Step Function Taps\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'Transition01', y, 8))
+		report_file.close()
