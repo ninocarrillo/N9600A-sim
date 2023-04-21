@@ -193,8 +193,8 @@ def GaussFilterGen(state):
 	FilterSum = np.sum(PulseFilter['Taps'])
 	FilterAdj = 1 / FilterSum
 	PulseFilter['TapsTrimmed'] = np.trim_zeros(PulseFilter['Taps'], trim='fb')
-	
 	PulseFilter['Taps'] = FilterAdj * PulseFilter['Taps']
+	samples_per_symbol = PulseFilter['sample rate'] // PulseFilter['symbol rate']
 
 	# i = 0
 	# for tap in PulseFilter['Taps']:
@@ -246,22 +246,33 @@ def GaussFilterGen(state):
 		plt.xticks(PulseFilter['SymbolTicks'])
 		plt.xticks(color='w')
 		plt.grid(True)
-		#plt.show()
-
-		# Generate a 0-1-0 step function 
-		y = np.arange(864)
-		for i in y:
-			if i < 287:
-				y[i] = 1600
-			else:
-				y[i] = 1800
-
-
-		y = np.rint(np.convolve(y, PulseFilter['Taps']))
-		print(y)
-		plt.figure()
-		plt.plot(y)
 		plt.show()
+
+		# generate the symbol patterns
+		symbol_count = np.power(2, PulseFilter['symbol span'])
+		for i0 in range(symbol_count):
+			#i0 is the symbol to be factored
+			y = np.zeros(samples_per_symbol * PulseFilter['symbol span'])
+			factor_me = i0
+			for i2 in range(PulseFilter['symbol span']):
+				factor = factor_me % 2
+				factor_me = factor_me // 2
+				if factor == 1:
+					level = 1600
+				else:
+					level = 1800
+				for i3 in range(samples_per_symbol):
+					y[(i2 * samples_per_symbol) + i3] = level
+			print(i0)
+			#plt.figure()
+			#plt.plot(y)
+			#plt.show()
+					
+
+			y = np.rint(np.convolve(y, PulseFilter['Taps'], 'same'))
+			plt.figure()
+			plt.plot(y)
+			plt.show()
 		
 
 		report_file.write('\n\n#0-1 Step Function Taps\n')
