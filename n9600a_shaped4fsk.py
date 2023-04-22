@@ -267,28 +267,29 @@ def GaussFilterGen(state):
 			#plt.figure()
 			#plt.plot(y)
 			#plt.show()
-					
+
 
 			z = np.rint(np.convolve(y, PulseFilter['Taps'], 'full'))
 			# trim the invalid results:
 			z = z[len(PulseFilter['Taps'])//2:]
 			z = z[:samples_per_symbol*PulseFilter['symbol span']]
-			
+
 			# select the center symbol length
 			x_offset = ((PulseFilter['symbol span'] * samples_per_symbol) // 2) - (samples_per_symbol // 2)
 			xz = np.arange(x_offset, x_offset + samples_per_symbol)
 			z = z[x_offset:x_offset+samples_per_symbol]
 			plt.figure()
+			plt.title(f'Pulse Pattern {i0}')
 			plt.plot(y)
 			plt.plot(xz,z)
 			plt.ylim(1500,1900)
 			plt.show()
-			
+
 			report_file.write(f'\n\Pulse Response Taps, {i0}')
 			report_file.write('\n')
 			report_file.write(fo.GenInt16ArrayC(f'PulseTaps{i0}', z, 8))
 			report_file.write('\n\n')
-		
+
 
 
 		report_file.close()
