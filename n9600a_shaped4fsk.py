@@ -254,10 +254,12 @@ def GaussFilterGen(state):
 			#i0 is the symbol to be factored
 			y = np.zeros(samples_per_symbol * PulseFilter['symbol span'])
 			factor_me = i0
+			pulse_pattern = 0
 			for i2 in range(PulseFilter['symbol span']):
 				factor = factor_me % 2
 				factor_me = factor_me // 2
 				if factor == 1:
+					pulse_pattern += 2**(PulseFilter['symbol span'] - i2 - 1)
 					level = 1600
 				else:
 					level = 1800
@@ -279,17 +281,30 @@ def GaussFilterGen(state):
 			xz = np.arange(x_offset, x_offset + samples_per_symbol)
 			z = z[x_offset:x_offset+samples_per_symbol]
 			plt.figure()
-			plt.title(f'Pulse Pattern {i0}')
+			plt.title(f'Pulse Pattern {pulse_pattern}')
 			plt.plot(y)
 			plt.plot(xz,z)
 			plt.ylim(1500,1900)
 			plt.show()
 
-			report_file.write(f'\n\Pulse Response Taps, {i0}')
+
 			report_file.write('\n')
-			report_file.write(fo.GenInt16ArrayC(f'PulseTaps{i0}', z, 8))
+			report_file.write(fo.GenInt16ArrayC(f'PulseTaps{pulse_pattern}', z, 8))
 			report_file.write('\n\n')
 
 
+		#generate a sine table:
+		scale_factor = 32
+		sine_table = np.zeros(PulseFilter['sample rate'] // scale_factor)
+		for i in range(len(sine_table)):
+			sine_table[i] = np.rint(np.sin(i * 2 * np.pi / (PulseFilter['sample rate'] // scale_factor)) * 256)
 
+		report_file.write('\n\n#Sine Samples\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
+		sine_table = sine_table[:len(sine_table) // 4]
+		report_file.write('\n\n#Sine Samples\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
+		
 		report_file.close()

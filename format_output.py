@@ -7,7 +7,7 @@ import os
 
 def GenInt16ArrayC(name, array, column_width):
 	result = '\n'
-	result += f'int16_t {name}[{len(array)}] = '
+	result += f'const __prog__ int16_t __attribute__((space(prog))) {name}[{len(array)}] = '
 	result += '{ '
 	y = len(array)
 	for x in range(y):
