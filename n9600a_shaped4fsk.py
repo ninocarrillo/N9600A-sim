@@ -11,6 +11,7 @@ import n9600a_pulse_filter as pulse_filter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
+import random
 
 def ModulateRRC(state):
 	argv = state['argv']
@@ -302,9 +303,46 @@ def GaussFilterGen(state):
 		report_file.write('\n\n#Sine Samples\n')
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
-		sine_table = sine_table[:len(sine_table) // 4]
+		sine_table = sine_table[:(len(sine_table) // 4) + 1]
 		report_file.write('\n\n#Sine Samples\n')
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
 		
 		report_file.close()
+
+
+		#generate a sine wave and save to wav file:
+		
+		SineSamplesPeriod = int(86400)
+		ToneFreq = 1700
+		TonePhase = 0
+		sample_output = np.zeros(SineSamplesPeriod * 5)
+		
+		for sample_index in range(SineSamplesPeriod * 5):
+			TonePhase += ToneFreq
+			while TonePhase >= SineSamplesPeriod:
+				TonePhase -= SineSamplesPeriod
+			y = int(TonePhase + random.randint(0,63))
+			while y >= SineSamplesPeriod:
+				y -= SineSamplesPeriod
+			x = SineSamplesPeriod >> 2
+			
+			if y < x :
+				y >>= 5
+				sample_output[sample_index] = sine_table[y] + 104
+			elif y < (x * 2):
+				y = int((SineSamplesPeriod / 2) - y) >> 5
+				sample_output[sample_index] = sine_table[y] + 104
+			elif y < (x * 3):
+				y = int(y - (SineSamplesPeriod / 2)) >> 5
+				sample_output[sample_index] = -sine_table[y] + 104
+			else:
+				y = y - (SineSamplesPeriod / 2)
+				y = int((SineSamplesPeriod / 2) - y) >> 5
+				sample_output[sample_index] = -sine_table[y] + 104
+			
+		plt.figure()
+		plt.plot(sample_output)
+		plt.show()
+		
+		scipy.io.wavfile.write(dirname+"ToneOutput.wav", SineSamplesPeriod, sample_output.astype(np.int16) * 64)
