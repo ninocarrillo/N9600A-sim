@@ -296,28 +296,33 @@ def GaussFilterGen(state):
 
 		#generate a sine table:
 		scale_factor = 32
+		harmonic = 2
+		harmonic_amplitude = 1/50
+		harmonic_phase_shift = 4 * PulseFilter['sample rate'] // (8 * scale_factor)
 		sine_table = np.zeros(PulseFilter['sample rate'] // scale_factor)
 		for i in range(len(sine_table)):
-			sine_table[i] = np.rint(np.sin(i * 2 * np.pi / (PulseFilter['sample rate'] // scale_factor)) * 256)
+			sine_table[i] = np.rint((np.sin(i * 2 * np.pi / (PulseFilter['sample rate'] // scale_factor)) + (harmonic_amplitude * np.sin(harmonic * 2 * np.pi*(harmonic_phase_shift + i) / (PulseFilter['sample rate'] // scale_factor)))) * 256)
 
 		report_file.write('\n\n#Sine Samples\n')
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
-		sine_table = sine_table[:(len(sine_table) // 4) + 1]
-		report_file.write('\n\n#Sine Samples\n')
+		quarter_sine_table = sine_table[:(len(sine_table) // 4) + 1]
+		half_sine_table = sine_table[:(len(sine_table) // 2) + 1]
 		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'SineSamples', sine_table, 8))
-		
+		report_file.write(fo.GenInt16ArrayC(f'QuarterSineSamples', quarter_sine_table, 8))
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'HalfSineSamples', half_sine_table, 8))
+
 		report_file.close()
 
 
 		#generate a sine wave and save to wav file:
-		
+
 		SineSamplesPeriod = int(86400)
 		ToneFreq = 1700
 		TonePhase = 0
 		sample_output = np.zeros(SineSamplesPeriod * 5)
-		
+
 		for sample_index in range(SineSamplesPeriod * 5):
 			TonePhase += ToneFreq
 			while TonePhase >= SineSamplesPeriod:
@@ -326,23 +331,41 @@ def GaussFilterGen(state):
 			while y >= SineSamplesPeriod:
 				y -= SineSamplesPeriod
 			x = SineSamplesPeriod >> 2
-			
+
 			if y < x :
 				y >>= 5
-				sample_output[sample_index] = sine_table[y] + 104
+				sample_output[sample_index] = sine_table[y]
 			elif y < (x * 2):
 				y = int((SineSamplesPeriod / 2) - y) >> 5
-				sample_output[sample_index] = sine_table[y] + 104
+				sample_output[sample_index] = sine_table[y]
 			elif y < (x * 3):
 				y = int(y - (SineSamplesPeriod / 2)) >> 5
-				sample_output[sample_index] = -sine_table[y] + 104
+				sample_output[sample_index] = -sine_table[y]
 			else:
 				y = y - (SineSamplesPeriod / 2)
 				y = int((SineSamplesPeriod / 2) - y) >> 5
-				sample_output[sample_index] = -sine_table[y] + 104
-			
-		plt.figure()
-		plt.plot(sample_output)
-		plt.show()
-		
-		scipy.io.wavfile.write(dirname+"ToneOutput.wav", SineSamplesPeriod, sample_output.astype(np.int16) * 64)
+				sample_output[sample_index] = -sine_table[y]
+
+		sample_output_2 = np.zeros(SineSamplesPeriod * 5)
+
+		for sample_index in range(SineSamplesPeriod * 5):
+			TonePhase += ToneFreq
+			while TonePhase >= SineSamplesPeriod:
+				TonePhase -= SineSamplesPeriod
+			y = int(TonePhase + random.randint(0,63))
+			while y >= SineSamplesPeriod:
+				y -= SineSamplesPeriod
+			x = SineSamplesPeriod >> 1
+
+			if y < x :
+				y >>= 5
+				sample_output_2[sample_index] = sine_table[y]
+			else:
+				y = y - (SineSamplesPeriod / 2)
+				y = int((SineSamplesPeriod / 2) - y) >> 5
+				sample_output_2[sample_index] = -sine_table[y]
+
+
+		scipy.io.wavfile.write(dirname+"QuarterTableToneOutput.wav", SineSamplesPeriod, sample_output.astype(np.int16) * 64)
+
+		scipy.io.wavfile.write(dirname+"HalfTableToneOutput.wav", SineSamplesPeriod, sample_output_2.astype(np.int16) * 64)
