@@ -297,11 +297,15 @@ def GaussFilterGen(state):
 		#generate a sine table:
 		scale_factor = 32
 		harmonic = 2
-		harmonic_amplitude = 1/50
+		harmonic_amplitude = 0/50
 		harmonic_phase_shift = 4 * PulseFilter['sample rate'] // (8 * scale_factor)
 		sine_table = np.zeros(PulseFilter['sample rate'] // scale_factor)
 		for i in range(len(sine_table)):
-			sine_table[i] = np.rint((np.sin(i * 2 * np.pi / (PulseFilter['sample rate'] // scale_factor)) + (harmonic_amplitude * np.sin(harmonic * 2 * np.pi*(harmonic_phase_shift + i) / (PulseFilter['sample rate'] // scale_factor)))) * 256)
+			sine_table[i] = np.rint((1*(np.sin(i * 2 * np.pi / (PulseFilter['sample rate'] // scale_factor))) + (harmonic_amplitude * np.sin(harmonic * 2 * np.pi*(harmonic_phase_shift + i) / (PulseFilter['sample rate'] // scale_factor)))) * 256)
+
+		plt.figure()
+		plt.plot(sine_table)
+		plt.show()
 
 		report_file.write('\n\n#Sine Samples\n')
 		report_file.write('\n')
