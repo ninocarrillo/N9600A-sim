@@ -331,11 +331,10 @@ def GaussFilterGen(state):
 			TonePhase += ToneFreq
 			while TonePhase >= SineSamplesPeriod:
 				TonePhase -= SineSamplesPeriod
-			y = int(TonePhase + random.randint(0,63))
+			y = int(TonePhase + random.randint(0,127))
 			while y >= SineSamplesPeriod:
 				y -= SineSamplesPeriod
 			x = SineSamplesPeriod >> 2
-
 			if y < x :
 				y >>= 5
 				sample_output[sample_index] = sine_table[y]
@@ -356,11 +355,10 @@ def GaussFilterGen(state):
 			TonePhase += ToneFreq
 			while TonePhase >= SineSamplesPeriod:
 				TonePhase -= SineSamplesPeriod
-			y = int(TonePhase + random.randint(0,63))
+			y = int(TonePhase + random.randint(0,127))
 			while y >= SineSamplesPeriod:
 				y -= SineSamplesPeriod
 			x = SineSamplesPeriod >> 1
-
 			if y < x :
 				y >>= 5
 				sample_output_2[sample_index] = sine_table[y]
@@ -368,8 +366,44 @@ def GaussFilterGen(state):
 				y = y - (SineSamplesPeriod / 2)
 				y = int((SineSamplesPeriod / 2) - y) >> 5
 				sample_output_2[sample_index] = -sine_table[y]
-
+		
+		sample_output_3 = np.zeros(SineSamplesPeriod * 5)
+		ToneFreq = 1350
+		ModPer = SineSamplesPeriod // ToneFreq
+		ModIndex = 0
+		ModAmplitude = 0
+		
+		for sample_index in range(SineSamplesPeriod * 5):
+			TonePhase += ToneFreq
+			while TonePhase >= SineSamplesPeriod:
+				TonePhase -= SineSamplesPeriod
+			y = int(TonePhase + random.randint(0,127))
+			while y >= SineSamplesPeriod:
+				y -= SineSamplesPeriod
+			x = SineSamplesPeriod >> 2
+			if y < x :
+				y >>= 5
+				sample_output_3[sample_index] = sine_table[y]
+			elif y < (x * 2):
+				y = int((SineSamplesPeriod / 2) - y) >> 5
+				sample_output_3[sample_index] = sine_table[y]
+			elif y < (x * 3):
+				y = int(y - (SineSamplesPeriod / 2)) >> 5
+				sample_output_3[sample_index] = -sine_table[y]
+			else:
+				y = y - (SineSamplesPeriod / 2)
+				y = int((SineSamplesPeriod / 2) - y) >> 5
+				sample_output_3[sample_index] = -sine_table[y]
+			sample_output_3[sample_index] = sample_output_3[sample_index] * (ModAmplitude + 1)
+			ModIndex += 1
+			if ModIndex >= ModPer:
+				ModIndex = 0
+				ModAmplitude = random.randint(0,3)
+			
 
 		scipy.io.wavfile.write(dirname+"QuarterTableToneOutput.wav", SineSamplesPeriod, sample_output.astype(np.int16) * 64)
 
 		scipy.io.wavfile.write(dirname+"HalfTableToneOutput.wav", SineSamplesPeriod, sample_output_2.astype(np.int16) * 64)
+		
+		
+		scipy.io.wavfile.write(dirname+"ModQtrToneOutput.wav", SineSamplesPeriod, sample_output_3.astype(np.int16) * 8)
