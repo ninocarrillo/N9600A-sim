@@ -149,7 +149,7 @@ def InitAFSKDemod(demodulator):
 	# demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
-	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 1) - demodulator['SqrtBitCount'])
+	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 2) - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**0
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
