@@ -12,9 +12,8 @@ def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
 
-def InitDescrambler():
-	descrambler = {}
-	descrambler['Polynomial'] = int('0x63003',16)
+def InitDescrambler(descrambler):
+	#descrambler['Polynomial'] = int('0x63003',16)
 	descrambler['Tap'] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 	descrambler['Invert'] = True
 	descrambler['TapCount'] = 0
@@ -53,11 +52,46 @@ def InitDataSlicer(data_slicer):
 	data_slicer['CrossingsInSync'] = 0
 	data_slicer['CrossingPhase'] = 0
 	data_slicer['ZeroCrossing'] = False
-	data_slicer['PhaseBufferN'] = 100
+	data_slicer['SampleIndex'] = 0
+	return data_slicer
+
+def InitDataSlicer2(data_slicer):
+	data_slicer['PLLClock'] = 0
+	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
+	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * data_slicer['PLLStep']
+	data_slicer['LastSample'] = 0
+	data_slicer['NewSample'] = 0
+	data_slicer['Result'] = 0
+	data_slicer['Midpoint'] = 0
+	data_slicer['ZeroCrossing'] = False
+	data_slicer['PhaseBufferN'] = len(data_slicer['LoopFilter'])
 	data_slicer['PhaseBuffer'] = np.zeros(data_slicer['PhaseBufferN'])
-	data_slicer['PhaseIndex'] = 0
 	data_slicer['SampleIndex'] = 0
 	data_slicer['PLLControl'] = 0
+	return data_slicer
+
+def InitDataSlicerN(data_slicer):
+	data_slicer['PLLClock'] = 0
+	data_slicer['PLLStep'] = 32
+	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['lock rate'] * 64)
+	data_slicer['Oversample'] = data_slicer['sample rate'] // data_slicer['symbol rate']
+	data_slicer['PLLPeriod'] = (data_slicer['sample rate'] // data_slicer['symbol rate']) * data_slicer['PLLStep']
+	data_slicer['LastSample'] = 0
+	data_slicer['NewSample'] = 0
+	data_slicer['Result'] = 0
+	data_slicer['Midpoint'] = 0
+	data_slicer['LoosePhaseTolerance'] = 2
+	data_slicer['TightPhaseTolerance'] = 1
+	data_slicer['DCD'] = 0
+	data_slicer['DCDLoad'] = 80
+	data_slicer['Phase'] = 0
+	data_slicer['PhaseError'] = 0
+	data_slicer['PhaseTolerance'] = data_slicer['TightPhaseTolerance']
+	data_slicer['CrossingsInSyncThreshold'] = 4
+	data_slicer['CrossingsInSync'] = 0
+	data_slicer['CrossingPhase'] = 0
+	data_slicer['ZeroCrossing'] = False
+	data_slicer['SampleIndex'] = 0
 	return data_slicer
 
 def InitFilterDecimator(filter_decimator):
@@ -115,7 +149,7 @@ def InitAFSKDemod(demodulator):
 	# demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
-	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 1) - demodulator['SqrtBitCount'])
+	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 2) - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**0
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
@@ -188,8 +222,10 @@ def PeakDetect(signal_value, detector):
 def FilterDecimate(filter):
 	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
 	index = 0
 	for data in filter['FilterBuffer']:
+		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
 		data = data // pow(2, (16 + filter['FilterShift']))
 		filter['FilterBuffer'][index] = data
 		index += 1
@@ -256,7 +292,7 @@ def DemodulateDPSK2(demodulator):
 
 	return demodulator
 
-def DemodulateDPSK3(demodulator):
+def DemodulateDPSK2(demodulator):
 	if demodulator['Enabled'] == True:
 
 		index = 0
@@ -486,15 +522,40 @@ def SliceData(slicer):
 				slicer['PLLClock'] *= slicer['Rate']
 		slicer['LastSample'] = slicer['NewSample']
 	return slicer
+	
+def SliceDataN(slicer):
+	slicer['Midpoint'] = 0
+	slicer['LastSample'] = 0
+	slicer['Result'] = np.zeros(int((len(slicer['Input']) / slicer['Oversample']) * 1.1))
+	output_index = 0
+	for slicer['NewSample'] in slicer['Input']:
+		slicer['PLLClock'] += slicer['PLLStep']
+		if slicer['PLLClock'] > ((slicer['PLLPeriod'] / 2.0) - 1.0):
+			slicer['PLLClock'] -= slicer['PLLPeriod']
+			if slicer['NewSample'] > slicer['Midpoint']:
+				slicer['Result'][output_index] = 1
+			else:
+				slicer['Result'][output_index] = 0
+			output_index += 1
+		if slicer['LastSample'] > slicer['Midpoint']:
+			if slicer['NewSample'] <= slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		else:
+			if slicer['NewSample'] > slicer['Midpoint']:
+				# Zero Crossing
+				slicer['PLLClock'] *= slicer['Rate']
+		slicer['LastSample'] = slicer['NewSample']
+	return slicer
 
-def ProgSliceData(slicer):
+def ProgSliceData2(slicer):
 	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
 	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
 	slicer['SampleIndex'] += 1
 	slicer['Midpoint'] = 0
 	slicer['Result'] = np.array([])
 	slicer['OutputTrigger'] = False
-	slicer['PLLClock'] += slicer['PLLStep'] + slicer['PLLControl']
+	slicer['PLLClock'] += (slicer['PLLStep'] + np.rint(slicer['PLLControl'] * slicer['PLLFeedbackGain']))
 	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
 		slicer['PLLClock'] -= slicer['PLLPeriod']
 		if slicer['NewSample'] > slicer['Midpoint']:
@@ -503,6 +564,109 @@ def ProgSliceData(slicer):
 		else:
 			slicer['Result'] = np.array([0])
 			slicer['OutputTrigger'] = True
+	if slicer['LastSample'] > slicer['Midpoint']:
+		if slicer['NewSample'] <= slicer['Midpoint']:
+			# Zero Crossing
+			slicer['ZeroCrossing'] = True
+			#slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			#slicer['PLLClock'] //= 64
+	else:
+		if slicer['NewSample'] > slicer['Midpoint']:
+			# Zero Crossing
+			slicer['ZeroCrossing'] = True
+			#slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			#slicer['PLLClock'] //= 64
+
+	if slicer['ZeroCrossing'] == True:
+		slicer['ZeroCrossing'] = False
+
+		slicer['PhaseError'] = slicer['PLLClock']
+
+		#slicer['PLLControl'] = -slicer['PhaseError']
+		slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+		slicer['PLLControl'] = -(np.convolve(slicer['PhaseBuffer'], slicer['LoopFilter'], 'valid') // pow(2, 16))
+	#else:
+		#slicer['PhaseBuffer'] = slicer['PhaseBuffer'][1:]
+		#slicer['PhaseBuffer'] = np.append(slicer['PhaseBuffer'], np.array(slicer['PhaseError']))
+
+
+	slicer['LastSample'] = slicer['NewSample']
+
+	return slicer
+
+def ProgSliceData(slicer):
+	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
+	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
+	slicer['SampleIndex'] += 1
+	slicer['Midpoint'] = 0
+	slicer['Result'] = np.array([])
+	slicer['OutputTrigger'] = False
+	slicer['PLLClock'] += slicer['PLLStep']
+	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
+		slicer['PLLClock'] -= slicer['PLLPeriod']
+		if slicer['NewSample'] > slicer['Midpoint']:
+			slicer['Result'] = np.array([1])
+			slicer['OutputTrigger'] = True
+		else:
+			slicer['Result'] = np.array([0])
+			slicer['OutputTrigger'] = True
+	if slicer['LastSample'] > slicer['Midpoint']:
+		if slicer['NewSample'] <= slicer['Midpoint']:
+			# Zero Crossing
+			slicer['ZeroCrossing'] = True
+			#slicer['PLLClock'] *= slicer['Rate']
+			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			slicer['PLLClock'] //= 64
+	else:
+		if slicer['NewSample'] > slicer['Midpoint']:
+			# Zero Crossing
+			slicer['ZeroCrossing'] = True
+			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
+			slicer['PLLClock'] //= 64
+
+	if slicer['ZeroCrossing'] == True:
+		slicer['ZeroCrossing'] = False
+		if slicer['DCD'] < (slicer['DCDLoad'] / 2):
+			slicer['PhaseTolerance'] = slicer['TightPhaseTolerance']
+		slicer['PhaseError'] = abs(slicer['Phase'] - slicer['CrossingPhase'])
+		if slicer['PhaseError'] < slicer['PhaseTolerance']:
+			slicer['CrossingsInSync'] += 1
+			if slicer['CrossingsInSync'] > slicer['CrossingsInSyncThreshold']:
+				slicer['DCD'] = slicer['DCDLoad']
+				slicer['PhaseTolerance'] = slicer['LoosePhaseTolerance']
+		else:
+			slicer['CrossingsInSync'] //= 2
+		slicer['CrossingPhase'] = slicer['Phase']
+
+	slicer['LastSample'] = slicer['NewSample']
+	slicer['Phase'] += 1
+	if slicer['Phase'] >= slicer['Oversample']:
+		slicer['Phase'] = 0
+	return slicer
+
+def ProgSliceDataN(slicer):
+	# slicer['EnvelopeDetector'] = HighLowDetect(slicer['NewSample'], slicer['EnvelopeDetector'])
+	# slicer['Midpoint'] = np.rint(slicer['EnvelopeDetector']['Midpoint'] * 0.66)
+	slicer['SampleIndex'] += 1
+	slicer['Midpoint'] = 0
+	slicer['Result'] = np.array([])
+	slicer['OutputTrigger'] = False
+	slicer['PLLClock'] += slicer['PLLStep']
+	if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
+		slicer['PLLClock'] -= slicer['PLLPeriod']
+		slicer['OutputTrigger'] = True
+		# Slice and record symbol
+		slicer['LastSlice'] = slicer['NewSample']
+		if slicer['NewSample'] > slicer['Threshold']:
+			slicer['Result'] = np.array([3])
+		elif slicer['NewSample'] > slicer['Midpoint']:
+			slicer['Result'] = np.array([1])
+		elif slicer['NewSample'] > -slicer['Threshold']:
+			slicer['Result'] = np.array([-1])
+		else:
+			slicer['Result'] = np.array([-3])
+			
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing
@@ -546,3 +710,47 @@ def DemodulateAFSKSSB(demodulator):
 		demodulator['Result'] = np.convolve(demodulator['OutputFilterBuffer'], demodulator['OutputFilter'], 'valid') // pow(2, (16 + demodulator['OutputFilterShift']))
 		demodulator['Result'] = demodulator['Result'][::demodulator['OutputFilterDecimationRate']]
 	return demodulator
+
+def PeakDetect2(signal_value, detector):
+	signal_value = abs(signal_value)
+	delta = signal_value - detector['Envelope']
+	if delta > 0:
+		detector['Envelope'] = detector['Envelope'] + np.rint((delta * detector['AttackRate'] / 128))
+		if detector['Envelope'] > signal_value:
+			detector['Envelope'] = signal_value
+		detector['SustainCount'] = 0
+	if detector['SustainCount'] >= detector['SustainPeriod']:
+		detector['Envelope'] = detector['Envelope'] - detector['DecayRate']
+		if detector['Envelope'] < 0:
+			detector['Envelope'] = 0
+			detector['SustainCount'] = 0
+	detector['SustainCount'] = detector['SustainCount'] + 1
+	return detector
+
+def FilterDecimate2(filter):
+	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
+	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
+	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	filter['ThreshBuffer'] = np.zeros(len(filter['FilterBuffer']))
+	index = 0
+	for data in filter['FilterBuffer']:
+		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
+		filter['ThreshBuffer'][index] = np.rint(filter['PeakDetector']['Envelope'] * filter['agc high thresh'] / 128)
+		data = data // pow(2, (16 + filter['FilterShift']))
+		filter['FilterBuffer'][index] = data
+		index += 1
+		if filter['InputAGCEnabled'] == True:
+			filter['PeakDetector'] = PeakDetect2(data, filter['PeakDetector'])
+			filter['GainChange'] = 0
+			if filter['PeakDetector']['Envelope'] > 24576:
+				filter['FilterShift'] = filter['FilterShift'] + 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
+				if filter['FilterShift'] > 16:
+					filter['FilterShift'] = 16
+			if filter['PeakDetector']['Envelope'] < 8192:
+				filter['FilterShift'] = filter['FilterShift'] - 1
+				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
+				if filter['FilterShift'] < -16:
+					filter['FilterShift'] = -16
+	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
+	return filter
