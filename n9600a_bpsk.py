@@ -22,12 +22,13 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
-	NCO = nco.GetNCOConfig(config, 1, "NCO ")
+	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
 	NCO = nco.InitNCO(NCO)
 
 	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 	ModulatingWaveform = np.convolve(PulseFilter['Taps'], BitStream)
-	ModulatingWaveform = ModulatingWaveform / max(ModulatingWaveform)
+	ModAmplitude = 64
+	ModulatingWaveform = np.rint(ModAmplitude * ModulatingWaveform / max(ModulatingWaveform))
 
 	Baseband = np.zeros(len(ModulatingWaveform))
 	i = 0

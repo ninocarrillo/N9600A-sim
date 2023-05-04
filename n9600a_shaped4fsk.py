@@ -261,9 +261,9 @@ def GaussFilterGen(state):
 				factor_me = factor_me // 2
 				if factor == 1:
 					pulse_pattern += 2**(PulseFilter['symbol span'] - i2 - 1)
-					level = 1600
+					level = 128
 				else:
-					level = 1800
+					level = -127
 				for i3 in range(samples_per_symbol):
 					y[(i2 * samples_per_symbol) + i3] = level
 			print(i0)
@@ -285,7 +285,7 @@ def GaussFilterGen(state):
 			plt.title(f'Pulse Pattern {pulse_pattern}')
 			plt.plot(y)
 			plt.plot(xz,z)
-			plt.ylim(1500,1900)
+			plt.ylim(-200,200)
 			plt.show()
 
 

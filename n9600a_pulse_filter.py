@@ -159,6 +159,20 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "amplitude bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "undersample"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitFilterDecimator(filter_decimator):
