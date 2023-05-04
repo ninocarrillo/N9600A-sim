@@ -159,13 +159,13 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "amplitude bits"
+	key_string = "amplitude"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "undersample"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
@@ -186,7 +186,7 @@ def InitFilterDecimator(filter_decimator):
 	return filter_decimator
 
 def InitGaussFilter(this):
-	this['Oversample'] = this['sample rate'] // this['symbol rate']
+	this['Oversample'] = this['sample rate'] // (this['symbol rate'] * this['undersample'])
 	this['TapCount'] = this['symbol span'] * this['Oversample']
 	this['TimeStep'] = 1 / this['sample rate']
 	this['SymbolTime'] = 1 / this['symbol rate']
@@ -240,6 +240,23 @@ def InitRRCFilter(this):
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
 	this['RC'] = np.convolve(this['Taps'], this['Taps'], 'same')
 	return this
+
+def BytesToSymbols(data, filter):
+	bit_count = len(data) * 8
+	symbol_count = bit_count // filter['SymbolMap']['symbol bits']
+	sample_count = symbol_count
+	samples = np.zeros(sample_count)
+	sample_index = 0
+	symbols_per_byte = 8 // filter['SymbolMap']['symbol bits']
+	symbol_mask = int(pow(2,filter['SymbolMap']['symbol bits']) - 1)
+	for byte in data:
+		byte = int(byte)
+		for byte_index in range(symbols_per_byte):
+			symbol = np.bitwise_and(byte, symbol_mask)
+			byte = np.right_shift(byte, filter['SymbolMap']['symbol bits'])
+			samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+			sample_index += 1
+	return samples
 
 def ExpandSampleStream(data, filter):
 	bit_count = len(data) * 8
@@ -359,3 +376,51 @@ def FilterDecimate2(filter):
 					filter['FilterShift'] = -16
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
+
+def GenPulseFilterPatterns(this):
+	bit_width = this['symbol span'] * this['SymbolMap']['symbol bits']
+	symbol_count = 2**bit_width
+	samples_per_symbol = this['Oversample']
+	symbol_mask = np.power(2, this['SymbolMap']['symbol bits']) - 1
+	symbol_tap = symbol_mask << ((this['symbol span'] - 1) * this['SymbolMap']['symbol bits'])
+	shift_mask = np.power(2,this['symbol span'] * this['SymbolMap']['symbol bits'])
+	this['FilterPatterns'] = np.zeros(symbol_count * samples_per_symbol)
+	for i0 in range(symbol_count):
+		#i0 is the symbol to be factored
+		y = np.zeros(samples_per_symbol * this['symbol span'])
+		factor_me = i0
+		# bit-reverse i0
+		shift_register = 0
+		for ix in range(bit_width):
+			shift_register <<= 1
+			if factor_me & 1:
+				shift_register |= 1
+			factor_me >>= 1
+		factor_me = shift_register
+		pulse_pattern = 0
+
+		bit_index = 0
+		for i2 in range(this['symbol span'] * this['SymbolMap']['symbol bits']):
+			shift_register <<= this['SymbolMap']['symbol bits']
+			factor = factor_me & symbol_mask
+			factor_me = factor_me >> this['SymbolMap']['symbol bits']
+			level = this['SymbolMap']['symbol map'][factor]
+
+			for i3 in range(samples_per_symbol):
+				y[(i2 * samples_per_symbol) + i3] = level
+
+			z = np.convolve(y, this['Taps'], 'full')
+			# trim the invalid results:
+			z = z[len(this['Taps'])//2:]
+			z = z[:samples_per_symbol*this['symbol span']]
+
+			# select the center symbol length
+			x_offset = ((this['symbol span'] * samples_per_symbol) // 2) - (samples_per_symbol // 2)
+			xz = np.arange(x_offset, x_offset + samples_per_symbol)
+			z = z[x_offset:x_offset+samples_per_symbol]
+			i4 = 0
+			for x in z:
+				this['FilterPatterns'][((i0) * samples_per_symbol) + i4] = x
+				i4 += 1
+	this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
+	return this
