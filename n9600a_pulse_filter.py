@@ -397,8 +397,6 @@ def GenPulseFilterPatterns(this):
 				shift_register |= 1
 			factor_me >>= 1
 		factor_me = shift_register
-		pulse_pattern = 0
-
 		bit_index = 0
 		for i2 in range(this['symbol span'] * this['SymbolMap']['symbol bits']):
 			shift_register <<= this['SymbolMap']['symbol bits']
