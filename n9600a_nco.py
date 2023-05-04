@@ -11,12 +11,6 @@ import n9600a_input_filter as input_filter
 
 def GetNCOConfig(config, num, id_string):
 	this = {}
-	key_string = "enabled"
-	try:
-		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
 
 	key_string = "nco design sample rate"
 	try:

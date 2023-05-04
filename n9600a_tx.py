@@ -78,7 +78,7 @@ elif ModulatorType == 'gaussfiltergen':
 elif ModulatorType == 'bpsk':
 	bpsk.Modulate(state)
 
-elif ModulatorType == 'bpskgauass':
+elif ModulatorType == 'bpskgauss':
 	bpsk.ModulateGauss(state)
 
 elif ModulatorType == 'bpskrrc':

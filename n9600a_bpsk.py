@@ -12,6 +12,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
 import random
+import n9600a_nco as nco
 
 def ModulateGauss(state):
 	argv = state['argv']
@@ -21,12 +22,24 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
-	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	NCO = nco.GetNCOConfig(config, 1, "NCO ")
+	NCO = nco.InitNCO(NCO)
 
-	waveform = np.convolve(PulseFilter['Taps'], BitStream)
-	ReceiveFilter = np.ones(17) / 17
-	waveform_2 = np.convolve(ReceiveFilter, waveform)
-	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
+	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	ModulatingWaveform = np.convolve(PulseFilter['Taps'], BitStream)
+	ModulatingWaveform = ModulatingWaveform / max(ModulatingWaveform)
+
+	Baseband = np.zeros(len(ModulatingWaveform))
+	i = 0
+	for Amplitude in ModulatingWaveform:
+		NCO = nco.UpdateNCO(NCO)
+		Baseband[i] = Amplitude * NCO['Sine']
+		i += 1
+
+	plt.figure()
+	plt.plot(Baseband)
+	plt.show()
+
 	plt.figure()
 	plt.subplot(221)
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
@@ -36,25 +49,23 @@ def ModulateGauss(state):
 	plt.grid(True)
 
 	plt.subplot(222)
-	plt.plot(waveform, 'b')
-	plt.plot(waveform_2, 'r')
+	plt.plot(ModulatingWaveform, 'b')
 
-
-	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 0)
+	eye_data = pulse_filter.GenEyeData2(ModulatingWaveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(eye_data)
 
 
-	fft_n = len(waveform)
+	fft_n = len(ModulatingWaveform)
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
 	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
-	waveform_fft = fft(waveform)
-	waveform_fft = fft(waveform)
-	fft_max = max(abs(waveform_fft))
-	waveform_fft = waveform_fft / fft_max
+	ModulatingWaveform_fft = fft(ModulatingWaveform)
+	ModulatingWaveform_fft = fft(ModulatingWaveform)
+	fft_max = max(abs(ModulatingWaveform_fft))
+	ModulatingWaveform_fft = ModulatingWaveform_fft / fft_max
 	plt.subplot(224)
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
-	plt.xlim(0,10000)
+	plt.plot(x_fft, 10*np.log(np.abs(ModulatingWaveform_fft[0:fft_n//2])))
+	plt.xlim(0,PulseFilter['symbol rate'] * 4)
 	plt.ylim(-100,10)
 	plt.show()
 
@@ -71,9 +82,11 @@ def ModulateGauss(state):
 			continue
 		break
 
-	waveform = waveform / max(waveform)
-	waveform = waveform * 32767
-	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
+	ModulatingWaveform = ModulatingWaveform / max(ModulatingWaveform)
+	ModulatingWaveform = ModulatingWaveform * 32767
+	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], ModulatingWaveform.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"Baseband.wav", PulseFilter['sample rate'], Baseband.astype(np.int16))
+
 	return
 
 def GaussFilterGen(state):
