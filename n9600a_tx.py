@@ -7,6 +7,7 @@ import n9600a_rx_afsk as afsk
 import n9600a_rx_dpsk2 as dpsk2
 import n9600a_rx_dpsk as dpsk
 import n9600a_rx_gfsk as gfsk
+import n9600a_bpsk as bpsk
 import n9600a_shaped4fsk as shaped4fsk
 import n9600a_nco as nco
 import n9600a_filters as filters
@@ -73,3 +74,12 @@ elif ModulatorType == 'gauss4fsk':
 
 elif ModulatorType == 'gaussfiltergen':
 	shaped4fsk.GaussFilterGen(state)
+
+elif ModulatorType == 'bpsk':
+	bpsk.Modulate(state)
+
+elif ModulatorType == 'bpskgauass':
+	bpsk.ModulateGauss(state)
+
+elif ModulatorType == 'bpskrrc':
+	bpsk.ModulateRRC(state)
