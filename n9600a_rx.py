@@ -11,6 +11,7 @@ import n9600a_rx_gfsk2 as gfsk2
 import n9600a_rx_rrcfsk as rrcfsk
 import n9600a_nco as nco
 import n9600a_filters as filters
+import n9600a_bpsk as bpsk
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
@@ -66,3 +67,6 @@ elif DemodulatorType == 'iirtest':
 
 elif DemodulatorType == 'rrcfsk':
 	rrcfsk.FullProcess(state)
+
+elif DemodulatorType== 'bpsk':
+	bpsk.FullProcess(state)
