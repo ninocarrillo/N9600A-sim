@@ -250,7 +250,8 @@ def DemodulateBPSK(this):
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
 
 			# mix the I and Q branch
-			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 16)
+			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 256) # 300
+			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 512) # 2400
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
