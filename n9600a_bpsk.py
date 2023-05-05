@@ -212,7 +212,7 @@ def DemodulateBPSK(this):
 	this['PhaseAccumulator'] = np.zeros(len(this['InputBuffer']))
 	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
 	this['SineOutput'] = np.zeros(len(this['InputBuffer']))
-	
+
 	this['NCOControlOutput'] = np.zeros(len(this['InputBuffer']))
 	this['CosineOutput'] = np.zeros(len(this['InputBuffer']))
 	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
@@ -252,8 +252,8 @@ def DemodulateBPSK(this):
 			# mix the I and Q branch
 			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 16)
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
-			#this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
-			this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
+			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
+			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
 			this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
 			if this['NCO']['Control'] > this['NCO']['nco control high']:
