@@ -61,7 +61,7 @@ def ModulateGauss(state):
 	i = 0
 	for Amplitude in ModulatingWaveform:
 		NCO = nco.UpdateNCO(NCO)
-		Baseband[i] = Amplitude * NCO['Sine']
+		Baseband[i] = Amplitude * NCO['Sine'] // PulseFilter['amplitude']
 		i += 1
 
 	plt.figure()
