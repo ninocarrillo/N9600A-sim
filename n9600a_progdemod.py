@@ -149,7 +149,7 @@ def InitAFSKDemod(demodulator):
 	# demodulator['MarkCOS'] = np.rint(demodulator['MarkAmplitude'] * (np.cos(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['MarkSIN'] = np.rint(demodulator['MarkAmplitude'] * (np.sin(2 * demodulator['MarkFreq'] * np.pi * time)))
 	# demodulator['SquareScale'] = 2**(30 - (demodulator['SqrtBitCount'] + 2*demodulator['CorrelatorShift']))
-	demodulator['SquareScale'] = 2**((demodulator['SquareSumBitCount'] - 2) - demodulator['SqrtBitCount'])
+	demodulator['SquareScale'] = 2**demodulator['sqrt shift']
 	# demodulator['SquareScale'] = 2**(31 - demodulator['SqrtBitCount'])
 	# demodulator['SquareScale'] = 2**0
 	demodulator['SquareCoef'] = 2**demodulator['SqrtBitCount']
@@ -376,7 +376,7 @@ def ProgDemodulateAFSK(demodulator):
 		mark_sig += 32768
 		mark_sig %= 65536
 		mark_sig -= 32768
-		mark_sig = np.rint(mark_sig / demodulator['SquareScale'])
+		mark_sig >>= demodulator['sqrt shift']
 		if mark_sig > demodulator['SquareClip']:
 			demodulator['MarkClip'] = True
 		mark_sig = int(np.clip(mark_sig, 0, demodulator['SquareClip']))
@@ -394,7 +394,7 @@ def ProgDemodulateAFSK(demodulator):
 		space_sig += 32768
 		space_sig %= 65536
 		space_sig -= 32768
-		space_sig = np.rint(space_sig / demodulator['SquareScale'])
+		space_sig >>= demodulator['sqrt shift']
 		if space_sig > demodulator['SquareClip']:
 			demodulator['SpaceClip'] = True
 		space_sig = int(np.clip(space_sig, 0, demodulator['SquareClip']))

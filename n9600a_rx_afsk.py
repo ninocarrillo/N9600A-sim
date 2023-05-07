@@ -83,6 +83,14 @@ def GetAFSKDemodulatorConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt bit count\' is missing or invalid')
 		sys.exit(-2)
+		
+	try:
+		afsk_demodulator['sqrt shift'] = int(config[f'AFSK Demodulator {num}']['sqrt shift'])
+	except:
+		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt shift\' is missing or invalid')
+		sys.exit(-2)
+
+		
 	try:
 		afsk_demodulator['OutputFilterDecimationRate'] = int(config[f'AFSK Demodulator {num}']['output filter decimation'])
 	except:
