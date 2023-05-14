@@ -188,6 +188,7 @@ def GaussFilterGen(state):
 	print(f'Started GaussFilterGen')
 	print(f'Reading settings for Gauss Pulse Shaping Filter')
 	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
+	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 
 	# Adjust gain of filter:
@@ -249,50 +250,60 @@ def GaussFilterGen(state):
 		plt.grid(True)
 		plt.show()
 
-		# generate the symbol patterns
-		symbol_count = np.power(2, PulseFilter['symbol span'])
-		for i0 in range(symbol_count):
-			#i0 is the symbol to be factored
-			y = np.zeros(samples_per_symbol * PulseFilter['symbol span'])
-			factor_me = i0
-			pulse_pattern = 0
-			for i2 in range(PulseFilter['symbol span']):
-				factor = factor_me % 2
-				factor_me = factor_me // 2
-				if factor == 1:
-					pulse_pattern += 2**(PulseFilter['symbol span'] - i2 - 1)
-					level = 128
-				else:
-					level = -127
-				for i3 in range(samples_per_symbol):
-					y[(i2 * samples_per_symbol) + i3] = level
-			print(i0)
-			#plt.figure()
-			#plt.plot(y)
-			#plt.show()
+		PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
 
+		# # generate the symbol patterns
+		# symbol_count = np.power(2, PulseFilter['symbol span'])
+		# FilterPatterns = np.zeros(symbol_count * samples_per_symbol)
+		# for i0 in range(symbol_count):
+		# 	#i0 is the symbol to be factored
+		# 	y = np.zeros(samples_per_symbol * PulseFilter['symbol span'])
+		# 	factor_me = i0
+		# 	pulse_pattern = 0
+		# 	for i2 in range(PulseFilter['symbol span']):
+		# 		factor = factor_me % 2
+		# 		factor_me = factor_me // 2
+		# 		if factor == 1:
+		# 			pulse_pattern += 2**(PulseFilter['symbol span'] - i2 - 1)
+		# 			level = PulseFilter['pulse high']
+		# 		else:
+		# 			level = PulseFilter['pulse low']
+		# 		for i3 in range(samples_per_symbol):
+		# 			y[(i2 * samples_per_symbol) + i3] = level
+		# 	print(i0)
+		# 	#plt.figure()
+		# 	#plt.plot(y)
+		# 	#plt.show()
+		#
+		#
+		# 	z = np.rint(np.convolve(y, PulseFilter['Taps'], 'full'))
+		# 	# trim the invalid results:
+		# 	z = z[len(PulseFilter['Taps'])//2:]
+		# 	z = z[:samples_per_symbol*PulseFilter['symbol span']]
+		#
+		# 	# select the center symbol length
+		# 	x_offset = ((PulseFilter['symbol span'] * samples_per_symbol) // 2) - (samples_per_symbol // 2)
+		# 	xz = np.arange(x_offset, x_offset + samples_per_symbol)
+		# 	z = z[x_offset:x_offset+samples_per_symbol]
+		# 	plt.figure()
+		# 	plt.title(f'Pulse Pattern {pulse_pattern}')
+		# 	plt.plot(y)
+		# 	plt.plot(xz,z)
+		# 	#plt.ylim(-200,200)
+		# 	plt.show()
+		#
+		#
+		# 	report_file.write('\n')
+		# 	report_file.write(fo.GenInt16ArrayC(f'PulseTaps{pulse_pattern}', z, 8))
+		# 	report_file.write('\n\n')
+		# 	i4 = 0
+		# 	for tap_value in z:
+		# 		FilterPatterns[(pulse_pattern * samples_per_symbol) + i4] = tap_value
+		# 		i4 += 1
 
-			z = np.rint(np.convolve(y, PulseFilter['Taps'], 'full'))
-			# trim the invalid results:
-			z = z[len(PulseFilter['Taps'])//2:]
-			z = z[:samples_per_symbol*PulseFilter['symbol span']]
-
-			# select the center symbol length
-			x_offset = ((PulseFilter['symbol span'] * samples_per_symbol) // 2) - (samples_per_symbol // 2)
-			xz = np.arange(x_offset, x_offset + samples_per_symbol)
-			z = z[x_offset:x_offset+samples_per_symbol]
-			plt.figure()
-			plt.title(f'Pulse Pattern {pulse_pattern}')
-			plt.plot(y)
-			plt.plot(xz,z)
-			plt.ylim(-200,200)
-			plt.show()
-
-
-			report_file.write('\n')
-			report_file.write(fo.GenInt16ArrayC(f'PulseTaps{pulse_pattern}', z, 8))
-			report_file.write('\n\n')
-
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'FilterPatterns', PulseFilter['FilterPatterns'], samples_per_symbol))
+		report_file.write('\n\n')
 
 		#generate a sine table:
 		scale_factor = 32
@@ -366,13 +377,13 @@ def GaussFilterGen(state):
 				y = y - (SineSamplesPeriod / 2)
 				y = int((SineSamplesPeriod / 2) - y) >> 5
 				sample_output_2[sample_index] = -sine_table[y]
-		
+
 		sample_output_3 = np.zeros(SineSamplesPeriod * 5)
 		ToneFreq = 1350
 		ModPer = SineSamplesPeriod // ToneFreq
 		ModIndex = 0
 		ModAmplitude = 0
-		
+
 		for sample_index in range(SineSamplesPeriod * 5):
 			TonePhase += ToneFreq
 			while TonePhase >= SineSamplesPeriod:
@@ -399,11 +410,11 @@ def GaussFilterGen(state):
 			if ModIndex >= ModPer:
 				ModIndex = 0
 				ModAmplitude = random.randint(0,3)
-			
+
 
 		scipy.io.wavfile.write(dirname+"QuarterTableToneOutput.wav", SineSamplesPeriod, sample_output.astype(np.int16) * 64)
 
 		scipy.io.wavfile.write(dirname+"HalfTableToneOutput.wav", SineSamplesPeriod, sample_output_2.astype(np.int16) * 64)
-		
-		
+
+
 		scipy.io.wavfile.write(dirname+"ModQtrToneOutput.wav", SineSamplesPeriod, sample_output_3.astype(np.int16) * 8)

@@ -13,7 +13,7 @@ def GenInt16ArrayC(name, array, column_width):
 	for x in range(y):
 		if x % column_width == 0:
 			result += ' \\\n     '
-		result += f' {int(array[x])}'
+		result += f' {int(np.rint(array[x]))}'
 		if x < (y-1):
 			result += ','
 	result += ' };'

@@ -138,7 +138,14 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	# key_string = "alpha"
+	# key_string = "pulse high"
+	# try:
+	# 	this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	# except:
+	# 	print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+	# 	sys.exit(-2)
+	#
+	# key_string = "pulse low"
 	# try:
 	# 	this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
 	# except:
@@ -420,5 +427,5 @@ def GenPulseFilterPatterns(this):
 			for x in z:
 				this['FilterPatterns'][((i0) * samples_per_symbol) + i4] = x
 				i4 += 1
-	this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
+	#this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
 	return this
