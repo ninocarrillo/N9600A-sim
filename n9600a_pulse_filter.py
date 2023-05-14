@@ -427,5 +427,6 @@ def GenPulseFilterPatterns(this):
 			for x in z:
 				this['FilterPatterns'][((i0) * samples_per_symbol) + i4] = x
 				i4 += 1
-	#this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
+	if (this['amplitude']) != 0:
+		this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
 	return this
