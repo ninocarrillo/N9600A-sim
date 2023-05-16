@@ -116,6 +116,20 @@ def GetRRCFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "undersample"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "amplitude"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def GetGaussFilterConfig(state):
@@ -427,6 +441,9 @@ def GenPulseFilterPatterns(this):
 			for x in z:
 				this['FilterPatterns'][((i0) * samples_per_symbol) + i4] = x
 				i4 += 1
-	if (this['amplitude']) != 0:
-		this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
+	try:
+		if (this['amplitude']) != 0:
+			this['FilterPatterns'] = np.rint(this['amplitude'] * this['FilterPatterns'] / max(abs(this['FilterPatterns'])))
+	except:
+		pass
 	return this
