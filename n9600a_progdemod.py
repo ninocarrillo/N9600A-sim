@@ -456,6 +456,7 @@ def ProgDecodeAX25(decoder):
 			decoder['BitIndex'] = 0
 			decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]).astype('uint16'))
 			decoder['ByteCount'] += 1
+			#print(hex(decoder['WorkingByte']), end=' ')
 		else:
 			decoder['WorkingByte'] = np.right_shift(decoder['WorkingByte'], 1)
 	else:
@@ -522,7 +523,7 @@ def SliceData(slicer):
 				slicer['PLLClock'] *= slicer['Rate']
 		slicer['LastSample'] = slicer['NewSample']
 	return slicer
-	
+
 def SliceDataN(slicer):
 	slicer['Midpoint'] = 0
 	slicer['LastSample'] = 0
@@ -666,7 +667,7 @@ def ProgSliceDataN(slicer):
 			slicer['Result'] = np.array([-1])
 		else:
 			slicer['Result'] = np.array([-3])
-			
+
 	if slicer['LastSample'] > slicer['Midpoint']:
 		if slicer['NewSample'] <= slicer['Midpoint']:
 			# Zero Crossing

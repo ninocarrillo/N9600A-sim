@@ -83,14 +83,14 @@ def GetAFSKDemodulatorConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt bit count\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	try:
 		afsk_demodulator['sqrt shift'] = int(config[f'AFSK Demodulator {num}']['sqrt shift'])
 	except:
 		print(f'{sys.argv[1]} [AFSK Demodulator {num}] \'sqrt shift\' is missing or invalid')
 		sys.exit(-2)
 
-		
+
 	try:
 		afsk_demodulator['OutputFilterDecimationRate'] = int(config[f'AFSK Demodulator {num}']['output filter decimation'])
 	except:
@@ -107,12 +107,12 @@ def GetAFSKDemodulatorConfig(config, num):
 def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
-	
+
 	print(f'Started AFSK process')
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
-	
+
 	# Initialize AFSK Demodulators
 	AFSKDemodulator = []
 	DataSlicer = []
@@ -254,18 +254,18 @@ def FullProcess(state):
 							CRC = AX25Decoder[demod_index]['CRC'][0]
 							filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
 							print(f'{dirname+filename}')
-							# try:
-							# 	bin_file = open(dirname + filename + '.bin', '+wb')
-							# except:
-							# 	pass
-							# with bin_file:
-							# 	for byte in AX25Decoder[2]['Output']:
-							# 		bin_file.write(byte.astype('uint8'))
-							# 	bin_file.close()
+							try:
+								bin_file = open(dirname + filename + '.bin', '+wb')
+							except:
+								pass
+							with bin_file:
+								for byte in AX25Decoder[demod_index]['Output']:
+									bin_file.write(byte.astype('uint8'))
+								bin_file.close()
 
 
-	# scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer1.astype(np.int16))
-	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], AFSKDemodulator[1]['Result'].astype(np.int16))
+	#scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], AFSKDemodulator[2]['Result'].astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
 	# Generate and save report file
