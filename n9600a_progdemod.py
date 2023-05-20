@@ -447,11 +447,11 @@ def ProgDecodeAX25(decoder):
 		decoder['BitIndex'] += 1
 		if decoder['Ones'] > 6:
 			# abort frame for invalid bit sequence
-			decoder['Ones'] = 0
+			#decoder['Ones'] = 0
 			decoder['BitIndex'] = 0
 			decoder['ByteCount'] = 0
 			decoder['Result'] = np.array([]).astype('uint16')
-		elif decoder['BitIndex'] >7:
+		if decoder['BitIndex'] == 8:
 			# 8 valid bits received, record byte
 			decoder['BitIndex'] = 0
 			decoder['Result'] = np.append(decoder['Result'], np.array([decoder['WorkingByte']]).astype('uint16'))
