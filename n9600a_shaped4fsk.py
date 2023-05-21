@@ -271,9 +271,9 @@ def GaussFilterGen(state):
 		# 		for i3 in range(samples_per_symbol):
 		# 			y[(i2 * samples_per_symbol) + i3] = level
 		# 	print(i0)
-		# 	#plt.figure()
-		# 	#plt.plot(y)
-		# 	#plt.show()
+		plt.figure()
+		plt.plot(PulseFilter['FilterPatterns'])
+		plt.show()
 		#
 		#
 		# 	z = np.rint(np.convolve(y, PulseFilter['Taps'], 'full'))
