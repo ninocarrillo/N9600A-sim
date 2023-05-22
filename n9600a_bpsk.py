@@ -340,6 +340,10 @@ def FullProcess(state):
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
+	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
+	PulseFilter['sample rate'] = FilterDecimator['OutputSampleRate']
+	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
+
 	print(f'Reading settings for BPSK Demodulators')
 	BPSKDemodulator = []
 	DemodulatorCount = 0
@@ -422,20 +426,23 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
+	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], PulseFilter['Taps'], 'valid')
+
 	plt.figure()
 	plt.subplot(221)
-	plt.plot(FilterDecimator['FilterBuffer'])
+	#plt.plot(FilterDecimator['FilterBuffer'])
 	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
-	plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
-	plt.title('I and Q LPF Outputs')
+	#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
+	plt.title('I LPF Output')
 	plt.subplot(222)
 	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
 	plt.plot(BPSKDemodulator[1]['LoopMixer'])
 	plt.title('Loop Filter Output')
 	plt.subplot(223)
-	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
-	plt.plot(BPSKDemodulator[1]['SamplePulse'])
-	plt.title('I Output and Sample Pulse')
+	#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
+	#plt.plot(BPSKDemodulator[1]['SamplePulse'])
+	plt.plot(FilteredOutput)
+	plt.title('Filtered Output')
 	plt.subplot(224)
 	plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
 	plt.title('NCO Control')
@@ -603,6 +610,7 @@ def ModulateRRC(state):
 	BitStream = pulse_filter.BytesToSymbols(state['InputData'], PulseFilter)
 	plt.figure()
 	plt.plot(BitStream)
+	plt.title('BitStream')
 	plt.show()
 	#ModulatingWaveform = np.convolve(PulseFilter['Taps'], BitStream)
 	#ModAmplitude = 64
@@ -624,6 +632,7 @@ def ModulateRRC(state):
 
 	plt.figure()
 	plt.plot(ModulatingWaveform)
+	plt.title('Modulating Waveform')
 	plt.show()
 
 	Baseband = np.zeros(len(ModulatingWaveform))
@@ -635,6 +644,7 @@ def ModulateRRC(state):
 
 	plt.figure()
 	plt.plot(Baseband)
+	plt.title('Baseband')
 	plt.show()
 
 	plt.figure()
