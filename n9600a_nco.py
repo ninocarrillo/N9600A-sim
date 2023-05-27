@@ -128,6 +128,13 @@ def Test(state):
 			continue
 		break
 
+	# Generate and save report file
+	report_file_name = f'run{run_number}_report.txt'
+	try:
+		report_file = open(dirname + report_file_name, 'w+')
+	except:
+		print('Unable to create report file.')
+
 
 	NCO = []
 
@@ -135,7 +142,7 @@ def Test(state):
 	NCO.append({})
 	NCO[1] = GetNCOConfig(config, 1, "NCO ")
 	NCO[1] = InitNCO(NCO[1])
-	print(NCO[1])
+	#print(NCO[1])
 
 	scipy.io.wavfile.write(dirname+"Wavetable.wav", NCO[1]['nco design sample rate'], NCO[1]['WaveTable'].astype(np.int16))
 
@@ -151,8 +158,29 @@ def Test(state):
 		AudioCosine[i] = NCO[1]['Cosine']
 		AudioDither[i] = NCO[1]['Dither']
 
-	scipy.io.wavfile.write(dirname+"AudioSine.wav", NCO[1]['design sample rate'], AudioSine.astype(np.int16))
-	scipy.io.wavfile.write(dirname+"AudioCosine.wav", NCO[1]['design sample rate'], AudioCosine.astype(np.int16))
-	scipy.io.wavfile.write(dirname+"AudioDither.wav", NCO[1]['design sample rate'], AudioDither.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"AudioSine.wav", NCO[1]['nco design sample rate'], AudioSine.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"AudioCosine.wav", NCO[1]['nco design sample rate'], AudioCosine.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"AudioDither.wav", NCO[1]['nco design sample rate'], AudioDither.astype(np.int16))
 
+	with report_file:
+		report_file.write('# Command line: ')
+		for argument in sys.argv:
+			report_file.write(f'{argument} ')
+		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+		try:
+			ini_file = open(sys.argv[1])
+		except:
+			report_file.write('Unable to open .ini file.')
+		with ini_file:
+			for character in ini_file:
+				report_file.write(character)
+
+		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+		report_file.write('\n\n#Sine Samples\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'SineSamples', NCO[1]['WaveTable'], 8))
+		quarter_sine_table = NCO[1]['WaveTable'][:(len(NCO[1]['WaveTable']) // 4) + 1]
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'QuarterSineSamples', quarter_sine_table, 8))
+		report_file.close()
 	return
