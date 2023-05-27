@@ -66,20 +66,6 @@ def GetBPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "nco control low"
-	try:
-		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
-	key_string = "nco control high"
-	try:
-		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
 	key_string = "i lpf iir order"
 	try:
 		this['I_LPF']['iir order'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -237,30 +223,27 @@ def DemodulateBPSK(this):
 			this['SineOutput'][index] = this['NCO']['Sine']
 			this['CosineOutput'][index] = this['NCO']['Cosine']
 			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.rint(sample * (2*this['NCO']['Sine']) / 65536)
+			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
 			# print(this)
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.rint(sample * (2*this['NCO']['Cosine']) / 65536)
+			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
 
 			# mix the I and Q branch
-			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 256) # 300
+			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
 			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 512) # 2400
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
 			this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
-			if this['NCO']['Control'] > this['NCO']['nco control high']:
-				this['NCO']['Control'] = this['NCO']['nco control high']
-			elif this['NCO']['Control'] < this['NCO']['nco control low']:
-				this['NCO']['Control'] = this['NCO']['nco control low']
+
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
 
@@ -426,7 +409,8 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], PulseFilter['Taps'], 'valid')
+	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], np.rint(PulseFilter['Taps'] * 8191), 'valid') // 65536
+	#print(PulseFilter['Taps'])
 
 	plt.figure()
 	plt.subplot(221)
@@ -437,6 +421,7 @@ def FullProcess(state):
 	plt.subplot(222)
 	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
 	plt.plot(BPSKDemodulator[1]['LoopMixer'])
+	plt.legend(['LoopFilter','LoopMixer'])
 	plt.title('Loop Filter Output')
 	plt.subplot(223)
 	#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
