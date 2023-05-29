@@ -701,7 +701,8 @@ def ModulateRRC(state):
 
 		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
-		report_file.write(fo.GenInt16ArrayC('RRCFilter', PulseFilter['Taps'] * 65536, PulseFilter['Oversample']))
+		report_file.write(fo.GenInt16ArrayC('RRCFilter', PulseFilter['Taps'] * np.rint(65536 / np.sum(PulseFilter['Taps'])), PulseFilter['Oversample']))
+		print(np.sum(PulseFilter['Taps']))
 
 
 		report_file.write('\n')
