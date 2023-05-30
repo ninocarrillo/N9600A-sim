@@ -102,6 +102,21 @@ def InitFilterDecimator(filter_decimator):
 	filter_decimator['NewSample'] = 0
 	filter_decimator['PeakDetector'] = {'AttackRate':filter_decimator['InputAGCAttackRate'], 'SustainPeriod': filter_decimator['InputAGCSustainPeriod'], 'DecayRate':filter_decimator['InputAGCDecayRate'], 'SustainCount':0, 'Envelope':0}
 	filter_decimator['OutputSampleRate'] = filter_decimator['InputSampleRate'] // filter_decimator['DecimationRate']
+	# Generate 256-step AGC gain table
+	# Target signal level will be 8191
+	# Gross AGC output range will be +8192 to +24576
+	filter_decimator['AGCScaleTable'] = np.ones(256)
+	for i in range(256):
+		peak = 128 * i
+		try:
+			scale = 8191 / peak
+		except:
+			scale = 1
+		if scale >= 1:
+			scale = 32767
+		else:
+			scale = np.rint(scale * 32768)
+		filter_decimator['AGCScaleTable'][i] = scale
 	return filter_decimator
 
 def InitGFSKDemod(demodulator):
@@ -223,12 +238,15 @@ def FilterDecimate(filter):
 	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
 	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
-	index = 0
+	index = 0	
 	for data in filter['FilterBuffer']:
+	
 		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
 		data = data // pow(2, (16 + filter['FilterShift']))
-		filter['FilterBuffer'][index] = data
-		index += 1
+
+		scale = filter['AGCScaleTable'][int(filter['PeakDetector']['Envelope'] / 128)]
+
+	
 		if filter['InputAGCEnabled'] == True:
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 			filter['GainChange'] = 0
@@ -242,6 +260,12 @@ def FilterDecimate(filter):
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
 				if filter['FilterShift'] < -16:
 					filter['FilterShift'] = -16
+
+		data = (data * scale) // 32768
+		#data = np.rint(data * 8191 / filter['PeakDetector']['Envelope'])
+		filter['FilterBuffer'][index] = data
+		index += 1	
+
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
 

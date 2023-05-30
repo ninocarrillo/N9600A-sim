@@ -416,8 +416,11 @@ def FullProcess(state):
 	plt.subplot(221)
 	#plt.plot(FilterDecimator['FilterBuffer'])
 	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
+	plt.plot(FilterDecimator['FilterBuffer'])
+	plt.plot(FilterDecimator['EnvelopeBuffer'])
 	#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
 	plt.title('I LPF Output')
+	plt.legend(['I_LPF Output','Filtered Data','Envelope'])
 	plt.subplot(222)
 	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
 	plt.plot(BPSKDemodulator[1]['LoopMixer'])
@@ -432,6 +435,36 @@ def FullProcess(state):
 	plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
 	plt.title('NCO Control')
 	plt.show()
+	
+	# Generate and save report file
+	report_file_name = f'run{run_number}_report.txt'
+	try:
+		report_file = open(dirname + report_file_name, 'w+')
+	except:
+		print('Unable to create report file.')
+	with report_file:
+		report_file.write('# Command line: ')
+		for argument in sys.argv:
+			report_file.write(f'{argument} ')
+		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+		try:
+			ini_file = open(sys.argv[1])
+		except:
+			report_file.write('Unable to open .ini file.')
+		with ini_file:
+			for character in ini_file:
+				report_file.write(character)
+
+		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+
+
+
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
+		report_file.write('\n\n')
+
+		report_file.close()
+	
 	return
 
 
