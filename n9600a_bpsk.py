@@ -183,6 +183,10 @@ def GetBPSKDemodConfig(config, num, id_string):
 def InitBPSKDemod(this):
 	this['NCO'] = nco.InitNCO(this['NCO'])
 	this['LoopFilter'] = filters.InitIIR(this['LoopFilter'])
+	this['LoopFilter2'] = this['LoopFilter'].copy()
+	this['LoopFilter3'] = this['LoopFilter'].copy()
+	this['LoopFilter2'] = filters.InitIIR(this['LoopFilter2'])
+	this['LoopFilter3'] = filters.InitIIR(this['LoopFilter3'])
 	this['I_LPF'] = filters.InitIIR(this['I_LPF'])
 	this['Q_LPF'] = filters.InitIIR(this['Q_LPF'])
 	this['BitAccumulator'] = 0
@@ -198,6 +202,7 @@ def DemodulateBPSK(this):
 	this['PhaseAccumulator'] = np.zeros(len(this['InputBuffer']))
 	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
 	this['SineOutput'] = np.zeros(len(this['InputBuffer']))
+	this['LoopIntegral'] = np.zeros(len(this['InputBuffer']))
 
 	this['NCOControlOutput'] = np.zeros(len(this['InputBuffer']))
 	this['CosineOutput'] = np.zeros(len(this['InputBuffer']))
@@ -209,6 +214,7 @@ def DemodulateBPSK(this):
 	databit_index = 0
 	start_time = time.time()
 	if this['enabled'] == True:
+		integral = 0
 		for sample in this['InputBuffer']:
 			progress = index // sample_count
 			if progress != last_progress_print:
@@ -239,10 +245,16 @@ def DemodulateBPSK(this):
 			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
 			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 512) # 2400
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
-			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
+			this['LoopFilter2'] = filters.UpdateIIR(this['LoopFilter2'], this['LoopFilter']['Output'])
+			this['LoopFilter3'] = filters.UpdateIIR(this['LoopFilter3'], this['LoopFilter2']['Output'])
+			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter2']['Output'])
 			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
-			this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
+			p = this['LoopFilterOutput'][index] * 0.5
+			integral += this['LoopFilterOutput'][index] * 0.002
+			this['LoopIntegral'][index] = integral
+			#this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
+			this['NCO']['Control'] = np.rint((p + integral) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
@@ -422,9 +434,10 @@ def FullProcess(state):
 	plt.title('I LPF Output')
 	plt.legend(['I_LPF Output','Filtered Data','Envelope'])
 	plt.subplot(222)
-	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
 	plt.plot(BPSKDemodulator[1]['LoopMixer'])
-	plt.legend(['LoopFilter','LoopMixer'])
+	plt.plot(BPSKDemodulator[1]['LoopIntegral'])
+	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
+	plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
 	plt.title('Loop Filter Output')
 	plt.subplot(223)
 	#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
@@ -435,7 +448,7 @@ def FullProcess(state):
 	plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
 	plt.title('NCO Control')
 	plt.show()
-	
+
 	# Generate and save report file
 	report_file_name = f'run{run_number}_report.txt'
 	try:
@@ -464,7 +477,7 @@ def FullProcess(state):
 		report_file.write('\n\n')
 
 		report_file.close()
-	
+
 	return
 
 

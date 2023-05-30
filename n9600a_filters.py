@@ -73,6 +73,9 @@ def InitIIR(this):
 
 def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 	result = val1 * val2
+	# val1 = val1 / pow(2,scale_bits)
+	# result = int(val1 * val2)
+	# np.clip(result,neg_sat,pos_sat)
 	if result > pos_sat:
 		result = pos_sat
 	elif result < neg_sat:

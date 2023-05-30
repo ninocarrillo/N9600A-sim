@@ -238,15 +238,15 @@ def FilterDecimate(filter):
 	filter['FilterBuffer'] = np.rint(np.convolve(filter['FilterBuffer'], filter['Filter'], 'valid'))
 	filter['FilterBuffer'] = filter['FilterBuffer'][::filter['DecimationRate']]
 	filter['EnvelopeBuffer'] = np.zeros(len(filter['FilterBuffer']))
-	index = 0	
+	index = 0
 	for data in filter['FilterBuffer']:
-	
+
 		filter['EnvelopeBuffer'][index] = filter['PeakDetector']['Envelope']
 		data = data // pow(2, (16 + filter['FilterShift']))
 
 		scale = filter['AGCScaleTable'][int(filter['PeakDetector']['Envelope'] / 128)]
 
-	
+
 		if filter['InputAGCEnabled'] == True:
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 			filter['GainChange'] = 0
@@ -264,7 +264,7 @@ def FilterDecimate(filter):
 		data = (data * scale) // 32768
 		#data = np.rint(data * 8191 / filter['PeakDetector']['Envelope'])
 		filter['FilterBuffer'][index] = data
-		index += 1	
+		index += 1
 
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
