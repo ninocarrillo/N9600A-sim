@@ -171,6 +171,27 @@ def GetBPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "loop filter p"
+	try:
+		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "loop filter i"
+	try:
+		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "loop filter i max"
+	try:
+		this['LoopFilter'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	key_string = "loop filter gain"
 	try:
 		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
@@ -250,11 +271,11 @@ def DemodulateBPSK(this):
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
-			p = this['LoopFilterOutput'][index] * 1
+			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
 			#integral += np.rint(this['LoopFilterOutput'][index] * 0.0035)
-			integral += np.rint(this['LoopFilterOutput'][index] * 0.02)
+			integral += np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter i'])
 			#integral = 0
-			if abs(integral) > 2000:
+			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
 			#this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
@@ -431,12 +452,12 @@ def FullProcess(state):
 	plt.figure()
 	plt.subplot(221)
 	#plt.plot(FilterDecimator['FilterBuffer'])
-	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
 	plt.plot(FilterDecimator['FilterBuffer'])
+	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
 	plt.plot(FilterDecimator['EnvelopeBuffer'])
 	#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
 	plt.title('I LPF Output')
-	plt.legend(['I_LPF Output','Filtered Data','Envelope'])
+	plt.legend(['Filtered Input','I_LPF Output','Envelope'])
 	plt.subplot(222)
 	plt.plot(BPSKDemodulator[1]['LoopMixer'])
 	plt.plot(BPSKDemodulator[1]['LoopIntegral'])
