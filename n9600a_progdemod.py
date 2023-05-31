@@ -250,12 +250,12 @@ def FilterDecimate(filter):
 		if filter['InputAGCEnabled'] == True:
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 			filter['GainChange'] = 0
-			if filter['PeakDetector']['Envelope'] > 24576:
+			if filter['PeakDetector']['Envelope'] > 30000:
 				filter['FilterShift'] = filter['FilterShift'] + 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
 				if filter['FilterShift'] > 16:
 					filter['FilterShift'] = 16
-			if filter['PeakDetector']['Envelope'] < 8192:
+			if filter['PeakDetector']['Envelope'] < 10000:
 				filter['FilterShift'] = filter['FilterShift'] - 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
 				if filter['FilterShift'] < -16:

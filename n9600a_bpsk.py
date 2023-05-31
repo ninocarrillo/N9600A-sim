@@ -247,11 +247,15 @@ def DemodulateBPSK(this):
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilter2'] = filters.UpdateIIR(this['LoopFilter2'], this['LoopFilter']['Output'])
 			this['LoopFilter3'] = filters.UpdateIIR(this['LoopFilter3'], this['LoopFilter2']['Output'])
-			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter2']['Output'])
+			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
-			p = this['LoopFilterOutput'][index] * 0.5
-			integral += this['LoopFilterOutput'][index] * 0.002
+			p = this['LoopFilterOutput'][index] * 1
+			#integral += np.rint(this['LoopFilterOutput'][index] * 0.0035)
+			integral += np.rint(this['LoopFilterOutput'][index] * 0.02)
+			#integral = 0
+			if abs(integral) > 2000:
+				integral = 0
 			this['LoopIntegral'][index] = integral
 			#this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
 			this['NCO']['Control'] = np.rint((p + integral) * this['LoopFilter']['loop filter gain'])
