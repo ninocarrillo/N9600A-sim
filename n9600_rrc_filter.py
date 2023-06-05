@@ -2,7 +2,7 @@ import numpy
 import math
 
 def doit(config, audio):
-	if int(config['sample_rate']) != config['OutputSampleRate']:
+	if int(config['sample_rate']) != config['SampleRate']:
 		print("Warning! Sample rate mismatch.")
 	this = {}
 	config['Oversample'] = int(config['sample_rate']) // int(config['symbol_rate'])
