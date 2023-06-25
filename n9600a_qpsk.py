@@ -249,14 +249,15 @@ def DemodulateQPSK(this):
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
 			this['CosineOutput'][index] = this['NCO']['Cosine']
+			branch_gain = 0.125
 			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
@@ -273,8 +274,8 @@ def DemodulateQPSK(this):
 				Q_Signum = -1
 
 			# Cross-mix the branches
-			I = this['I_LPFOutput'][index] * Q_Signum
-			Q = this['Q_LPFOutput'][index] * I_Signum
+			I = this['I_LPFOutput'][index] * Q_Signum * branch_gain
+			Q = this['Q_LPFOutput'][index] * I_Signum * branch_gain
 
 
 			this['LoopMixer'][index] = I - Q
@@ -456,7 +457,8 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	FilteredOutput = np.convolve(QPSKDemodulator[1]['I_LPFOutput'], np.rint(PulseFilter['Taps'] * 8191), 'valid') // 65536
+	FilteredIOutput = np.convolve(QPSKDemodulator[1]['I_LPFOutput'], np.rint(PulseFilter['Taps'] * 8191), 'valid') // 65536
+	FilteredQOutput = np.convolve(QPSKDemodulator[1]['Q_LPFOutput'], np.rint(PulseFilter['Taps'] * 8191), 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	plt.figure()
@@ -478,8 +480,10 @@ def FullProcess(state):
 	plt.subplot(223)
 	#plt.plot(QPSKDemodulator[1]['I_LPFOutput'])
 	#plt.plot(QPSKDemodulator[1]['SamplePulse'])
-	plt.plot(FilteredOutput)
-	plt.title('Filtered Output')
+	plt.plot(FilteredIOutput)
+	plt.plot(FilteredQOutput)
+	plt.legend('Filtered I', 'Filtered Q')
+	plt.title('Filtered I/Q Output')
 	plt.subplot(224)
 	plt.plot(QPSKDemodulator[1]['NCOControlOutput'])
 	plt.title('NCO Control')
