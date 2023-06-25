@@ -489,7 +489,7 @@ def FullProcess(state):
 	#plt.plot(QPSKDemodulator[1]['SamplePulse'])
 	plt.plot(FilteredIOutput)
 	plt.plot(FilteredQOutput)
-	plt.legend('Filtered I', 'Filtered Q')
+	plt.legend(['Filtered I', 'Filtered Q'])
 	plt.title('Filtered I/Q Output')
 	plt.subplot(224)
 	plt.plot(QPSKDemodulator[1]['NCOControlOutput'])
