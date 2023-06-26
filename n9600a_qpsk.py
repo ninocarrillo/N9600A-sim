@@ -178,7 +178,14 @@ def GetQPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "loop filter i"
+	key_string = "loop filter i1"
+	try:
+		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "loop filter i2"
 	try:
 		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
 	except:
@@ -293,11 +300,11 @@ def DemodulateQPSK(this):
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
 			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
-			integral += np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter i'])
+			integral += np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter i1'])
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
-			this['NCO']['Control'] = np.rint((p + integral) * this['LoopFilter']['loop filter gain'])
+			this['NCO']['Control'] = np.rint((p + (np.rint(integral * this['LoopFilter']['loop filter i2']))) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
