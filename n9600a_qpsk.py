@@ -288,8 +288,8 @@ def DemodulateQPSK(this):
 				Q_Signum = -1
 
 			# Cross-mix the branches
-			I = this['I_LPFOutput'][index] * Q_Signum * this['branch gain']
-			Q = this['Q_LPFOutput'][index] * I_Signum * this['branch gain']
+			I = np.rint(this['I_LPFOutput'][index] * Q_Signum * this['branch gain'])
+			Q = np.rint(this['Q_LPFOutput'][index] * I_Signum * this['branch gain'])
 
 
 			this['LoopMixer'][index] = I - Q
