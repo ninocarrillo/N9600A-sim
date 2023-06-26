@@ -25,4 +25,4 @@ With 4 words of preamble (100ms) :
 loop gain 350, integral 164: 13 packets
 
 With 6 words of preamble (150ms) :
-loop gain 350, integral 164: 13 packets
+loop gain 350, integral 164: 12 packets
