@@ -313,45 +313,7 @@ def DemodulateQPSK(this):
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 
-			# Downsample and threshold data output and save as Result
-			if this['NCO']['QuadraturePhaseRollover'] == True:
-				this['NCO']['QuadraturePhaseRollover'] = False
-				if this['I_LPF']['Output'] > 0:
-					try:
-						this['Result'][databit_index] =	 1
-					except:
-						pass
-					this['SamplePulse'][index] = 3000
-				else:
-					try:
-						this['Result'][databit_index] = 0
-					except:
-						pass
-					this['SamplePulse'][index] = -3000
-				databit_index += 1
-			else:
-				this['SamplePulse'][index] = 0
 
-			# this['BitAccumulator'] += this['I_LPF']['Output']
-			#
-			# if this['NCO']['InPhaseRollover'] == True:
-			#	this['NCO']['InPhaseRollover'] = False
-			#	if this['BitAccumulator'] > 0:
-			#		try:
-			#			this['Result'][databit_index] =	 1
-			#		except:
-			#			pass
-			#		this['SamplePulse'][index] = this['BitAccumulator']
-			#	else:
-			#		try:
-			#			this['Result'][databit_index] = 0
-			#		except:
-			#			pass
-			#		this['SamplePulse'][index] = this['BitAccumulator']
-			#	databit_index += 1
-			#	this['BitAccumulator'] = 0
-			# else:
-			#	this['SamplePulse'][index] = 0
 
 
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
