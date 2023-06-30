@@ -26,3 +26,13 @@ loop gain 350, integral 164: 13 packets
 
 With 6 words of preamble (150ms) :
 loop gain 350, integral 164: 12 packets
+
+
+New runs:
+P 6554, I1 7, I2 32767, B 32767, LFG 328: 44
+P 6554, I1 8, I2 32767, B 32767, LFG 328: 43
+P 6554, I1 8, I2 32767, B 32767, LFG 229: 46
+P 6554, I1 7, I2 32767, B 32767, LFG 229: 46, 50 Hz window
+P 6554, I1 3, I2 32767, B 32767, LFG 328: 41
+P 13108, I1 14, I2 32767, B 32767, LFG 164: 42
+P 6226, I1 7, I2 32767, B 32767, LFG 229: 51, 80 Hz window
