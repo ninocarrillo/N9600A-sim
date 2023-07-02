@@ -54,7 +54,10 @@ def InitNCO(this):
 	this['QuadraturePhaseOffset'] = int(np.rint(this['nco design sample rate'] / 4))
 	this['QuadraturePhase'] = this['QuadraturePhaseOffset']
 	this['Control'] = 0
-	this['Amplitude'] = pow(2,this['nco amplitude bits'] - 1) - 1
+	try:
+		this['Amplitude'] = this['Amplitude']
+	except:
+		this['Amplitude'] = pow(2,this['nco amplitude bits'] - 1) - 1
 	this['WaveTable'] = np.zeros(this['nco wavetable size'])
 	this['InPhaseRollover'] = False
 	this['QuadraturePhaseRollover'] = False

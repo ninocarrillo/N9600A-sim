@@ -517,6 +517,7 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
+	NCO['Amplitude'] = PulseFilter['amplitude']
 	NCO = nco.InitNCO(NCO)
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
@@ -637,6 +638,13 @@ def ModulateGauss(state):
 		report_file.write(fo.GenInt16ArrayC(f'BPSKFilterPatterns', PulseFilter['FilterPatterns'], PulseFilter['Oversample']))
 		report_file.write('\n\n')
 
+
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
+		report_file.write(fo.GenInt16ArrayC(f'QuarterSineTable', NCO['WaveTable'][0:(len(NCO['WaveTable']) // 4) + 1], 8))
+		report_file.write('\n\n')
+
+
 		report_file.close()
 
 
@@ -655,6 +663,7 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
+	NCO['Amplitude'] = PulseFilter['amplitude']
 	NCO = nco.InitNCO(NCO)
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
@@ -782,6 +791,13 @@ def ModulateRRC(state):
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'BPSKFilterPatterns', PulseFilter['FilterPatterns'], PulseFilter['Oversample']))
 		report_file.write('\n\n')
+
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
+		report_file.write(fo.GenInt16ArrayC(f'QuarterSineTable', NCO['WaveTable'][0:(len(NCO['WaveTable']) // 4) + 1], 8))
+		
+		report_file.write('\n\n')
+
 
 		report_file.close()
 
