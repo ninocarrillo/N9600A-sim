@@ -703,13 +703,16 @@ def ModulateRRC(state):
 	plt.title('Baseband')
 	plt.show()
 
-	plt.figure()
-	plt.subplot(221)
-	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
-	plt.xticks(PulseFilter['SymbolTicks'])
-	plt.xticks(color='w')
-	plt.grid(True)
+	try:
+		plt.figure()
+		plt.subplot(221)
+		plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+		#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+		plt.xticks(PulseFilter['SymbolTicks'])
+		plt.xticks(color='w')
+		plt.grid(True)
+	except:
+			pass
 
 	plt.subplot(222)
 	plt.plot(ModulatingWaveform, 'b')
