@@ -426,7 +426,13 @@ def GenPulseFilterPatterns(this):
 			level = this['SymbolMap']['symbol map'][factor]
 
 			for i3 in range(samples_per_symbol):
-				y[(i2 * samples_per_symbol) + i3] = level
+				if i3 == 0:
+					y[(i2 * samples_per_symbol) + i3] = level
+				else:
+					if this['SymbolMap']['expander'] == 'step':
+						y[(i2 * samples_per_symbol) + i3] = level
+					else:
+						y[(i2 * samples_per_symbol) + i3] = 0
 
 			z = np.convolve(y, this['Taps'], 'full')
 			# trim the invalid results:
