@@ -472,7 +472,7 @@ def FullProcess(state):
 	plt.title('I/Q Demodulator Constellation')
 	plt.scatter(QPSKDemodulator[1]['I_LPFOutput'], QPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
 	plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
-	plt.scatter(DataSlicer['IResult'][625:833], DataSlicer['QResult'][625:833], 25, c='tab:red')
+	plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
 	plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
 	plt.xlim([-16000,16000])
 	plt.ylim([-12000,12000])
