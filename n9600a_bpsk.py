@@ -789,13 +789,15 @@ def ModulateRRC(state):
 
 
 		report_file.write('\n')
+		report_file.write(f'\nMax in table: {max(PulseFilter["FilterPatterns"])}')
+		report_file.write(f'\nMin in table: {min(PulseFilter["FilterPatterns"])}\n')
 		report_file.write(fo.GenInt16ArrayC(f'BPSKFilterPatterns', PulseFilter['FilterPatterns'], PulseFilter['Oversample']))
 		report_file.write('\n\n')
 
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
 		report_file.write(fo.GenInt16ArrayC(f'QuarterSineTable', NCO['WaveTable'][0:(len(NCO['WaveTable']) // 4) + 1], 8))
-		
+
 		report_file.write('\n\n')
 
 
