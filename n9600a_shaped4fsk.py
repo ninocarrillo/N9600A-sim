@@ -21,10 +21,12 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
-	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
-	waveform = np.convolve(PulseFilter['Taps'], BitStream)
+
+
+	waveform = pulse_filter.ImpulseOversample(state['InputData'], PulseFilter)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+
 	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
@@ -113,6 +115,11 @@ def ModulateRRC(state):
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'] * 65536, 8))
 		report_file.write('\n')
+
+
+
+
+
 		report_file.close()
 
 

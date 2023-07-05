@@ -13,6 +13,7 @@ import n9600a_nco as nco
 import n9600a_filters as filters
 import os
 import numpy as np
+import random
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_tx.py <ini file> <input bin file> <output wav file>")
@@ -46,7 +47,8 @@ try:
 		state['InputData'] = np.zeros(file_size)
 		index = 0
 		while(byte := f.read(1)):
-			state['InputData'][index] = int.from_bytes(byte, "big")
+			#state['InputData'][index] = int.from_bytes(byte, "big")
+			state['InputData'][index] = random.randint(0,255)
 			index += 1
 		f.close()
 except:
