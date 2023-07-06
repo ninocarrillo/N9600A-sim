@@ -279,6 +279,16 @@ def BytesToSymbols(data, filter):
 			sample_index += 1
 	return samples
 
+def GenFilterPhases(filter):
+	filter['PhaseTaps'] = np.zeros(len(filter['Taps']))
+	for i0 in range(filter['Oversample']):
+		for i1 in range (filter['symbol span']):
+			try:
+				filter['PhaseTaps'][i0 * filter['symbol span'] + i1] = filter['Taps'][i0 + (i1 * filter['Oversample'])]
+			except:
+				print(i0, i1)
+	return filter
+
 def ImpulseOversample(data, filter):
 	undersample_fir = np.zeros([filter['Oversample'], filter['symbol span']])
 	for i0 in range(filter['Oversample']):

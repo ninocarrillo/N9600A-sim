@@ -24,8 +24,19 @@ def ModulateRRC(state):
 
 
 
+	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
+
+
 	waveform = pulse_filter.ImpulseOversample(state['InputData'], PulseFilter)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	print(max(waveform))
+	print(min(waveform))
+
+	#create phased filter oversample sections:
+	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
+	plt.figure()
+	plt.plot(PulseFilter['PhaseTaps'])
+	plt.show()
 
 	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
@@ -42,7 +53,7 @@ def ModulateRRC(state):
 
 	plt.subplot(222)
 	plt.plot(waveform, 'b')
-	plt.plot(waveform_2, 'r')
+	#plt.plot(waveform_2, 'r')
 	plt.title("Modulation Waveform")
 	plt.legend(["Post Transmit Filter", "Post Receive Filter"])
 
@@ -79,11 +90,7 @@ def ModulateRRC(state):
 			continue
 		break
 
-	waveform = waveform / max(waveform)
-	waveform = waveform * 32767
 
-	waveform_2 = waveform_2 / max(waveform_2)
-	waveform_2 = waveform_2 * 32767
 
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", PulseFilter['sample rate'], waveform_2.astype(np.int16))
@@ -113,7 +120,12 @@ def ModulateRRC(state):
 
 		report_file.write('\n\n# RRC Pulse Filter\n')
 		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'] * 65536, 8))
+		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'], PulseFilter['Oversample']))
+		report_file.write('\n')
+
+		report_file.write('\n\n# RRC Pulse Filter Phased Taps\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'PhaseTaps', PulseFilter['PhaseTaps'], PulseFilter['symbol span']))
 		report_file.write('\n')
 
 
