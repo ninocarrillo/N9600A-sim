@@ -282,6 +282,7 @@ def BytesToSymbols(data, filter):
 def GenFilterPhases(filter):
 	filter['PhaseTaps'] = np.zeros(len(filter['Taps']))
 	for i0 in range(filter['Oversample']):
+		i0i = (filter['Oversample'] - i0) - 1
 		for i1 in range (filter['symbol span']):
 			try:
 				filter['PhaseTaps'][i0 * filter['symbol span'] + i1] = filter['Taps'][i0 + (i1 * filter['Oversample'])]
@@ -314,6 +315,39 @@ def ImpulseOversample(data, filter):
 		for x3 in range(filter['Oversample']):
 			sample_stream[sample_index] = np.convolve(sample_buffer, undersample_fir[x3], mode='valid')
 			sample_index += 1
+
+	return sample_stream
+
+def ImpulseOversample2(data, filter):
+	YMem = np.zeros([filter['Oversample'], filter['symbol span']])
+	for i0 in range(filter['Oversample']):
+		YMem[i0] = filter['Taps'][i0::filter['Oversample']]
+	# data is a list of 8-bit integer values
+	symbol_stream = np.zeros(len(data) * 8 // filter['SymbolMap']['symbol bits'])
+	x3 = 0
+	for x1 in data:
+		x1 = int(x1)
+		for x2 in range(8 // filter['SymbolMap']['symbol bits']):
+			symbol_stream[x3] = filter['SymbolMap']['symbol map'][np.right_shift(x1, (8 - filter['SymbolMap']['symbol bits']))]
+			x1 = np.left_shift(x1, filter['SymbolMap']['symbol bits'])
+			x1 = np.bitwise_and(x1, 255)
+			x3 += 1
+	sample_buffer = np.zeros(filter['symbol span'])
+	sample_stream = np.zeros(len(symbol_stream) * filter['Oversample'])
+	sample_index = 0
+	YMemIndex = 0
+	x0 = 0
+	while x0 < len(symbol_stream):
+		if YMemIndex == 0:
+			for x2 in range(filter['symbol span']-1):
+				sample_buffer[x2] = sample_buffer[x2 + 1]
+			sample_buffer[filter['symbol span']-1] = symbol_stream[x0]
+			x0 += 1
+		sample_stream[sample_index] = np.convolve(sample_buffer, YMem[YMemIndex], mode='valid')
+		sample_index += 1
+		YMemIndex += 1
+		if YMemIndex >= filter['Oversample']:
+			YMemIndex = 0
 
 	return sample_stream
 

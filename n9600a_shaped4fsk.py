@@ -25,12 +25,27 @@ def ModulateRRC(state):
 
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
+	for index in range(96,162):
+		PulseFilter['Taps'][index] = index
 
-
-	waveform = pulse_filter.ImpulseOversample(state['InputData'], PulseFilter)
+	for index in range(13):
+		state['InputData'][index] = 119
+	index +=1
+	state['InputData'][index] = 0xF1
+	index +=1
+	state['InputData'][index] = 0x5E
+	index +=1
+	state['InputData'][index] = 0x48
+	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
 	print(max(waveform))
 	print(min(waveform))
+
+	plt.figure()
+	plt.plot(waveform)
+	#plt.plot(waveform_3)
+	plt.show()
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
