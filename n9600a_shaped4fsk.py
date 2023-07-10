@@ -25,8 +25,6 @@ def ModulateRRC(state):
 
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
-	for index in range(96,162):
-		PulseFilter['Taps'][index] = index
 
 	for index in range(13):
 		state['InputData'][index] = 119
