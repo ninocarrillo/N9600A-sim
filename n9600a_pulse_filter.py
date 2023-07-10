@@ -279,6 +279,78 @@ def BytesToSymbols(data, filter):
 			sample_index += 1
 	return samples
 
+def GenFilterPhases(filter):
+	filter['PhaseTaps'] = np.zeros(len(filter['Taps']))
+	for i0 in range(filter['Oversample']):
+		i0i = (filter['Oversample'] - i0) - 1
+		for i1 in range (filter['symbol span']):
+			try:
+				filter['PhaseTaps'][i0 * filter['symbol span'] + i1] = filter['Taps'][i0 + (i1 * filter['Oversample'])]
+			except:
+				print(i0, i1)
+	return filter
+
+def ImpulseOversample(data, filter):
+	undersample_fir = np.zeros([filter['Oversample'], filter['symbol span']])
+	for i0 in range(filter['Oversample']):
+		undersample_fir[i0] = filter['Taps'][i0::filter['Oversample']]
+	# data is a list of 8-bit integer values
+	symbol_stream = np.zeros(len(data) * 8 // filter['SymbolMap']['symbol bits'])
+	x3 = 0
+	for x1 in data:
+		x1 = int(x1)
+		for x2 in range(8 // filter['SymbolMap']['symbol bits']):
+			symbol_stream[x3] = filter['SymbolMap']['symbol map'][np.right_shift(x1, (8 - filter['SymbolMap']['symbol bits']))]
+			x1 = np.left_shift(x1, filter['SymbolMap']['symbol bits'])
+			x1 = np.bitwise_and(x1, 255)
+			x3 += 1
+	sample_buffer = np.zeros(filter['symbol span'])
+	oversample_index = 0
+	sample_stream = np.zeros(len(symbol_stream) * filter['Oversample'])
+	sample_index = 0
+	for x1 in symbol_stream:
+		for x2 in range(filter['symbol span'] - 1):
+			sample_buffer[x2] = sample_buffer[x2 + 1]
+		sample_buffer[filter['symbol span']-1] = x1
+		for x3 in range(filter['Oversample']):
+			sample_stream[sample_index] = np.convolve(sample_buffer, undersample_fir[x3], mode='valid')
+			sample_index += 1
+
+	return sample_stream
+
+def ImpulseOversample2(data, filter):
+	YMem = np.zeros([filter['Oversample'], filter['symbol span']])
+	for i0 in range(filter['Oversample']):
+		YMem[i0] = filter['Taps'][i0::filter['Oversample']]
+	# data is a list of 8-bit integer values
+	symbol_stream = np.zeros(len(data) * 8 // filter['SymbolMap']['symbol bits'])
+	x3 = 0
+	for x1 in data:
+		x1 = int(x1)
+		for x2 in range(8 // filter['SymbolMap']['symbol bits']):
+			symbol_stream[x3] = filter['SymbolMap']['symbol map'][np.right_shift(x1, (8 - filter['SymbolMap']['symbol bits']))]
+			x1 = np.left_shift(x1, filter['SymbolMap']['symbol bits'])
+			x1 = np.bitwise_and(x1, 255)
+			x3 += 1
+	sample_buffer = np.zeros(filter['symbol span'])
+	sample_stream = np.zeros(len(symbol_stream) * filter['Oversample'])
+	sample_index = 0
+	YMemIndex = 0
+	x0 = 0
+	while x0 < len(symbol_stream):
+		if YMemIndex == 0:
+			for x2 in range(filter['symbol span']-1):
+				sample_buffer[x2] = sample_buffer[x2 + 1]
+			sample_buffer[filter['symbol span']-1] = symbol_stream[x0]
+			x0 += 1
+		sample_stream[sample_index] = np.convolve(sample_buffer, YMem[YMemIndex], mode='valid')
+		sample_index += 1
+		YMemIndex += 1
+		if YMemIndex >= filter['Oversample']:
+			YMemIndex = 0
+
+	return sample_stream
+
 def ExpandSampleStream(data, filter):
 	bit_count = len(data) * 8
 	#print('BitCount', bit_count)
@@ -290,13 +362,13 @@ def ExpandSampleStream(data, filter):
 	samples = np.zeros(sample_count + flush_count)
 	sample_index = 0
 	symbols_per_byte = 8 // filter['SymbolMap']['symbol bits']
-	symbol_mask = int(pow(2,filter['SymbolMap']['symbol bits']) - 1)
 	if filter['SymbolMap']['expander'] == 'impulse':
 		for byte in data:
 			byte = int(byte)
 			for byte_index in range(symbols_per_byte):
-				symbol = np.bitwise_and(byte, symbol_mask)
-				byte = np.right_shift(byte, filter['SymbolMap']['symbol bits'])
+				symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
+				byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
+				byte = np.bitwise_and(byte, 255)
 				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
 				sample_index += 1
 				for extend_index in range(filter['Oversample'] - 1):
@@ -400,7 +472,7 @@ def FilterDecimate2(filter):
 
 def GenPulseFilterPatterns(this):
 	bit_width = this['symbol span'] * this['SymbolMap']['symbol bits']
-	symbol_count = 2**bit_width
+	symbol_count = (2**bit_width) // this['SymbolMap']['symbol bits']
 	samples_per_symbol = this['Oversample']
 	symbol_mask = np.power(2, this['SymbolMap']['symbol bits']) - 1
 	symbol_tap = symbol_mask << ((this['symbol span'] - 1) * this['SymbolMap']['symbol bits'])
@@ -408,7 +480,7 @@ def GenPulseFilterPatterns(this):
 	this['FilterPatterns'] = np.zeros(symbol_count * samples_per_symbol)
 	for i0 in range(symbol_count):
 		#i0 is the symbol to be factored
-		y = np.zeros(samples_per_symbol * this['symbol span'])
+		y = np.zeros(samples_per_symbol * this['symbol span']*this['SymbolMap']['symbol bits'])
 		factor_me = i0
 		# bit-reverse i0
 		shift_register = 0

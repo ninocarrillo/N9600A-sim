@@ -21,10 +21,38 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
-	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
-	waveform = np.convolve(PulseFilter['Taps'], BitStream)
+
+
+	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
+	for index in range(96,162):
+		PulseFilter['Taps'][index] = index
+
+	for index in range(13):
+		state['InputData'][index] = 119
+	index +=1
+	state['InputData'][index] = 0xF1
+	index +=1
+	state['InputData'][index] = 0x5E
+	index +=1
+	state['InputData'][index] = 0x48
+	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
 	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
+	print(max(waveform))
+	print(min(waveform))
+
+	plt.figure()
+	plt.plot(waveform)
+	#plt.plot(waveform_3)
+	plt.show()
+
+	#create phased filter oversample sections:
+	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
+	plt.figure()
+	plt.plot(PulseFilter['PhaseTaps'])
+	plt.show()
+
 	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
@@ -40,7 +68,7 @@ def ModulateRRC(state):
 
 	plt.subplot(222)
 	plt.plot(waveform, 'b')
-	plt.plot(waveform_2, 'r')
+	#plt.plot(waveform_2, 'r')
 	plt.title("Modulation Waveform")
 	plt.legend(["Post Transmit Filter", "Post Receive Filter"])
 
@@ -77,11 +105,7 @@ def ModulateRRC(state):
 			continue
 		break
 
-	waveform = waveform / max(waveform)
-	waveform = waveform * 32767
 
-	waveform_2 = waveform_2 / max(waveform_2)
-	waveform_2 = waveform_2 * 32767
 
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", PulseFilter['sample rate'], waveform_2.astype(np.int16))
@@ -111,8 +135,18 @@ def ModulateRRC(state):
 
 		report_file.write('\n\n# RRC Pulse Filter\n')
 		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'] * 65536, 8))
+		report_file.write(fo.GenInt16ArrayC(f'RRCFilter', PulseFilter['Taps'], PulseFilter['Oversample']))
 		report_file.write('\n')
+
+		report_file.write('\n\n# RRC Pulse Filter Phased Taps\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'PhaseTaps', PulseFilter['PhaseTaps'], PulseFilter['symbol span']))
+		report_file.write('\n')
+
+
+
+
+
 		report_file.close()
 
 
