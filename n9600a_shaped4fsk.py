@@ -35,7 +35,7 @@ def ModulateRRC(state):
 	index +=1
 	state['InputData'][index] = 0x48
 	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
-	waveform_2 = np.convolve(PulseFilter['Taps'], waveform)
+	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform) // (PulseFilter['amplitude'] * 3))
 	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
 	print(max(waveform))
 	print(min(waveform))
@@ -66,7 +66,7 @@ def ModulateRRC(state):
 
 	plt.subplot(222)
 	plt.plot(waveform, 'b')
-	#plt.plot(waveform_2, 'r')
+	plt.plot(waveform_2, 'r')
 	plt.title("Modulation Waveform")
 	plt.legend(["Post Transmit Filter", "Post Receive Filter"])
 
