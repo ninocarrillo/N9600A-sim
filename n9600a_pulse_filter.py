@@ -300,7 +300,19 @@ def InitRRCFilter(this):
 		a4 = 0.006947368
 		for index in range(this['TapCount']):
 			this['FilterWindow'][index] = a0 - (a1 * np.cos(2 * np.pi * index / N)) + (a2 * np.cos(4 * np.pi * index / N)) - (a3 * np.cos(6 * np.pi * index / N)) + (a4  * np.cos(8 * np.pi * index / N))
-	
+	elif this['window'] == 'tukey':
+		a = 0.5
+		index = 0
+		while index < a * N / 2:
+			this['FilterWindow'][index] = 0.5 * (1 - np.cos(2 * np.pi * index / (a * N)))
+			index += 1
+		while index <= N // 2:
+			this['FilterWindow'][index] = 1
+			index += 1
+		while index <= N:
+			this['FilterWindow'][index] = this['FilterWindow'][N - index]
+			index += 1
+		
 
 	this['Taps'] = np.multiply(this['Taps'], this['FilterWindow'])
 	this['WindowedRC'] = np.convolve(this['Taps'], this['Taps'], 'same')
