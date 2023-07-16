@@ -363,6 +363,8 @@ def FullProcess(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter['sample rate'] = FilterDecimator['OutputSampleRate']
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
+	PulseFilter = pulse_filter.InitHannWindow(PulseFilter)
+
 
 	print(f'Reading settings for BPSK Demodulators')
 	BPSKDemodulator = []
@@ -661,6 +663,20 @@ def ModulateRRC(state):
 	#PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
+
+	
+	plt.figure()
+	plt.plot(PulseFilter['Taps'])
+	plt.plot(PulseFilter['WindowedRC'])
+	plt.title('Hann Window RRC')
+	plt.show()
+	
+	
+	plt.figure()
+	plt.plot(PulseFilter['WindowedRC'])
+	plt.title('Hann Window RC')
+	plt.show()
+	
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
 	NCO['Amplitude'] = PulseFilter['amplitude']

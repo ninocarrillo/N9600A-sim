@@ -129,6 +129,13 @@ def GetRRCFilterConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+		
+	key_string = "window"
+	try:
+		this[f'{key_string}'] = config[f'{id_string}'][f'{key_string}']
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 
 	return this
 
@@ -230,6 +237,7 @@ def InitGaussFilter(this):
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
 	return this
 
+
 def InitRRCFilter(this):
 	this['Oversample'] = this['sample rate'] // this['symbol rate']
 	this['TapCount'] = this['symbol span'] * this['Oversample']
@@ -260,6 +268,43 @@ def InitRRCFilter(this):
 		index += 1
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
 	this['RC'] = np.convolve(this['Taps'], this['Taps'], 'same')
+	
+	this['FilterWindow'] = np.zeros(this['TapCount'])
+	
+	N = this['TapCount'] - 1
+	if this['window'] == 'hann':
+		for index in range(this['TapCount']):
+			this['FilterWindow'][index] = np.power(np.sin(np.pi * index / N),2)
+	elif this['window'] == 'rect':
+		for index in range(this['TapCount']):
+			this['FilterWindow'][index] = 1
+	elif this['window'] == 'blackmann':
+		a0 = 0.355768
+		a1 = 0.487396
+		a2 = 0.144232
+		a3 = 0.012604
+		for index in range(this['TapCount']):
+			this['FilterWindow'][index] = a0 - (a1 * np.cos(2 * np.pi * index / N)) + (a2 * np.cos(4 * np.pi * index / N)) - (a3 * np.cos(6 * np.pi * index / N))
+	elif this['window'] == 'blackmann-harris':
+		a0 = 0.35875
+		a1 = 0.48829
+		a2 = 0.14128
+		a3 = 0.01168
+		for index in range(this['TapCount']):
+			this['FilterWindow'][index] = a0 - (a1 * np.cos(2 * np.pi * index / N)) + (a2 * np.cos(4 * np.pi * index / N)) - (a3 * np.cos(6 * np.pi * index / N))
+	elif this['window'] == 'flattop':
+		a0 = 0.21557895
+		a1 = 0.41663158
+		a2 = 0.277263158
+		a3 = 0.083578947
+		a4 = 0.006947368
+		for index in range(this['TapCount']):
+			this['FilterWindow'][index] = a0 - (a1 * np.cos(2 * np.pi * index / N)) + (a2 * np.cos(4 * np.pi * index / N)) - (a3 * np.cos(6 * np.pi * index / N)) + (a4  * np.cos(8 * np.pi * index / N))
+	
+
+	this['Taps'] = np.multiply(this['Taps'], this['FilterWindow'])
+	this['WindowedRC'] = np.convolve(this['Taps'], this['Taps'], 'same')
+	this['WindowedRC'] = this['WindowedRC'] * max(this['Taps']) / max(this['WindowedRC'])
 	return this
 
 def BytesToSymbols(data, filter):
