@@ -666,15 +666,14 @@ def ModulateRRC(state):
 
 	
 	plt.figure()
-	plt.plot(PulseFilter['Taps'])
-	plt.plot(PulseFilter['WindowedRC'])
-	plt.title('Hann Window RRC')
+	plt.plot(PulseFilter['FilterWindow'])
+	plt.legend('Filter Window')
 	plt.show()
 	
-	
 	plt.figure()
+	plt.plot(PulseFilter['Taps'])
 	plt.plot(PulseFilter['WindowedRC'])
-	plt.title('Hann Window RC')
+	plt.title('Windowed RRC')
 	plt.show()
 	
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
@@ -809,8 +808,17 @@ def ModulateRRC(state):
 		report_file.write(f'\nMin in table: {min(PulseFilter["FilterPatterns"])}\n')
 		report_file.write(fo.GenInt16ArrayC(f'BPSKFilterPatterns', PulseFilter['FilterPatterns'], PulseFilter['Oversample']))
 		report_file.write('\n\n')
+		
+		report_file.write(fo.GenInt16ArrayC(f'HalfBPSKFilterPatterns', PulseFilter['FilterPatterns'][0:len(PulseFilter['FilterPatterns'])//2], PulseFilter['Oversample']))
+		
 
-		report_file.write('\n')
+		report_file.write('\n\n')
+		report_file.write('\n\n')
+		
+		report_file.write(fo.GenInt16ArrayC(f'Filter Window', np.rint(PulseFilter['FilterWindow'] * 32767), PulseFilter['Oversample']))
+		
+
+		report_file.write('\n\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
 		report_file.write(fo.GenInt16ArrayC(f'QuarterSineTable', NCO['WaveTable'][0:(len(NCO['WaveTable']) // 4) + 1], 8))
 
