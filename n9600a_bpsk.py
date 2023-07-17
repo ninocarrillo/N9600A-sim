@@ -409,7 +409,9 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], np.rint(ReceivePulseFilter[1]['Taps'] * 8191), 'valid') // 65536
+	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
+
+	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	plt.figure()
@@ -462,6 +464,10 @@ def FullProcess(state):
 
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
+		report_file.write('\n\n')
+		
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
 		report_file.write('\n\n')
 
 		report_file.close()
