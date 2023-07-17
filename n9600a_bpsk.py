@@ -287,48 +287,6 @@ def DemodulateBPSK(this):
 			# save the data signal
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
-
-			# Downsample and threshold data output and save as Result
-			if this['NCO']['QuadraturePhaseRollover'] == True:
-				this['NCO']['QuadraturePhaseRollover'] = False
-				if this['I_LPF']['Output'] > 0:
-					try:
-						this['Result'][databit_index] =	 1
-					except:
-						pass
-					this['SamplePulse'][index] = 3000
-				else:
-					try:
-						this['Result'][databit_index] = 0
-					except:
-						pass
-					this['SamplePulse'][index] = -3000
-				databit_index += 1
-			else:
-				this['SamplePulse'][index] = 0
-
-			# this['BitAccumulator'] += this['I_LPF']['Output']
-			#
-			# if this['NCO']['InPhaseRollover'] == True:
-			#	this['NCO']['InPhaseRollover'] = False
-			#	if this['BitAccumulator'] > 0:
-			#		try:
-			#			this['Result'][databit_index] =	 1
-			#		except:
-			#			pass
-			#		this['SamplePulse'][index] = this['BitAccumulator']
-			#	else:
-			#		try:
-			#			this['Result'][databit_index] = 0
-			#		except:
-			#			pass
-			#		this['SamplePulse'][index] = this['BitAccumulator']
-			#	databit_index += 1
-			#	this['BitAccumulator'] = 0
-			# else:
-			#	this['SamplePulse'][index] = 0
-
-
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
 
 
@@ -363,22 +321,25 @@ def FullProcess(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter['sample rate'] = FilterDecimator['OutputSampleRate']
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
-	PulseFilter = pulse_filter.InitHannWindow(PulseFilter)
 
 
 	print(f'Reading settings for BPSK Demodulators')
 	BPSKDemodulator = []
+	ReceivePulseFilter = []
 	DemodulatorCount = 0
 	id_string = "BPSK Demodulator "
 	for DemodulatorNumber in range(4):
 		BPSKDemodulator.append({})
+		ReceivePulseFilter.append({})
 		if config.has_section(f'{id_string}{DemodulatorNumber}'):
 			print(f'Reading settings for {id_string}{DemodulatorNumber}')
 			DemodulatorCount += 1
 			BPSKDemodulator[DemodulatorNumber] = GetBPSKDemodConfig(config, DemodulatorNumber, id_string)
 			BPSKDemodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			BPSKDemodulator[DemodulatorNumber] = InitBPSKDemod(BPSKDemodulator[DemodulatorNumber])
-
+			ReceivePulseFilter[DemodulatorNumber] = PulseFilter.copy()
+			ReceivePulseFilter[DemodulatorNumber]['sample rate'] = BPSKDemodulator[DemodulatorNumber]['InputSampleRate']
+			ReceivePulseFilter[DemodulatorNumber] = pulse_filter.InitRRCFilter(ReceivePulseFilter[DemodulatorNumber])
 
 	AX25Decoder = [{}]
 	Descrambler = [{}]
@@ -448,7 +409,7 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], np.rint(PulseFilter['Taps'] * 8191), 'valid') // 65536
+	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], np.rint(ReceivePulseFilter[1]['Taps'] * 8191), 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	plt.figure()
@@ -664,18 +625,18 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
-	
+
 	plt.figure()
 	plt.plot(PulseFilter['FilterWindow'])
 	plt.legend('Filter Window')
 	plt.show()
-	
+
 	plt.figure()
 	plt.plot(PulseFilter['Taps'])
 	plt.plot(PulseFilter['WindowedRC'])
 	plt.title('Windowed RRC')
 	plt.show()
-	
+
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
 	NCO['Amplitude'] = PulseFilter['amplitude']
@@ -808,15 +769,15 @@ def ModulateRRC(state):
 		report_file.write(f'\nMin in table: {min(PulseFilter["FilterPatterns"])}\n')
 		report_file.write(fo.GenInt16ArrayC(f'BPSKFilterPatterns', PulseFilter['FilterPatterns'], PulseFilter['Oversample']))
 		report_file.write('\n\n')
-		
+
 		report_file.write(fo.GenInt16ArrayC(f'HalfBPSKFilterPatterns', PulseFilter['FilterPatterns'][0:len(PulseFilter['FilterPatterns'])//2], PulseFilter['Oversample']))
-		
+
 
 		report_file.write('\n\n')
 		report_file.write('\n\n')
-		
+
 		report_file.write(fo.GenInt16ArrayC(f'Filter Window', np.rint(PulseFilter['FilterWindow'] * 32767), PulseFilter['Oversample']))
-		
+
 
 		report_file.write('\n\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
