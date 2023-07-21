@@ -301,6 +301,7 @@ def DemodulateQPSK(this):
 			# scale the NCO control signal
 			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
 			integral += np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter i1'])
+			#integral += this['LoopFilterOutput'][index]
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
@@ -451,10 +452,10 @@ def FullProcess(state):
 	plt.title('I LPF Output')
 	plt.legend(['Filtered Input','I_LPF Output','Q_LPF Output', 'Envelope'])
 	plt.subplot(222)
-	#plt.plot(QPSKDemodulator[1]['LoopMixer'])
+	plt.plot(QPSKDemodulator[1]['LoopMixer'])
 	plt.plot(QPSKDemodulator[1]['LoopIntegral'])
-	#plt.plot(QPSKDemodulator[1]['LoopFilterOutput'])
-	#plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
+	plt.plot(QPSKDemodulator[1]['LoopFilterOutput'])
+	plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
 	plt.title('Loop Filter Output')
 	plt.subplot(223)
 	#plt.plot(QPSKDemodulator[1]['I_LPFOutput'])
