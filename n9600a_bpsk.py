@@ -465,7 +465,7 @@ def FullProcess(state):
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
 		report_file.write('\n\n')
-		
+
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
 		report_file.write('\n\n')
@@ -634,7 +634,7 @@ def ModulateRRC(state):
 
 	plt.figure()
 	plt.plot(PulseFilter['FilterWindow'])
-	plt.legend('Filter Window')
+	plt.title('Filter Window')
 	plt.show()
 
 	plt.figure()
