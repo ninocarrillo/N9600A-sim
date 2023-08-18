@@ -55,8 +55,15 @@ def ModulateRRC(state):
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
-	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	try:
+		plt.plot(PulseFilter['Time'], PulseFilter['Taps'] / max(PulseFilter['Taps']), 'b')
+	except:
+		print('plot fail')
+	try:
+		plt.plot(PulseFilter['Time'], PulseFilter['RC'] / max(PulseFilter['RC']), 'r')
+	except:
+		print('plot fail')
+		
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	#plt.xlabel("Symbol Intervals")
