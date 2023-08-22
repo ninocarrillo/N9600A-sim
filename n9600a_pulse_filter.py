@@ -58,14 +58,6 @@ def GetAGCConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "agc high thresh"
-	try:
-		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
-	id_string = "Decimator"
 	key_string = "decimation"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
@@ -129,7 +121,7 @@ def GetRRCFilterConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "window"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}'][f'{key_string}']
@@ -268,9 +260,9 @@ def InitRRCFilter(this):
 		index += 1
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
 	this['RC'] = np.convolve(this['Taps'], this['Taps'], 'same')
-	
+
 	this['FilterWindow'] = np.zeros(this['TapCount'])
-	
+
 	N = this['TapCount'] - 1
 	if this['window'] == 'hann':
 		for index in range(this['TapCount']):
@@ -312,7 +304,7 @@ def InitRRCFilter(this):
 		while index <= N:
 			this['FilterWindow'][index] = this['FilterWindow'][N - index]
 			index += 1
-		
+
 
 	this['Taps'] = np.multiply(this['Taps'], this['FilterWindow'])
 	this['WindowedRC'] = np.convolve(this['Taps'], this['Taps'], 'same')
