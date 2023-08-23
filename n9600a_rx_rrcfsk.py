@@ -68,7 +68,8 @@ def FullProcess(state):
 	plt.subplot(234)
 	plt.plot(FilterDecimator['EnvelopeBuffer'])
 	plt.subplot(235)
-	correlator_buffer = [-3,0,0,0,0,0,-3,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,-3,0,0,0,0,0,-1,0,0,0,0,0,3,0,0,0,0,0,1,0,0,0,0,0,-1,0,0,0,0,0,1]
+	#correlator_buffer = [-3,0,0,0,0,0,-3,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,-3,0,0,0,0,0,-1,0,0,0,0,0,3,0,0,0,0,0,1,0,0,0,0,0,-1,0,0,0,0,0,1]
+	correlator_buffer = [+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,-3]
 	correlator_buffer = np.flip(np.convolve(correlator_buffer, FilterDecimator['Filter'], 'same'))
 	#correlator_buffer = np.flip(np.convolve(correlator_buffer, FilterDecimator['Filter'], 'same'))
 	correlation = np.rint(np.convolve(correlator_buffer, FilterDecimator['FilterBuffer'], 'valid'))
