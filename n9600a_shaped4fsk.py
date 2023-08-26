@@ -35,21 +35,13 @@ def ModulateRRC(state):
 	index +=1
 	state['InputData'][index] = 0x48
 	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
+	#waveform = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	#waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform) // (PulseFilter['amplitude'] * 3))
 	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
-	print(max(waveform))
-	print(min(waveform))
-
-	plt.figure()
-	plt.plot(waveform)
-	#plt.plot(waveform_3)
-	plt.show()
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
-	plt.figure()
-	plt.plot(PulseFilter['PhaseTaps'])
-	plt.show()
 
 	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
@@ -63,7 +55,7 @@ def ModulateRRC(state):
 		plt.plot(PulseFilter['Time'], PulseFilter['RC'] / max(PulseFilter['RC']), 'r')
 	except:
 		print('plot fail')
-		
+
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	#plt.xlabel("Symbol Intervals")

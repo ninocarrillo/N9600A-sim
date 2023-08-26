@@ -232,7 +232,7 @@ def InitGaussFilter(this):
 
 def InitRRCFilter(this):
 	this['Oversample'] = this['sample rate'] // this['symbol rate']
-	this['TapCount'] = this['symbol span'] * this['Oversample']
+	this['TapCount'] = this['symbol span'] * this['Oversample'] + 1
 	this['TimeStep'] = 1 / this['sample rate']
 	this['SymbolTime'] = 1 / this['symbol rate']
 	this['Time'] = np.arange(0, this['TapCount'] * this['TimeStep'], this['TimeStep']) - (this['TapCount'] * this['TimeStep'] / 2) + (this['TimeStep'] / 2)
@@ -339,38 +339,15 @@ def GenFilterPhases(filter):
 				print(i0, i1)
 	return filter
 
-def ImpulseOversample(data, filter):
-	undersample_fir = np.zeros([filter['Oversample'], filter['symbol span']])
-	for i0 in range(filter['Oversample']):
-		undersample_fir[i0] = filter['Taps'][i0::filter['Oversample']]
-	# data is a list of 8-bit integer values
-	symbol_stream = np.zeros(len(data) * 8 // filter['SymbolMap']['symbol bits'])
-	x3 = 0
-	for x1 in data:
-		x1 = int(x1)
-		for x2 in range(8 // filter['SymbolMap']['symbol bits']):
-			symbol_stream[x3] = filter['SymbolMap']['symbol map'][np.right_shift(x1, (8 - filter['SymbolMap']['symbol bits']))]
-			x1 = np.left_shift(x1, filter['SymbolMap']['symbol bits'])
-			x1 = np.bitwise_and(x1, 255)
-			x3 += 1
-	sample_buffer = np.zeros(filter['symbol span'])
-	oversample_index = 0
-	sample_stream = np.zeros(len(symbol_stream) * filter['Oversample'])
-	sample_index = 0
-	for x1 in symbol_stream:
-		for x2 in range(filter['symbol span'] - 1):
-			sample_buffer[x2] = sample_buffer[x2 + 1]
-		sample_buffer[filter['symbol span']-1] = x1
-		for x3 in range(filter['Oversample']):
-			sample_stream[sample_index] = np.convolve(sample_buffer, undersample_fir[x3], mode='valid')
-			sample_index += 1
 
-	return sample_stream
 
 def ImpulseOversample2(data, filter):
 	YMem = np.zeros([filter['Oversample'], filter['symbol span']])
 	for i0 in range(filter['Oversample']):
-		YMem[i0] = filter['Taps'][i0::filter['Oversample']]
+		try:
+			YMem[i0] = filter['Taps'][i0::filter['Oversample']]
+		except:
+			YMem[i0] = (filter['Taps'][:-1])[i0::filter['Oversample']]
 	# data is a list of 8-bit integer values
 	symbol_stream = np.zeros(len(data) * 8 // filter['SymbolMap']['symbol bits'])
 	x3 = 0
