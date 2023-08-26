@@ -416,6 +416,30 @@ def ExpandSampleStream(data, filter):
 		sample_index += 1
 	return samples
 
+def GenPhaseData(samples, oversample, depth):
+	phase_index = 0
+	depth_index = 0
+	sample_index = 0
+	circ_buffer = np.zeros([oversample, depth])
+	mean = np.zeros(len(samples))
+	variance = np.zeros(len(samples))
+	local_mean = np.zeros(oversample)
+	local_variance = np.zeros(oversample)
+	for sample in samples:
+		circ_buffer[phase_index,depth_index] = abs(sample)
+		mean[sample_index] = np.mean(circ_buffer[phase_index])
+		variance[sample_index] = np.var(circ_buffer[phase_index])
+		local_variance[phase_index] = variance[sample_index]
+		variance[sample_index] = np.argmin(local_variance)
+		sample_index += 1
+		phase_index += 1
+		if phase_index >= oversample:
+			phase_index = 0
+		depth_index += 1
+		if depth_index >= depth:
+			depth_index = 0
+	return [mean,variance]
+
 def GenEyeData2(samples, oversample, delay):
 	trace_count = int(np.floor((len(samples) - delay) / oversample))
 	#print(trace_count)

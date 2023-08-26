@@ -87,6 +87,16 @@ def ModulateRRC(state):
 	plt.title("Frequency Spectrum")
 	plt.show()
 
+	# calculate mean and variance for each sample phase
+	depth = 20
+	phase_data = pulse_filter.GenPhaseData(waveform_2, PulseFilter['Oversample'], depth)
+	plt.figure()
+	plt.subplot(121)
+	plt.plot(phase_data[0])
+	plt.subplot(122)
+	plt.plot(phase_data[1])
+	plt.show()
+
 
 
 	#generate a new directory for the reports
