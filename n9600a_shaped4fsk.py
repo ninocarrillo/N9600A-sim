@@ -35,8 +35,8 @@ def ModulateRRC(state):
 	index +=1
 	state['InputData'][index] = 0x48
 	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
-	#waveform = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
-	#waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform))
+	waveform = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform) // (PulseFilter['amplitude'] * 3))
 	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
 
@@ -88,13 +88,23 @@ def ModulateRRC(state):
 	plt.show()
 
 	# calculate mean and variance for each sample phase
-	depth = 20
+	depth = (2*PulseFilter['Oversample']) + 1
 	phase_data = pulse_filter.GenPhaseData(waveform_2, PulseFilter['Oversample'], depth)
 	plt.figure()
-	plt.subplot(121)
-	plt.plot(phase_data[0])
-	plt.subplot(122)
+	plt.subplot(141)
+	plt.plot(phase_data[4],'.')
+	plt.plot(waveform_2)
+	plt.subplot(142)
 	plt.plot(phase_data[1])
+	plt.plot(phase_data[2])
+	plt.plot(waveform_2)
+	plt.title('Max Min Spread (maximize)')
+	plt.subplot(143)
+	plt.plot(phase_data[2])
+	plt.title('Dispersion (minimize)')
+	plt.subplot(144)
+	plt.plot(phase_data[3])
+	plt.plot(phase_data[5])
 	plt.show()
 
 

@@ -422,23 +422,43 @@ def GenPhaseData(samples, oversample, depth):
 	sample_index = 0
 	circ_buffer = np.zeros([oversample, depth])
 	mean = np.zeros(len(samples))
-	variance = np.zeros(len(samples))
+	variance1 = np.zeros(len(samples))
+	variance2 = np.zeros(len(samples))
+	best_phase = np.zeros(len(samples))
+	local_best_phase = np.zeros(depth)
 	local_mean = np.zeros(oversample)
-	local_variance = np.zeros(oversample)
+	local_variance1 = np.zeros(oversample)
+	local_variance2 = np.zeros(oversample)
+	local_variance3 = np.zeros(oversample)
+	phase_error = np.zeros(len(samples))
+	selected_samples = np.zeros(len(samples))
 	for sample in samples:
-		circ_buffer[phase_index,depth_index] = abs(sample)
+		circ_buffer[phase_index,depth_index] = sample
 		mean[sample_index] = np.mean(circ_buffer[phase_index])
-		variance[sample_index] = np.var(circ_buffer[phase_index])
-		local_variance[phase_index] = variance[sample_index]
-		variance[sample_index] = np.argmin(local_variance)
+		variance1[sample_index] = np.max(circ_buffer[phase_index]) - np.min(circ_buffer[phase_index])
+		variance2[sample_index] = np.max(np.abs(circ_buffer[phase_index])) - np.min(np.abs(circ_buffer[phase_index]))
+		local_variance1[phase_index] = variance1[sample_index] # maximize this, the spread between sample values
+		local_variance2[phase_index] = variance2[sample_index] # minimimize this, the spread between points on same side
+
+		local_best_phase[depth_index] = np.argmin(local_variance2)
+		best_phase[sample_index] = np.round(np.mean(local_best_phase))
+		#print(f'{local_variance2}')
+		if phase_index == best_phase[sample_index]:
+			selected_samples[sample_index] = sample
+		else:
+			selected_samples[sample_index] = 0
+		phase_error[sample_index] = best_phase[sample_index] - local_best_phase[depth_index]
+		while phase_error[sample_index] > (oversample // 2):
+			phase_error[sample_index] -= oversample
+		#phase_error[sample_index] = abs(variance1[sample_index]) * phase_error[sample_index]
 		sample_index += 1
 		phase_index += 1
 		if phase_index >= oversample:
 			phase_index = 0
-		depth_index += 1
-		if depth_index >= depth:
-			depth_index = 0
-	return [mean,variance]
+			depth_index += 1
+			if depth_index >= depth:
+				depth_index = 0
+	return [mean,variance1, variance2, phase_error, selected_samples, best_phase]
 
 def GenEyeData2(samples, oversample, delay):
 	trace_count = int(np.floor((len(samples) - delay) / oversample))
