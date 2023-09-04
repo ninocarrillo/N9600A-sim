@@ -104,14 +104,14 @@ with report_file:
 		report_file.write(f'{argument} ')
 
 
-	report_file.write('\n\n# Hamming(7,4) Encoding Table')
-	report_file.write(fo.GenInt16ArrayHexC(f'Hamming74Encode', encode_table, 1))
+	report_file.write('\n\n// Hamming(7,4) Encoding Table')
+	report_file.write(fo.GenInt16ArrayHexC(f'Hamming74EncodeTable', encode_table, 1))
 
-	report_file.write('\n\n# Hamming(7,4) Decoding Table')
-	report_file.write(fo.GenInt16ArrayHexC(f'Hamming74Decode', decode_table, 8))
+	report_file.write('\n\n// Hamming(7,4) Decoding Table')
+	report_file.write(fo.GenInt16ArrayHexC(f'Hamming74DecodeTable', decode_table, 8))
 
-	report_file.write('\n\n# Hamming(7,4) Distance Table')
-	report_file.write(fo.GenInt16ArrayC(f'Hamming74Distance', distance_table, 8))
+	report_file.write('\n\n// Hamming(7,4) Distance Table')
+	report_file.write(fo.GenInt16ArrayC(f'Hamming74DistanceTable', distance_table, 8))
 
 
 	report_file.close()
