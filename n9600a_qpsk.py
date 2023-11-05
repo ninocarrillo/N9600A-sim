@@ -185,13 +185,6 @@ def GetQPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "loop filter i2"
-	try:
-		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
 	key_string = "loop filter i max"
 	try:
 		this['LoopFilter'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -206,12 +199,7 @@ def GetQPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "branch gain"
-	try:
-		this[f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
+
 
 	return this
 
@@ -288,8 +276,8 @@ def DemodulateQPSK(this):
 				Q_Signum = -1
 
 			# Cross-mix the branches
-			I = np.rint(this['I_LPFOutput'][index] * Q_Signum * this['branch gain'])
-			Q = np.rint(this['Q_LPFOutput'][index] * I_Signum * this['branch gain'])
+			I = np.rint(this['I_LPFOutput'][index] * Q_Signum)
+			Q = np.rint(this['Q_LPFOutput'][index] * I_Signum)
 
 
 			this['LoopMixer'][index] = I - Q
@@ -305,7 +293,7 @@ def DemodulateQPSK(this):
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
-			this['NCO']['Control'] = np.rint((p + (np.rint(integral * this['LoopFilter']['loop filter i2']))) * this['LoopFilter']['loop filter gain'])
+			this['NCO']['Control'] = np.rint((p + (np.rint(integral))) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
