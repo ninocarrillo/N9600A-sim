@@ -273,13 +273,13 @@ def DemodulateBPSK(this):
 			# scale the NCO control signal
 			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
 			#integral += np.rint(this['LoopFilterOutput'][index] * 0.0035)
-			integral += np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter i'])
+			integral += this['LoopFilterOutput'][index]
 			#integral = 0
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
 			#this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
-			this['NCO']['Control'] = np.rint((p + integral) * this['LoopFilter']['loop filter gain'])
+			this['NCO']['Control'] = np.rint((p + (integral * this['LoopFilter']['loop filter i'])) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
