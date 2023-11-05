@@ -14,6 +14,7 @@ import n9600a_filters as filters
 import n9600a_bpsk as bpsk
 import n9600a_qpsk as qpsk
 import n9600a_qpsk32 as qpsk32
+import n9600a_bpsk32 as bpsk32
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
@@ -78,3 +79,6 @@ elif DemodulatorType == 'qpsk':
 
 elif DemodulatorType == 'qpsk32':
 	qpsk32.FullProcess(state)
+	
+elif DemodulatorType == 'bpsk32':
+	bpsk32.FullProcess(state)
