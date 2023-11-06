@@ -439,6 +439,17 @@ def FullProcess(state):
 	plt.title('NCO Control')
 	plt.show()
 
+
+	plt.figure()
+	plt.title('I/Q Demodulator Constellation')
+	plt.scatter(BPSKDemodulator[1]['I_LPFOutput'], BPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
+	#plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
+	#plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
+	plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
+	plt.xlim([-16000,16000])
+	plt.ylim([-12000,12000])
+	plt.show()
+
 	# Generate and save report file
 	report_file_name = f'run{run_number}_report.txt'
 	try:
