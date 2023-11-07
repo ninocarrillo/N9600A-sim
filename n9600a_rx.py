@@ -19,6 +19,7 @@ import n9600a_bpsk32 as bpsk32
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
 	sys.exit(-1)
+state = {}
 
 # read demodulator description from ini file:
 config = configparser.ConfigParser()
@@ -37,7 +38,22 @@ except:
 	sys.exit(-2)
 print(f'Demodulator type is {DemodulatorType}')
 
-state = {}
+
+key_string = "reports"
+try:
+	state[f'{key_string}'] = config[f'General'].getboolean(f'{key_string}')
+except:
+	print(f'{sys.argv[1]} [General] \'{key_string}\' is missing or invalid')
+	sys.exit(-2)
+
+key_string = "plots"
+try:
+	state[f'{key_string}'] = config[f'General'].getboolean(f'{key_string}')
+except:
+	print(f'{sys.argv[1]} [General] \'{key_string}\' is missing or invalid')
+	sys.exit(-2)
+
+
 state['argv'] = sys.argv
 state['config'] = config
 
@@ -79,6 +95,6 @@ elif DemodulatorType == 'qpsk':
 
 elif DemodulatorType == 'qpsk32':
 	qpsk32.FullProcess(state)
-	
+
 elif DemodulatorType == 'bpsk32':
 	bpsk32.FullProcess(state)

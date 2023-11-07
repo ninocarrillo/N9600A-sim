@@ -31,6 +31,7 @@ def GetBPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+
 	key_string = "nco design sample rate"
 	try:
 		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -302,18 +303,7 @@ def FullProcess(state):
 
 	print(f'Started BPSK Demodulation process')
 
-	#generate a new directory for the reports
-	run_number = 0
-	print('trying to make a new directory')
-	while True:
-		run_number = run_number + 1
-		dirname = f'./run{run_number}/'
-		try:
-			os.mkdir(dirname)
-		except:
-			print(dirname + ' exists')
-			continue
-		break
+
 
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
@@ -353,9 +343,23 @@ def FullProcess(state):
 			except:
 				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
-			
+
 			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
+
+	if state['reports'] == True:
+		#generate a new directory for the reports
+		run_number = 0
+		print('trying to make a new directory')
+		while True:
+			run_number = run_number + 1
+			dirname = f'./run{run_number}/'
+			try:
+				os.mkdir(dirname)
+			except:
+				print(dirname + ' exists')
+				continue
+			break
 
 	AX25Decoder = [{}]
 	Descrambler = [{}]
@@ -382,7 +386,8 @@ def FullProcess(state):
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
 	print(f'Done.')
 
-	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
+	if state['reports'] == True:
+		scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
 	print(f'\nDemodulating audio. ')
 	BPSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
@@ -409,27 +414,29 @@ def FullProcess(state):
 				CRC = AX25Decoder[1]['CRC'][0]
 				decodernum = '1'
 				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
-				print(f'{dirname+filename}')
-				try:
-					bin_file = open(dirname + filename + '.bin', '+wb')
-				except:
-					pass
-				with bin_file:
-					for byte in AX25Decoder[1]['Output']:
-						bin_file.write(byte.astype('uint8'))
-					bin_file.close()
-					
+				print(f'{filename}')
+				if state['reports'] == True:
+					try:
+						bin_file = open(dirname + filename + '.bin', '+wb')
+					except:
+						pass
+					with bin_file:
+						for byte in AX25Decoder[1]['Output']:
+							bin_file.write(byte.astype('uint8'))
+						bin_file.close()
+
 	print(f'Total packets decoded: {total_packets}')
 
-	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Result'].astype(np.int16))
-	scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],BPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
-	scipy.io.wavfile.write(dirname+"I_LPF.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_LPFOutput'].astype(np.int16))
-	scipy.io.wavfile.write(dirname+"Q_LPF.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_LPFOutput'].astype(np.int16))
+	if state['reports'] == True:
+		scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Result'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],BPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"I_LPF.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_LPFOutput'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"Q_LPF.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_LPFOutput'].astype(np.int16))
 
-	scipy.io.wavfile.write(dirname+"SamplePulse.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['SamplePulse'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"SamplePulse.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['SamplePulse'].astype(np.int16))
 
-	scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
-	scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
 	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
 
@@ -437,78 +444,80 @@ def FullProcess(state):
 	FilteredQOutput = np.convolve(BPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
-	plt.figure()
-	plt.subplot(221)
-	#plt.plot(FilterDecimator['FilterBuffer'])
-	plt.plot(FilterDecimator['FilterBuffer'])
-	plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
-	plt.plot(FilterDecimator['EnvelopeBuffer'])
-	#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
-	plt.title('I LPF Output')
-	plt.legend(['Filtered Input','I_LPF Output','Envelope'])
-	plt.subplot(222)
-	plt.plot(BPSKDemodulator[1]['LoopMixer'])
-	plt.plot(BPSKDemodulator[1]['LoopIntegral'])
-	plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
-	plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
-	plt.title('Loop Filter Output')
-	plt.subplot(223)
-	#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
-	#plt.plot(BPSKDemodulator[1]['SamplePulse'])
-	plt.plot(FilteredIOutput)
-	plt.title('Filtered I Output')
-	plt.subplot(224)
-	plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
-	plt.title('NCO Control')
-	plt.show()
+	if state['plots'] == True:
+		plt.figure()
+		plt.subplot(221)
+		#plt.plot(FilterDecimator['FilterBuffer'])
+		plt.plot(FilterDecimator['FilterBuffer'])
+		plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
+		plt.plot(FilterDecimator['EnvelopeBuffer'])
+		#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
+		plt.title('I LPF Output')
+		plt.legend(['Filtered Input','I_LPF Output','Envelope'])
+		plt.subplot(222)
+		plt.plot(BPSKDemodulator[1]['LoopMixer'])
+		plt.plot(BPSKDemodulator[1]['LoopIntegral'])
+		plt.plot(BPSKDemodulator[1]['LoopFilterOutput'])
+		plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
+		plt.title('Loop Filter Output')
+		plt.subplot(223)
+		#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
+		#plt.plot(BPSKDemodulator[1]['SamplePulse'])
+		plt.plot(FilteredIOutput)
+		plt.title('Filtered I Output')
+		plt.subplot(224)
+		plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
+		plt.title('NCO Control')
+		plt.show()
 
 
-	plt.figure()
-	plt.title('I/Q Demodulator Constellation')
-	plt.scatter(BPSKDemodulator[1]['I_LPFOutput'], BPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
-	plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
-	#plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
-	plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
-	plt.xlim([-16000,16000])
-	plt.ylim([-12000,12000])
-	plt.show()
+		plt.figure()
+		plt.title('I/Q Demodulator Constellation')
+		plt.scatter(BPSKDemodulator[1]['I_LPFOutput'], BPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
+		plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
+		#plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
+		plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
+		plt.xlim([-16000,16000])
+		plt.ylim([-12000,12000])
+		plt.show()
 
-	# Generate and save report file
-	report_file_name = f'run{run_number}_report.txt'
-	try:
-		report_file = open(dirname + report_file_name, 'w+')
-	except:
-		print('Unable to create report file.')
-	with report_file:
-		report_file.write('# Command line: ')
-		for argument in sys.argv:
-			report_file.write(f'{argument} ')
-		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+	if state['reports'] == True:
+		# Generate and save report file
+		report_file_name = f'run{run_number}_report.txt'
 		try:
-			ini_file = open(sys.argv[1])
+			report_file = open(dirname + report_file_name, 'w+')
 		except:
-			report_file.write('Unable to open .ini file.')
-		with ini_file:
-			for character in ini_file:
-				report_file.write(character)
+			print('Unable to create report file.')
+		with report_file:
+			report_file.write('# Command line: ')
+			for argument in sys.argv:
+				report_file.write(f'{argument} ')
+			report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+			try:
+				ini_file = open(sys.argv[1])
+			except:
+				report_file.write('Unable to open .ini file.')
+			with ini_file:
+				for character in ini_file:
+					report_file.write(character)
 
-		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+			report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
 
 
-		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
-		report_file.write('\n\n')
+			report_file.write('\n')
+			report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
+			report_file.write('\n\n')
 
-		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
-		report_file.write('\n\n')
-		
-		report_file.write(f'Total packets decoded: {total_packets}')
+			report_file.write('\n')
+			report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
+			report_file.write('\n\n')
 
-		report_file.close()
+			report_file.write(f'Total packets decoded: {total_packets}')
 
-	return
+			report_file.close()
+
+	return total_packets
 
 
 
