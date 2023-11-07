@@ -411,7 +411,8 @@ def FullProcess(state):
 
 	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
 
-	FilteredOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+	FilteredIOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+	FilteredQOutput = np.convolve(BPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	plt.figure()
@@ -432,8 +433,8 @@ def FullProcess(state):
 	plt.subplot(223)
 	#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
 	#plt.plot(BPSKDemodulator[1]['SamplePulse'])
-	plt.plot(FilteredOutput)
-	plt.title('Filtered Output')
+	plt.plot(FilteredIOutput)
+	plt.title('Filtered I Output')
 	plt.subplot(224)
 	plt.plot(BPSKDemodulator[1]['NCOControlOutput'])
 	plt.title('NCO Control')
@@ -443,7 +444,7 @@ def FullProcess(state):
 	plt.figure()
 	plt.title('I/Q Demodulator Constellation')
 	plt.scatter(BPSKDemodulator[1]['I_LPFOutput'], BPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
-	#plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
+	plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
 	#plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
 	plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
 	plt.xlim([-16000,16000])
