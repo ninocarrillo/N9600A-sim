@@ -292,6 +292,7 @@ def DemodulateBPSK(this):
 
 
 			index += 1
+	this['Result'] = this['I_LPFOutput']
 	return this
 
 
@@ -326,11 +327,13 @@ def FullProcess(state):
 	print(f'Reading settings for BPSK Demodulators')
 	BPSKDemodulator = []
 	ReceivePulseFilter = []
+	DataSlicer = []
 	DemodulatorCount = 0
 	id_string = "BPSK Demodulator "
 	for DemodulatorNumber in range(4):
 		BPSKDemodulator.append({})
 		ReceivePulseFilter.append({})
+		DataSlicer.append({})
 		if config.has_section(f'{id_string}{DemodulatorNumber}'):
 			print(f'Reading settings for {id_string}{DemodulatorNumber}')
 			DemodulatorCount += 1
@@ -340,6 +343,19 @@ def FullProcess(state):
 			ReceivePulseFilter[DemodulatorNumber] = PulseFilter.copy()
 			ReceivePulseFilter[DemodulatorNumber]['sample rate'] = BPSKDemodulator[DemodulatorNumber]['InputSampleRate']
 			ReceivePulseFilter[DemodulatorNumber] = pulse_filter.InitRRCFilter(ReceivePulseFilter[DemodulatorNumber])
+			try:
+				DataSlicer[DemodulatorNumber]['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
+			except:
+				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer bit rate\' is missing or invalid')
+				sys.exit(-2)
+			try:
+				DataSlicer[DemodulatorNumber]['Rate'] = float(config[f'Data Slicer {DemodulatorNumber}']['slicer lock rate'])
+			except:
+				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
+				sys.exit(-2)
+			
+			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
 	AX25Decoder = [{}]
 	Descrambler = [{}]
@@ -348,7 +364,7 @@ def FullProcess(state):
 		AX25Decoder.append({})
 		Descrambler.append({})
 		AX25Decoder[index] = demod.InitAX25Decoder()
-		Descrambler[index]['Polynomial'] = int('0x5',16) # double differential decoding
+		Descrambler[index]['Polynomial'] = int('0x63003',16) # G3RUH poly * differential decoding
 		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
 
 	try:
@@ -373,31 +389,37 @@ def FullProcess(state):
 	BPSKDemodulator[1] = DemodulateBPSK(BPSKDemodulator[1])
 	print(f'Done.')
 
-	print(f'\nDifferential decoding and AX25 decoding data. ')
+	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 
 	total_packets = 0
 
-	for data_bit in BPSKDemodulator[1]['Result']:
-		Descrambler[1]['NewBit'] = data_bit
-		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
-		AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
-		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
-		if AX25Decoder[1]['OutputTrigger'] == True:
-			AX25Decoder[1]['OutputTrigger'] = False
-			# Check for uniqueness
-			total_packets += 1
-			CRC = AX25Decoder[1]['CRC'][0]
-			decodernum = '1'
-			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
-			print(f'{dirname+filename}')
-			try:
-				bin_file = open(dirname + filename + '.bin', '+wb')
-			except:
-				pass
-			with bin_file:
-				for byte in AX25Decoder[1]['Output']:
-					bin_file.write(byte.astype('uint8'))
-				bin_file.close()
+	loop_count = len(BPSKDemodulator[1]['Result'])
+	for index in range(loop_count):
+		DataSlicer[1]['NewSample'] = BPSKDemodulator[1]['Result'][index]
+		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
+		for data_bit in DataSlicer[1]['Result']:
+			Descrambler[1]['NewBit'] = data_bit
+			Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
+			AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
+			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
+			if AX25Decoder[1]['OutputTrigger'] == True:
+				AX25Decoder[1]['OutputTrigger'] = False
+				# Check for uniqueness
+				total_packets += 1
+				CRC = AX25Decoder[1]['CRC'][0]
+				decodernum = '1'
+				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
+				print(f'{dirname+filename}')
+				try:
+					bin_file = open(dirname + filename + '.bin', '+wb')
+				except:
+					pass
+				with bin_file:
+					for byte in AX25Decoder[1]['Output']:
+						bin_file.write(byte.astype('uint8'))
+					bin_file.close()
+					
+	print(f'Total packets decoded: {total_packets}')
 
 	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Result'].astype(np.int16))
 	scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],BPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
@@ -481,6 +503,8 @@ def FullProcess(state):
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
 		report_file.write('\n\n')
+		
+		report_file.write(f'Total packets decoded: {total_packets}')
 
 		report_file.close()
 
