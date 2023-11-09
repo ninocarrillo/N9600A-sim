@@ -48,7 +48,8 @@ def GetBPSKDemodConfig(config, num, id_string):
 
 	key_string = "nco set frequency"
 	try:
-		this['NCO'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this['NCO'][f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
