@@ -16,6 +16,7 @@ import n9600a_qpsk as qpsk
 import n9600a_qpsk32 as qpsk32
 import n9600a_bpsk32 as bpsk32
 import numpy as np
+import format_output as fo
 
 if len(sys.argv) < 3:
 	print("Not enough arguments. Usage: py -3 n9600a_rx.py <ini file> <wav file>")
@@ -105,7 +106,7 @@ if state['iterators'] > 0:
 					print(f'{sys.argv[1]} [f\'Iterator {iterator_number}\'] \'{key_string}\' is missing or invalid')
 					sys.exit(-2)
 			IteratorStructure[iterator_number]['current value'] = IteratorStructure[iterator_number]['low value']
-			IteratorStructure[iterator_number]['cycles'] = np.floor((IteratorStructure[iterator_number]['high value'] - IteratorStructure[iterator_number]['low value']) / IteratorStructure[iterator_number]['step value']) + 1
+			IteratorStructure[iterator_number]['cycles'] = np.ceil((IteratorStructure[iterator_number]['high value'] - IteratorStructure[iterator_number]['low value']) / IteratorStructure[iterator_number]['step value']) + 1
 			total_cycles = total_cycles * IteratorStructure[iterator_number]['cycles']
 
 
@@ -178,9 +179,13 @@ if state['iterators'] > 0:
 				iterating = True
 				break
 
-		for print_index in range(1, state['iterators'] +1):
-			print(IteratorStructure[print_index]['key name'])
-		print(IteratorResults)
+	for print_index in range(1, state['iterators'] +1):
+		if print_index > 1:
+			print(', ', end='')
+		print(IteratorStructure[print_index]['key name'], end='')
+	print(', decoded packets', end='')
+	result = fo.GenCSV(IteratorResults)
+	print(result)
 
 
 else:
