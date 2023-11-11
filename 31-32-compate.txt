@@ -9,3 +9,7 @@
 .32 performance
 600 QPSK32 44/50
 2400 QPSK32 17/50
+
+Packet loudness normalize to -18 dB
+White noise adjustable fade -3 to -15 dB
+28.8kHz sampling rate
