@@ -13,3 +13,9 @@
 Packet loudness normalize to -18 dB
 White noise adjustable fade -3 to -15 dB
 28.8kHz sampling rate
+
+
+costas loop retune performance (sim / hardware):
+bpsk_300_a32
+38 / 36 (-0.48 dB)
+28 / 26 (-0.48 dB)
