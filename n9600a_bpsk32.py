@@ -201,6 +201,13 @@ def GetBPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "loop integrator trim"
+	try:
+		this['LoopFilter'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitBPSKDemod(this):
@@ -247,40 +254,33 @@ def DemodulateBPSK(this):
 					time_remaining = np.rint(interval_time * (progress_steps - progress) / progress)
 					print(f'Interval: {progress}, Time Remaining: {time_remaining}')
 					print(this['NCO']['Control'])
-			# print(f'{index}')
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
 			this['CosineOutput'][index] = this['NCO']['Cosine']
 			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) // 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
-			# print(this)
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) // 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
 
 			# mix the I and Q branch
-			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
-			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 512) # 2400
+			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] // 32768) # simulate 15 bit fractional integer multiplication
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilter2'] = filters.UpdateIIR(this['LoopFilter2'], this['LoopFilter']['Output'])
 			this['LoopFilter3'] = filters.UpdateIIR(this['LoopFilter3'], this['LoopFilter2']['Output'])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
-			#this['LoopFilterOutput'][index] = np.rint(this['LoopMixer'][index])
 			# scale the NCO control signal
-			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
-			#integral += np.rint(this['LoopFilterOutput'][index] * 0.0035)
-			integral += this['LoopFilterOutput'][index]
-			#integral = 0
+			p = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
+			integral += this['LoopFilterOutput'][index] + this['LoopFilter']['loop integrator trim']
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
-			#this['NCO']['Control'] = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter gain'])
 			this['NCO']['Control'] = np.rint((p + (integral * this['LoopFilter']['loop filter i'])) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']

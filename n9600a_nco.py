@@ -67,10 +67,6 @@ def InitNCO(this):
 
 def UpdateNCO(this):
 	control = this['Control']
-	# if control > this['set frequency'] / 4:
-	# 	control = this['set frequency'] / 4
-	# if control < -this['set frequency'] / 4:
-	# 	control = -this['set frequency'] / 4
 
 	if this['nco phase dither bits'] > 0:
 		this['Dither'] = np.floor(np.random.rand() * pow(2,this['nco phase dither bits'])) - pow(2,this['nco phase dither bits'] - 1)
@@ -84,12 +80,12 @@ def UpdateNCO(this):
 	else:
 		this['InPhaseRollover'] = False
 
-	this['QuadraturePhase'] += this['nco set frequency'] + this['Control']
-	if this['QuadraturePhase'] >= this['nco design sample rate']:
-		this['QuadraturePhase'] -= this['nco design sample rate']
-		this['QuadraturePhaseRollover'] = True
-	else:
-		this['QuadraturePhaseRollover'] = False
+	# this['QuadraturePhase'] += this['nco set frequency'] + this['Control']
+	# if this['QuadraturePhase'] >= this['nco design sample rate']:
+	# 	this['QuadraturePhase'] -= this['nco design sample rate']
+	# 	this['QuadraturePhaseRollover'] = True
+	# else:
+	# 	this['QuadraturePhaseRollover'] = False
 
 	# now add dither and enter the lookup table
 	inphase = this['InPhase'] + this['Dither']

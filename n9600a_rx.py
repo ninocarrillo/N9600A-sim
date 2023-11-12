@@ -160,7 +160,7 @@ if state['iterators'] > 0:
 			qpsk.FullProcess(state)
 
 		elif DemodulatorType == 'qpsk32':
-			qpsk32.FullProcess(state)
+			IteratorResults[state['iterators']][cycle_number] = qpsk32.FullProcess(state)
 
 		elif DemodulatorType == 'bpsk32':
 			IteratorResults[state['iterators']][cycle_number] = bpsk32.FullProcess(state)

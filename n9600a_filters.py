@@ -73,9 +73,6 @@ def InitIIR(this):
 
 def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 	result = val1 * val2
-	# val1 = val1 / pow(2,scale_bits)
-	# result = int(val1 * val2)
-	# np.clip(result,neg_sat,pos_sat)
 	if result > pos_sat:
 		result = pos_sat
 	elif result < neg_sat:
@@ -128,7 +125,6 @@ def UpdateIIR(this, sample):
 	# Calculate the final sum
 	for index in range(1, this['iir order'] + 1):
 		v += MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
-		#v = np.clip(v, this['NegativeSaturation'], this['PositiveSaturation'])
 	this['Y'][0] = v
 	this['Output'] = v
 	return this
