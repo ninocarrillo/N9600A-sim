@@ -17,5 +17,5 @@ White noise adjustable fade -3 to -15 dB
 
 costas loop retune performance (sim / hardware):
 bpsk_300_a32
-38 / 36 (-0.48 dB)
+44 / 44
 28 / 26 (-0.48 dB)
