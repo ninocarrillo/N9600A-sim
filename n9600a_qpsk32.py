@@ -243,6 +243,7 @@ def DemodulateQPSK(this):
 	sample_count = len(this['InputBuffer']) // progress_steps
 	databit_index = 0
 	start_time = time.time()
+	last_time_remaining = 0
 	if this['enabled'] == True:
 		integral = 0
 		for sample in this['InputBuffer']:
@@ -252,8 +253,9 @@ def DemodulateQPSK(this):
 				interval_time = time.time() - start_time
 				if (progress > 0):
 					time_remaining = np.rint(interval_time * (progress_steps - progress) / progress)
-					print(f'Interval: {progress}, Time Remaining: {time_remaining}')
-					print(this['NCO']['Control'])
+					if last_time_remaining != time_remaining:
+						print(f'{time_remaining},', end='', flush=True)
+					last_time_remaining = time_remaining
 			# print(f'{index}')
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
@@ -429,6 +431,7 @@ def FullProcess(state):
 
 	DataSlicer[1]['IInput'] = FilteredIOutput
 	DataSlicer[1]['QInput'] = FilteredQOutput
+
 	DataSlicer[1] = demod.SliceIQData(DataSlicer[1])
 
 	for data_bit in DataSlicer[1]['Result']:

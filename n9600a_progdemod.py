@@ -555,6 +555,7 @@ def SliceIQData(slicer):
 	slicer['LastISample'] = 0
 	slicer['LastQSample'] = 0
 	slicer['StateRegister'] = 0
+	slicer['SyncSelector'] = 0
 	slicer['IResult'] = np.zeros(int((len(slicer['IInput']) / slicer['Oversample']) * 1.1))
 	slicer['QResult'] = np.zeros(int((len(slicer['QInput']) / slicer['Oversample']) * 1.1))
 	slicer['Result'] = np.zeros(int(2 * len(slicer['IResult'])))
@@ -586,8 +587,14 @@ def SliceIQData(slicer):
 				slicer['Result'][output_bit_index] = 1
 			output_bit_index += 1
 
-		if (LastISample < 0 and ThisISample > 0) or (LastISample > 0 and ThisISample < 0) or (LastQSample < 0 and ThisQSample > 0) or (LastQSample > 0 and ThisQSample < 0):
-			slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
+		if slicer['SyncSelector'] == 0:
+			if (LastISample < 0 and ThisISample > 0) or (LastISample > 0 and ThisISample < 0):
+				slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
+		else:
+			if (LastQSample < 0 and ThisQSample > 0) or (LastQSample > 0 and ThisQSample < 0):
+				slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
+
+
 		LastISample = ThisISample
 		LastQSample = ThisQSample
 	return slicer
