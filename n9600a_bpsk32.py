@@ -294,7 +294,7 @@ def DemodulateBPSK(this):
 
 
 			index += 1
-	this['Result'] = this['I_LPFOutput']
+
 	return this
 
 
@@ -308,12 +308,12 @@ def FullProcess(state):
 
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
-	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
-	PulseFilter['sample rate'] = FilterDecimator['OutputSampleRate']
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
+	FilterDecimator['sample rate'] = FilterDecimator['InputSampleRate']
+	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
 	print(f'Reading settings for BPSK Demodulators')
 	BPSKDemodulator = []
@@ -395,13 +395,20 @@ def FullProcess(state):
 	BPSKDemodulator[1] = DemodulateBPSK(BPSKDemodulator[1])
 	print(f'Done.')
 
+	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
+
+	FilteredIOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+	FilteredQOutput = np.convolve(BPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 
 	total_packets = 0
 
-	loop_count = len(BPSKDemodulator[1]['Result'])
+
+
+	loop_count = len(FilteredIOutput)
 	for index in range(loop_count):
-		DataSlicer[1]['NewSample'] = BPSKDemodulator[1]['Result'][index]
+		DataSlicer[1]['NewSample'] = FilteredIOutput[index]
 		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
 		for data_bit in DataSlicer[1]['Result']:
 			Descrambler[1]['NewBit'] = data_bit
@@ -439,10 +446,7 @@ def FullProcess(state):
 		scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 		scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], BPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
 
-	FilteredIOutput = np.convolve(BPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
-	FilteredQOutput = np.convolve(BPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	if state['plots'] == True:
