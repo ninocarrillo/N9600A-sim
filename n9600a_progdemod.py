@@ -548,6 +548,32 @@ def SliceData(slicer):
 		slicer['LastSample'] = slicer['NewSample']
 	return slicer
 
+def SliceIQData(slicer):
+	slicer['Midpoint'] = 0
+	slicer['LastISample'] = 0
+	slicer['LastQSample'] = 0
+	slicer['IResult'] = np.zeros(int((len(slicer['IInput']) / slicer['Oversample']) * 1.1))
+	slicer['QResult'] = np.zeros(int((len(slicer['QInput']) / slicer['Oversample']) * 1.1))
+	slicer['Result'] = np.zeros(int(2 * len(slicer['IResult'])))
+	output_index = 0
+	LastISample = 0
+	LastQSample = 0
+	for input_index in range(len(slicer['IInput'])):
+		ThisISample = slicer['IInput'][input_index]
+		ThisQSample = slicer['QInput'][input_index]
+		slicer['PLLClock'] += slicer['PLLStep']
+		if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
+			slicer['PLLClock'] -= slicer['PLLPeriod']
+			slicer['IResult'][output_index] = ThisISample
+			slicer['QResult'][output_index] = ThisQSample
+			output_index += 1
+
+		if (LastISample < 0 and ThisISample > 0) or (LastISample > 0 and ThisISample < 0) or (LastQSample < 0 and ThisQSample > 0) or (LastQSample > 0 and ThisQSample < 0):
+			slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
+		LastISample = ThisISample
+		LastQSample = ThisQSample
+	return slicer
+
 def SliceDataN(slicer):
 	slicer['Midpoint'] = 0
 	slicer['LastSample'] = 0

@@ -305,7 +305,7 @@ def DemodulateQPSK(this):
 
 
 			# save the data signal
-			this['I_LPFOutput'][index] = this['I_LPF']['Output']
+			#this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 
 
@@ -318,30 +318,7 @@ def DemodulateQPSK(this):
 			index += 1
 	return this
 
-def SliceIQData(slicer):
-	slicer['Midpoint'] = 0
-	slicer['LastISample'] = 0
-	slicer['LastQSample'] = 0
-	slicer['IResult'] = np.zeros(int((len(slicer['IInput']) / slicer['Oversample']) * 1.1))
-	slicer['QResult'] = np.zeros(int((len(slicer['QInput']) / slicer['Oversample']) * 1.1))
-	output_index = 0
-	LastISample = 0
-	LastQSample = 0
-	for input_index in range(len(slicer['IInput'])):
-		ThisISample = slicer['IInput'][input_index]
-		ThisQSample = slicer['QInput'][input_index]
-		slicer['PLLClock'] += slicer['PLLStep']
-		if slicer['PLLClock'] > ((slicer['PLLPeriod'] // 2) - 1):
-			slicer['PLLClock'] -= slicer['PLLPeriod']
-			slicer['IResult'][output_index] = ThisISample
-			slicer['QResult'][output_index] = ThisQSample
-			output_index += 1
 
-		if (LastISample < 0 and ThisISample > 0) or (LastISample > 0 and ThisISample < 0) or (LastQSample < 0 and ThisQSample > 0) or (LastQSample > 0 and ThisQSample < 0):
-			slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
-		LastISample = ThisISample
-		LastQSample = ThisQSample
-	return slicer
 
 def FullProcess(state):
 	argv = state['argv']
@@ -414,7 +391,7 @@ def FullProcess(state):
 		AX25Decoder.append({})
 		Descrambler.append({})
 		AX25Decoder[index] = demod.InitAX25Decoder()
-		Descrambler[index]['Polynomial'] = int('0x63003',16) # G3RUH poly * differential decoding
+		Descrambler[index]['Polynomial'] = int('0x21001',16) # G3RUH poly
 		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
 
 	try:
@@ -444,32 +421,38 @@ def FullProcess(state):
 
 	total_packets = 0
 
-	loop_count = len(QPSKDemodulator[1]['Result'])
-	for index in range(loop_count):
-		DataSlicer[1]['NewSample'] = QPSKDemodulator[1]['Result'][index]
-		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
-		for data_bit in DataSlicer[1]['Result']:
-			Descrambler[1]['NewBit'] = data_bit
-			Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
-			AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
-			AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
-			if AX25Decoder[1]['OutputTrigger'] == True:
-				AX25Decoder[1]['OutputTrigger'] = False
-				# Check for uniqueness
-				total_packets += 1
-				CRC = AX25Decoder[1]['CRC'][0]
-				decodernum = '1'
-				filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
-				print(f'{filename}')
-				if state['reports'] == True:
-					try:
-						bin_file = open(dirname + filename + '.bin', '+wb')
-					except:
-						pass
-					with bin_file:
-						for byte in AX25Decoder[1]['Output']:
-							bin_file.write(byte.astype('uint8'))
-						bin_file.close()
+	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
+
+	FilteredIOutput = np.convolve(QPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+	FilteredQOutput = np.convolve(QPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+
+
+	DataSlicer[1]['IInput'] = FilteredIOutput
+	DataSlicer[1]['QInput'] = FilteredQOutput
+	DataSlicer[1] = demod.SliceIQData(DataSlicer[1])
+
+	for data_bit in DataSlicer[1]['Result']:
+		Descrambler[1]['NewBit'] = data_bit
+		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
+		AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
+		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
+		if AX25Decoder[1]['OutputTrigger'] == True:
+			AX25Decoder[1]['OutputTrigger'] = False
+			# Check for uniqueness
+			total_packets += 1
+			CRC = AX25Decoder[1]['CRC'][0]
+			decodernum = '1'
+			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
+			print(f'{filename}')
+			if state['reports'] == True:
+				try:
+					bin_file = open(dirname + filename + '.bin', '+wb')
+				except:
+					pass
+				with bin_file:
+					for byte in AX25Decoder[1]['Output']:
+						bin_file.write(byte.astype('uint8'))
+					bin_file.close()
 
 	print(f'Total packets decoded: {total_packets}')
 
@@ -484,10 +467,7 @@ def FullProcess(state):
 		scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['I_Mixer'].astype(np.int16))
 		scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
 
-	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
 
-	FilteredIOutput = np.convolve(QPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
-	FilteredQOutput = np.convolve(QPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
 	#print(PulseFilter['Taps'])
 
 	if state['plots'] == True:
@@ -507,10 +487,9 @@ def FullProcess(state):
 		plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
 		plt.title('Loop Filter Output')
 		plt.subplot(223)
-		#plt.plot(BPSKDemodulator[1]['I_LPFOutput'])
-		#plt.plot(BPSKDemodulator[1]['SamplePulse'])
 		plt.plot(FilteredIOutput)
-		plt.title('Filtered I Output')
+		plt.plot(FilteredQOutput)
+		plt.title('Filtered I/Q Output')
 		plt.subplot(224)
 		plt.plot(QPSKDemodulator[1]['NCOControlOutput'])
 		plt.title('NCO Control')
@@ -521,7 +500,7 @@ def FullProcess(state):
 		plt.title('I/Q Demodulator Constellation')
 		plt.scatter(QPSKDemodulator[1]['I_LPFOutput'], QPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
 		plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
-		#plt.scatter(DataSlicer['IResult'], DataSlicer['QResult'], 5, c='tab:red')
+		plt.scatter(DataSlicer[1]['IResult'], DataSlicer[1]['QResult'], 5, c='tab:red')
 		plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
 		plt.xlim([-16000,16000])
 		plt.ylim([-12000,12000])
