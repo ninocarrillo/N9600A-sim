@@ -549,13 +549,17 @@ def SliceData(slicer):
 	return slicer
 
 def SliceIQData(slicer):
+	# QTSM_SM QPSK V26A 2400bps
+	slicer['DiffQuadDemap'] = [3,2,1,0,1,3,0,2,2,0,3,1,0,1,2,3]
 	slicer['Midpoint'] = 0
 	slicer['LastISample'] = 0
 	slicer['LastQSample'] = 0
+	slicer['StateRegister'] = 0
 	slicer['IResult'] = np.zeros(int((len(slicer['IInput']) / slicer['Oversample']) * 1.1))
 	slicer['QResult'] = np.zeros(int((len(slicer['QInput']) / slicer['Oversample']) * 1.1))
 	slicer['Result'] = np.zeros(int(2 * len(slicer['IResult'])))
 	output_index = 0
+	output_bit_index = 0
 	LastISample = 0
 	LastQSample = 0
 	for input_index in range(len(slicer['IInput'])):
@@ -567,6 +571,20 @@ def SliceIQData(slicer):
 			slicer['IResult'][output_index] = ThisISample
 			slicer['QResult'][output_index] = ThisQSample
 			output_index += 1
+
+			slicer['StateRegister'] = slicer['StateRegister'] << 2
+			if ThisISample > slicer['Midpoint']:
+				slicer['StateRegister'] = slicer['StateRegister'] | 2
+			if ThisQSample > slicer['Midpoint']:
+				slicer['StateRegister'] = slicer['StateRegister'] | 1
+
+			demap_symbol = slicer['DiffQuadDemap'][slicer['StateRegister'] & 15]
+			if demap_symbol & 2 == 2:
+				slicer['Result'][output_bit_index] = 1
+			output_bit_index += 1
+			if demap_symbol & 1 == 1:
+				slicer['Result'][output_bit_index] = 1
+			output_bit_index += 1
 
 		if (LastISample < 0 and ThisISample > 0) or (LastISample > 0 and ThisISample < 0) or (LastQSample < 0 and ThisQSample > 0) or (LastQSample > 0 and ThisQSample < 0):
 			slicer['PLLClock'] = np.rint(slicer['Rate'] * slicer['PLLClock'])
