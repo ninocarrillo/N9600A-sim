@@ -133,7 +133,7 @@ if state['iterators'] > 0:
 			dpsk2.FullProcess(state)
 
 		elif DemodulatorType == 'gfsk':
-			gfsk.FullProcess(state)
+			IteratorResults[state['iterators']][cycle_number] = gfsk.FullProcess(state)
 
 		elif DemodulatorType == 'gfsk2':
 			gfsk2.FullProcess(state)

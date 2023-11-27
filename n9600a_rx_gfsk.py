@@ -169,4 +169,4 @@ def FullProcess(state):
 	print('made new directory: ', dirname)
 	print('done')
 
-	return
+	return total_packets
