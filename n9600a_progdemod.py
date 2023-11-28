@@ -11,6 +11,10 @@ def InitAX25Decoder():
 def InitDifferentialDecoder():
 	decoder = {'LastBit':0, 'NewBit':0, 'Result':0}
 	return decoder
+	
+def InitUpsampler(this):
+	this['OutputSampleRate'] = this['InputSampleRate'] * this['rate']
+	return this
 
 def InitDescrambler(descrambler):
 	#descrambler['Polynomial'] = int('0x63003',16)
@@ -268,6 +272,10 @@ def FilterDecimate(filter):
 
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter
+	
+def UpSample(this):
+	this['OutputBuffer'] = np.zeros(len(this['InputBuffer']) * this['rate']
+	return this
 
 def ProgFilterDecimate(filter):
 	filter['FilterBuffer'] = filter['FilterBuffer'][1:]
