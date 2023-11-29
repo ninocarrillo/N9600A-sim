@@ -8,6 +8,7 @@ import n9600a_progdemod as demod
 import format_output as fo
 import n9600a_strings as strings
 import n9600a_input_filter as input_filter
+import n9600a_upsampler as upsampler
 
 def GetGFSKDemodulatorConfig(config, num):
 	gfsk_demodulator = {}
@@ -22,10 +23,15 @@ def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
 
-	print(f'Started AFSK process')
+	print(f'Started GFSK process')
 	print(f'Reading settings for Filter Decimator')
 	FilterDecimator = input_filter.GetInputFilterConfig(state)
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
+
+	print(f'Reading settings for Upsampler')
+	Upsampler = upsampler.GetUpsamplerConfig(config)
+	Upsampler['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+	Upsampler = upsampler.InitUpsampler(Upsampler)
 
 	GFSKDemodulator = []
 	DataSlicer = []
@@ -37,7 +43,9 @@ def FullProcess(state):
 			print(f'Reading settings for GFSK Demodulator {DemodulatorNumber}')
 			DemodulatorCount += 1
 			GFSKDemodulator[DemodulatorNumber] = GetGFSKDemodulatorConfig(config, DemodulatorNumber)
-			GFSKDemodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+
+			#GFSKDemodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+			GFSKDemodulator[DemodulatorNumber]['InputSampleRate'] = Upsampler['OutputSampleRate']
 			try:
 				DataSlicer[DemodulatorNumber]['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
 			except:
@@ -49,7 +57,7 @@ def FullProcess(state):
 				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
 
-			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+			DataSlicer[DemodulatorNumber]['InputSampleRate'] = Upsampler['OutputSampleRate']
 			GFSKDemodulator[DemodulatorNumber] = demod.InitGFSKDemod(GFSKDemodulator[DemodulatorNumber])
 			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
@@ -103,15 +111,14 @@ def FullProcess(state):
 	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
 	print(f'\nDemodulating audio. ')
-	GFSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
-	GFSKDemodulator[1] = demod.DemodulateGFSK(GFSKDemodulator[1])
-	print(GFSKDemodulator[1]['Result'])
+	Upsampler['InputBuffer'] = FilterDecimator['FilterBuffer']
+	Upsampler = upsampler.Upsample(Upsampler)
 	print(f'Done.')
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
-	loop_count = len(GFSKDemodulator[1]['Result'])
+	loop_count = len(Upsampler['OutputBuffer'])
 	for index in range(loop_count):
-		DataSlicer[1]['NewSample'] = GFSKDemodulator[1]['Result'][index]
+		DataSlicer[1]['NewSample'] = Upsampler['OutputBuffer'][index]
 		DataSlicer[1] = demod.ProgSliceData(DataSlicer[1])
 		for data_bit in DataSlicer[1]['Result']:
 			Descrambler[1]['NewBit'] = data_bit
@@ -134,7 +141,7 @@ def FullProcess(state):
 				# 		bin_file.write(byte.astype('uint8'))
 				# 	bin_file.close()
 
-	scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], GFSKDemodulator[1]['Result'].astype(np.int16))
+	scipy.io.wavfile.write(dirname+"DemodSignal.wav", Upsampler['OutputSampleRate'], Upsampler['OutputBuffer'].astype(np.int16))
 	# scipy.io.wavfile.write(dirname+"DemodSignal2.wav", FilterDecimator['OutputSampleRate'], demod_sig_buffer2.astype(np.int16))
 	#scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], filtered_signal_buffer.astype(np.int16))
 
