@@ -38,6 +38,6 @@ def Upsample(this):
 	this['OutputBuffer'] = np.zeros(len(this['InputBuffer']) * this['rate'])
 
 	this['OutputBuffer'][::this['rate']] = this['InputBuffer']
-	this['OutputBuffer'] = np.rint(np.convolve(this['OutputBuffer'], this['taps'], 'valid')) // 65536
+	this['OutputBuffer'] = np.rint(np.convolve(this['OutputBuffer'], this['taps'], 'valid')) // 32768
 
 	return this
