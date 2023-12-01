@@ -36,8 +36,15 @@ def InitUpsampler(this):
 
 def Upsample(this):
 	this['OutputBuffer'] = np.zeros(len(this['InputBuffer']) * this['rate'])
-
 	this['OutputBuffer'][::this['rate']] = this['InputBuffer']
 	this['OutputBuffer'] = np.rint(np.convolve(this['OutputBuffer'], this['taps'], 'valid')) // 32768
+	return this
+
+def UpsampleSlow(this):
+	this['OutputBuffer'] = np.zeros(len(this['InputBuffer']) * this['rate'])
+	input_sample_count = len(this['InputBuffer'])
+	input_sample_index = 0
+	filter_tap_index = 0
+	#while input_sample_index < input_sample_count:
 
 	return this
