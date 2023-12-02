@@ -56,6 +56,11 @@ def FullProcess(state):
 			except:
 				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
 				sys.exit(-2)
+			try:
+				DataSlicer[DemodulatorNumber]['BitRateSkew'] = float(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate skew'])
+			except:
+				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer bit rate skew\' is missing or invalid')
+				sys.exit(-2)
 
 			DataSlicer[DemodulatorNumber]['InputSampleRate'] = Upsampler['OutputSampleRate']
 			GFSKDemodulator[DemodulatorNumber] = demod.InitGFSKDemod(GFSKDemodulator[DemodulatorNumber])

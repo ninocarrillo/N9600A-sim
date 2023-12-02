@@ -41,6 +41,7 @@ def InitDataSlicer(data_slicer):
 	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['Rate'] * 64)
 	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * data_slicer['PLLStep']
+	data_slicer['PLLPeriod'] = int(data_slicer['PLLPeriod'] * data_slicer['BitRateSkew'])
 	data_slicer['LastSample'] = 0
 	data_slicer['NewSample'] = 0
 	data_slicer['Result'] = 0
