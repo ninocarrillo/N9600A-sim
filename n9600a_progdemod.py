@@ -38,7 +38,7 @@ def InitDescrambler(descrambler):
 def InitDataSlicer(data_slicer):
 	data_slicer['PLLClock'] = 0
 	data_slicer['PLLStep'] = 128
-	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['Rate'] * 64)
+	data_slicer['CalculatedFeedbackRate'] = np.rint(data_slicer['Rate'] * data_slicer['PLLStep'])
 	data_slicer['Oversample'] = data_slicer['InputSampleRate'] // data_slicer['BitRate']
 	data_slicer['PLLPeriod'] = (data_slicer['InputSampleRate'] // data_slicer['BitRate']) * data_slicer['PLLStep']
 	data_slicer['PLLPeriod'] = int(data_slicer['PLLPeriod'] * data_slicer['BitRateSkew'])
@@ -702,13 +702,13 @@ def ProgSliceData(slicer):
 			slicer['ZeroCrossing'] = True
 			#slicer['PLLClock'] *= slicer['Rate']
 			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
-			slicer['PLLClock'] //= 64
+			slicer['PLLClock'] //= slicer['PLLStep']
 	else:
 		if slicer['NewSample'] > slicer['Midpoint']:
 			# Zero Crossing
 			slicer['ZeroCrossing'] = True
 			slicer['PLLClock'] *= slicer['CalculatedFeedbackRate']
-			slicer['PLLClock'] //= 64
+			slicer['PLLClock'] //= slicer['PLLStep']
 
 	if slicer['ZeroCrossing'] == True:
 		slicer['ZeroCrossing'] = False
