@@ -67,11 +67,22 @@ def InitFSK4Demod(this):
 	this['SecondBitDemap'] = np.zeros(4)
 	# index position 0 = symbol value -3, index position 3 = symbol value 3
 	for index in range(4):
-		if this['symbol map'][index]
+		value_number = 0
+		if this['symbol map'][index] == -3:
+			value_number = 0
+		if this['symbol map'][index] == -1:
+			value_number = 1
+		if this['symbol map'][index] == 1:
+			value_number = 2
+		if this['symbol map'][index] == 3:
+			value_number = 3
+		this['FirstBitDemap'][value_number] = np.right_shift(index & 2, 1)
+		this['SecondBitDemap'][value_number] = index & 1
+	print(this)
 	return this
 	
 def Demodulate4FSK(this):
-	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol'])))
+	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol']))
 	bit_index = 0
 	phase = 0
 	symbol = 0
