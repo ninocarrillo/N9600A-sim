@@ -52,7 +52,14 @@ def GetFSK4DemodulatorConfig(config, num):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
+	key_string = "sample phase"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitFSK4Demod(this):
@@ -121,32 +128,23 @@ def FullProcess(state):
 
 	print(f'\nFiltering and decimating audio. ')
 	FilterDecimator['FilterBuffer'] = audio
+	FilterDecimator = demod.FilterDecimate(FilterDecimator)
 
 
 	plt.figure()
-	plt.subplot(231)
-	plt.plot(FilterDecimator['FilterBuffer'])
+	plt.subplot(221)
+	plt.plot(audio)
 	plt.title('Input Signal')
-	FilterDecimator = demod.FilterDecimate(FilterDecimator)
-	plt.subplot(232)
+	plt.subplot(222)
 	plt.plot(FilterDecimator['FilterBuffer'])
 	plt.title('Filtered Signal')
-	plt.subplot(233)
+	plt.subplot(223)
 	plt.plot(FilterDecimator['Filter'])
 	plt.title('Filter Kernel')
 	#plt.plot(QPSKDemodulator[1]['SamplePulse'])
-	plt.subplot(234)
+	plt.subplot(224)
 	plt.plot(FilterDecimator['EnvelopeBuffer'])
-	plt.subplot(235)
-	#correlator_buffer = [-3,0,0,0,0,0,-3,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,3,0,0,0,0,0,-3,0,0,0,0,0,-1,0,0,0,0,0,3,0,0,0,0,0,1,0,0,0,0,0,-1,0,0,0,0,0,1]
-	correlator_buffer = [+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,+3,0,0,0,0,0,-3,0,0,0,0,0,-3,0,0,0,0,0,-3]
-	correlator_buffer = np.flip(np.convolve(correlator_buffer, FilterDecimator['Filter'], 'same'))
-	#correlator_buffer = np.flip(np.convolve(correlator_buffer, FilterDecimator['Filter'], 'same'))
-	correlation = np.rint(np.convolve(correlator_buffer, FilterDecimator['FilterBuffer'], 'valid'))
-	#plt.plot(correlation)
-	plt.plot(correlator_buffer)
-	plt.subplot(236)
-	plt.plot(correlation)
+	plt.title('Envelope Buffer')
 	plt.show()
 
 
