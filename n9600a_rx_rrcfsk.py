@@ -63,6 +63,35 @@ def GetFSK4DemodulatorConfig(config, num):
 	return this
 
 def InitFSK4Demod(this):
+	this['FirstBitDemap'] = np.zeros(4)
+	this['SecondBitDemap'] = np.zeros(4)
+	# index position 0 = symbol value -3, index position 3 = symbol value 3
+	for index in range(4):
+		if this['symbol map'][index]
+	return this
+	
+def Demodulate4FSK(this):
+	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol'])))
+	bit_index = 0
+	phase = 0
+	symbol = 0
+	for sample in this['InputAudio']:
+		if phase == this['sample phase']:
+			if sample > 0:
+				if sample >= this['threshold']:
+					symbol = 3
+				else:
+					symbol = 2
+			else:
+				if sample <= (-this['threshold']):
+					symbol = 0
+				else:
+					symbol = 1
+			# demap the symbol
+			
+		phase = phase + 1
+		if phase >= this['samples per symbol']:
+			phase = 0
 	return this
 
 def FullProcess(state):
@@ -129,6 +158,30 @@ def FullProcess(state):
 	print(f'\nFiltering and decimating audio. ')
 	FilterDecimator['FilterBuffer'] = audio
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
+	
+	FSK4Demodulator[1]['InputAudio'] = FilterDecimator['FilterBuffer']
+	FSK4Demodulator[1] = Demodulate4FSK(FSK4Demodulator[1])
+
+	for data_bit in FSK4Demodulator[1]['Result']:
+		Descrambler[1]['NewBit'] = data_bit
+		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
+		AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
+		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
+		if AX25Decoder[1]['OutputTrigger'] == True:
+			AX25Decoder[1]['OutputTrigger'] = False
+			total_packets += 1
+			CRC = AX25Decoder[1]['CRC'][0]
+			decodernum = '1'
+			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
+			print(f'{dirname+filename}')
+			# try:
+			# 	bin_file = open(dirname + filename + '.bin', '+wb')
+			# except:
+			# 	pass
+			# with bin_file:
+			# 	for byte in AX25Decoder[2]['Output']:
+			# 		bin_file.write(byte.astype('uint8'))
+			# 	bin_file.close()
 
 
 	plt.figure()
