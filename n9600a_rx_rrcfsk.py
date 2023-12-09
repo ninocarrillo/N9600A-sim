@@ -13,6 +13,51 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
 
+def GetFSK4DemodulatorConfig(config, num):
+	this = {}
+	
+	id_string = "FSK4 Demodulator "
+	
+	key_string = "enabled"
+	try:
+		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "invert"
+	try:
+		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "samples per symbol"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "threshold"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "symbol map"
+	try:
+		this[f'{key_string}'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	return this
+
+def InitFSK4Demod(this):
+	return this
+
 def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
@@ -38,6 +83,31 @@ def FullProcess(state):
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 	FilterDecimator['Filter'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
+
+
+	
+	DemodulatorCount = 0
+	FSK4Demodulator = [{}]
+	for DemodulatorNumber in range(4):
+		
+		if config.has_section(f'FSK4 Demodulator {DemodulatorNumber}'):
+			print(f'Reading settings for FSK4 Demodulator {DemodulatorNumber}')
+			DemodulatorCount += 1
+			FSK4Demodulator.append({})
+			FSK4Demodulator[DemodulatorNumber] = GetFSK4DemodulatorConfig(config, DemodulatorNumber)
+			FSK4Demodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+			FSK4Demodulator[DemodulatorNumber] = InitFSK4Demod(FSK4Demodulator[DemodulatorNumber])
+
+
+	AX25Decoder = [{}]
+	Descrambler = [{}]
+	for index in range(1,DemodulatorCount+1):
+		print(f'Initializing AX25Decoder {index}, Descrambler {index}')
+		AX25Decoder.append({})
+		Descrambler.append({})
+		AX25Decoder[index] = demod.InitAX25Decoder()
+		Descrambler[index]['Polynomial'] = int('0x21001',16) # G3RUH poly
+		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(argv[2])

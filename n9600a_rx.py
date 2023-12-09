@@ -151,7 +151,7 @@ if state['iterators'] > 0:
 			filters.IIRTest(state)
 
 		elif DemodulatorType == 'rrcfsk':
-			rrcfsk.FullProcess(state)
+			IteratorResults[state['iterators']][cycle_number] = rrcfsk.FullProcess(state)
 
 		elif DemodulatorType== 'bpsk':
 			bpsk.FullProcess(state)
