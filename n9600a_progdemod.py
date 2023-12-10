@@ -105,7 +105,7 @@ def InitDataSlicerN(data_slicer):
 def InitFilterDecimator(filter_decimator):
 	filter_decimator['FilterBuffer'] = np.zeros(len(filter_decimator['Filter']))
 	filter_decimator['DataBuffer'] = np.array([])
-	filter_decimator['FilterShift'] = -5
+	filter_decimator['FilterShift'] = 0
 	filter_decimator['DecimationCounter'] = 0
 	filter_decimator['NewSample'] = 0
 	filter_decimator['PeakDetector'] = {'AttackRate':filter_decimator['InputAGCAttackRate'], 'SustainPeriod': filter_decimator['InputAGCSustainPeriod'], 'DecayRate':filter_decimator['InputAGCDecayRate'], 'SustainCount':0, 'Envelope':0}
@@ -261,13 +261,13 @@ def FilterDecimate(filter):
 			if filter['PeakDetector']['Envelope'] > 30000:
 				filter['FilterShift'] = filter['FilterShift'] + 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-				if filter['FilterShift'] > 16:
-					filter['FilterShift'] = 16
+				if filter['FilterShift'] > filter['MaxAGCShift']:
+					filter['FilterShift'] = filter['MaxAGCShift']
 			if filter['PeakDetector']['Envelope'] < 10000:
 				filter['FilterShift'] = filter['FilterShift'] - 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-				if filter['FilterShift'] < -16:
-					filter['FilterShift'] = -16
+				if filter['FilterShift'] < filter['MinAGCShift']:
+					filter['FilterShift'] = filter['MinAGCShift']
 
 		data = (data * scale) // 32768
 		#data = np.rint(data * 8191 / filter['PeakDetector']['Envelope'])
@@ -296,13 +296,13 @@ def ProgFilterDecimate(filter):
 			if filter['PeakDetector']['Envelope'] > 24576:
 				filter['FilterShift'] = filter['FilterShift'] + 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-				if filter['FilterShift'] > 16:
-					filter['FilterShift'] = 16
+				if filter['FilterShift'] > filter['MaxAGCShift']:
+					filter['FilterShift'] = filter['MaxAGCShift']
 			if filter['PeakDetector']['Envelope'] < 8192:
 				filter['FilterShift'] = filter['FilterShift'] - 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-				if filter['FilterShift'] < -16:
-					filter['FilterShift'] = -16
+				if filter['FilterShift'] < filter['MinAGCShift']:
+					filter['FilterShift'] = filter['MinAGCShift']
 	return filter
 
 def DemodulateGFSK(demodulator):
@@ -833,12 +833,12 @@ def FilterDecimate2(filter):
 			if filter['PeakDetector']['Envelope'] > 24576:
 				filter['FilterShift'] = filter['FilterShift'] + 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-				if filter['FilterShift'] > 16:
-					filter['FilterShift'] = 16
+				if filter['FilterShift'] > fitler['MaxAGCShift']:
+					filter['FilterShift'] = filter['MaxAGCShift']
 			if filter['PeakDetector']['Envelope'] < 8192:
 				filter['FilterShift'] = filter['FilterShift'] - 1
 				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-				if filter['FilterShift'] < -16:
-					filter['FilterShift'] = -16
+				if filter['FilterShift'] < filter['MinAGCShift']:
+					filter['FilterShift'] = filter['MinAGCShift']
 	filter['FilterBuffer'] = np.clip(filter['FilterBuffer'], -32768, 32767)
 	return filter

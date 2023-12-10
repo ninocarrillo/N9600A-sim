@@ -263,7 +263,7 @@ def FullProcess(state):
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
 
-	if 1 == 0:
+	if 1 == 1:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
