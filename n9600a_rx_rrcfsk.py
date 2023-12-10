@@ -81,6 +81,20 @@ def GetFSK4DemodulatorConfig(config, num):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "sync offset"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync delay"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitFSK4Demod(this):
@@ -103,6 +117,9 @@ def InitFSK4Demod(this):
 		this['SecondBitDemap'][value_number] = index & 1
 	this['SyncClock'] = 0
 	this['LastSyncSample'] = 0
+	this['SampleHistory'] = np.zeros(this['samples per symbol'])
+	this['SampleIndex'] = 0
+	this['DelayIndex'] = 1
 	#print(this)
 	return this
 
@@ -110,8 +127,6 @@ def Demodulate4FSK(this):
 	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol']))
 	this['SampleAudio'] = np.zeros(len(this['InputAudio']))
 	this['MissDistance'] = np.zeros(len(this['InputAudio']))
-	this['LastSymbol'] = 0
-	this['ThisSymbol'] = 0
 	bit_index = 0
 	phase = 0
 	symbol = 0
@@ -130,7 +145,7 @@ def Demodulate4FSK(this):
 			miss4 = miss3
 		#if abs(miss1) > abs(miss4):
 		#	miss1 = miss4
-		this['MissDistance'][sample_index] = miss1
+		# this['MissDistance'][sample_index] = miss1
 
 		this['SyncClock'] += this['sync step']
 		if this['SyncClock'] > ((this['sync period'] // 2) - 1):
@@ -152,10 +167,11 @@ def Demodulate4FSK(this):
 			bit_index += 1
 			this['Result'][bit_index] = this['SecondBitDemap'][symbol]
 			bit_index += 1
-		sample_index += 1
+
 		phase += 1
 		if phase >= this['samples per symbol']:
 			phase = 0
+
 
 		if 1 == 0:
 			if this['LastSyncSample'] > 0:
@@ -169,19 +185,54 @@ def Demodulate4FSK(this):
 					this['SyncClock'] *= this['sync rate']
 					this['SyncClock'] //= this['sync step']
 			this['LastSyncSample'] = miss1
-		else:
+
+		if 2 == 0:
 			if this['LastSyncSample'] > 0:
 				if sample <= 0:
 					# Zero Crossing
+					this['SyncClock'] -= this['sync offset']
 					this['SyncClock'] *= this['sync rate']
 					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset']
 			else:
-				if sample < 0:
+				if sample > 0:
 					# Zero Crossing
+					this['SyncClock'] -= this['sync offset']
 					this['SyncClock'] *= this['sync rate']
 					this['SyncClock'] //= this['sync step']
-
+					this['SyncClock'] += this['sync offset']
 			this['LastSyncSample'] = sample
+
+		if 3 == 3:
+			if this['SampleHistory'][this['DelayIndex']] < -this['threshold']:
+				if sample >= this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset']
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset']
+
+
+					this['MissDistance'][sample_index] = this['threshold']
+
+			elif this['SampleHistory'][this['DelayIndex']] >= this['threshold']:
+				if sample < -this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset']
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset']
+
+					this['MissDistance'][sample_index] = this['threshold']
+
+		sample_index += 1
+		this['SampleHistory'][this['SampleIndex']] = sample
+		this['SampleIndex'] += 1
+		if this['SampleIndex'] >= this['samples per symbol']:
+			this['SampleIndex'] = 0
+		this['DelayIndex'] = this['SampleIndex'] + this['sync delay']
+		if this['DelayIndex'] >= this['samples per symbol']:
+			this['DelayIndex'] -= this['samples per symbol']
 
 	return this
 
@@ -278,7 +329,7 @@ def FullProcess(state):
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
 
-	if 1 == 0:
+	if 1 == 1:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
