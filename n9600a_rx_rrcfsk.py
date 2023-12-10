@@ -145,7 +145,7 @@ def Demodulate4FSK(this):
 			miss4 = miss3
 		#if abs(miss1) > abs(miss4):
 		#	miss1 = miss4
-		# this['MissDistance'][sample_index] = miss1
+		this['MissDistance'][sample_index] = miss1
 
 		this['SyncClock'] += this['sync step']
 		if this['SyncClock'] > ((this['sync period'] // 2) - 1):
@@ -337,7 +337,7 @@ def FullProcess(state):
 		plt.subplot(222)
 		plt.plot(FSK4Demodulator[1]['InputAudio'])
 		plt.plot(FSK4Demodulator[1]['SampleAudio'])
-		plt.plot(FSK4Demodulator[1]['MissDistance'])
+		#plt.plot(FSK4Demodulator[1]['MissDistance'])
 		plt.title('Filtered Signal')
 		plt.subplot(223)
 		plt.plot(FilterDecimator['Filter'])
