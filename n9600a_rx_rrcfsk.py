@@ -110,6 +110,8 @@ def Demodulate4FSK(this):
 	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol']))
 	this['SampleAudio'] = np.zeros(len(this['InputAudio']))
 	this['MissDistance'] = np.zeros(len(this['InputAudio']))
+	this['LastSymbol'] = 0
+	this['ThisSymbol'] = 0
 	bit_index = 0
 	phase = 0
 	symbol = 0
@@ -155,18 +157,31 @@ def Demodulate4FSK(this):
 		if phase >= this['samples per symbol']:
 			phase = 0
 
-
-		if this['LastSyncSample'] > 0:
-			if miss1 <= 0:
-				# Zero Crossing
-				this['SyncClock'] *= this['sync rate']
-				this['SyncClock'] //= this['sync step']
+		if 1 == 0:
+			if this['LastSyncSample'] > 0:
+				if miss1 <= 0:
+					# Zero Crossing
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+			else:
+				if miss1 > 0:
+					# Zero Crossing
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+			this['LastSyncSample'] = miss1
 		else:
-			if miss1 > 0:
-				# Zero Crossing
-				this['SyncClock'] *= this['sync rate']
-				this['SyncClock'] //= this['sync step']
-		this['LastSyncSample'] = miss1
+			if this['LastSyncSample'] > 0:
+				if sample <= 0:
+					# Zero Crossing
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+			else:
+				if sample < 0:
+					# Zero Crossing
+					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] //= this['sync step']
+
+			this['LastSyncSample'] = sample
 
 	return this
 
@@ -263,7 +278,7 @@ def FullProcess(state):
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
 
-	if 1 == 1:
+	if 1 == 0:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
