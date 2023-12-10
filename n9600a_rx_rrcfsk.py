@@ -92,16 +92,14 @@ def Demodulate4FSK(this):
 	symbol = 0
 	sample_index = 0
 	for sample in this['InputAudio']:
+
 		# Determine the miss distance
-		miss1 = abs(sample - this['Perfect1'])
-		miss3 = abs(sample - this['Perfect3'])
-		if miss1 < miss3:
-			this['MissDistance'][sample_index] = miss1
-		else:
-			this['MissDistance'][sample_index] = miss3
+		miss1 = abs(sample - this['Perfect3'])
+
+		this['MissDistance'][sample_index] = miss1
+
 	
-		if this['invert'] == True:
-			sample = -sample
+
 		if phase == this['sample phase']:
 			this['SampleAudio'][sample_index] = sample
 			if sample > 0:
@@ -192,6 +190,8 @@ def FullProcess(state):
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
 	
 	FSK4Demodulator[1]['InputAudio'] = FilterDecimator['FilterBuffer']
+	if FSK4Demodulator[1]['invert'] == True:
+		FSK4Demodulator[1]['InputAudio'] = -FSK4Demodulator[1]['InputAudio']
 	FSK4Demodulator[1] = Demodulate4FSK(FSK4Demodulator[1])
 
 	total_packets = 0
@@ -216,13 +216,13 @@ def FullProcess(state):
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
 
-	if 1 == 0:
+	if 1 == 1:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
 		plt.title('Input Signal')
 		plt.subplot(222)
-		plt.plot(FilterDecimator['FilterBuffer'])
+		plt.plot(FSK4Demodulator[1]['InputAudio'])
 		plt.plot(FSK4Demodulator[1]['SampleAudio'])
 		plt.plot(FSK4Demodulator[1]['MissDistance'])
 		plt.title('Filtered Signal')
