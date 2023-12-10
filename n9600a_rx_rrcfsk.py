@@ -15,37 +15,37 @@ from scipy.fft import fft, fftfreq
 
 def GetFSK4DemodulatorConfig(config, num):
 	this = {}
-	
+
 	id_string = "FSK4 Demodulator "
-	
+
 	key_string = "enabled"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "invert"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}{num}'].getboolean(f'{key_string}')
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "samples per symbol"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "threshold"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	key_string = "symbol map"
 	try:
 		this[f'{key_string}'] = strings.StringToIntArray(config[f'{id_string}{num}'][f'{key_string}'])
@@ -54,6 +54,27 @@ def GetFSK4DemodulatorConfig(config, num):
 		sys.exit(-2)
 
 	key_string = "sample phase"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync rate"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync step"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync period"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
@@ -80,9 +101,11 @@ def InitFSK4Demod(this):
 			value_number = 3
 		this['FirstBitDemap'][value_number] = np.right_shift(index & 2, 1)
 		this['SecondBitDemap'][value_number] = index & 1
+	this['SyncClock'] = 0
+	this['LastSyncSample'] = 0
 	#print(this)
 	return this
-	
+
 def Demodulate4FSK(this):
 	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol']))
 	this['SampleAudio'] = np.zeros(len(this['InputAudio']))
@@ -94,13 +117,23 @@ def Demodulate4FSK(this):
 	for sample in this['InputAudio']:
 
 		# Determine the miss distance
-		miss1 = abs(sample - this['Perfect3'])
+		miss1 = sample - this['Perfect3']
+		miss2 = sample - this['Perfect1']
+		miss3 = sample + this['Perfect1']
+		miss4 = sample + this['Perfect3']
 
+		if abs(miss1) > abs(miss2):
+			miss1 = miss2
+		if abs(miss4) > abs(miss3):
+			miss4 = miss3
+		#if abs(miss1) > abs(miss4):
+		#	miss1 = miss4
 		this['MissDistance'][sample_index] = miss1
 
-	
-
-		if phase == this['sample phase']:
+		this['SyncClock'] += this['sync step']
+		if this['SyncClock'] > ((this['sync period'] // 2) - 1):
+			this['SyncClock'] -= this['sync period']
+		#if phase == this['sample phase']:
 			this['SampleAudio'][sample_index] = sample
 			if sample > 0:
 				if sample >= this['threshold']:
@@ -121,6 +154,20 @@ def Demodulate4FSK(this):
 		phase += 1
 		if phase >= this['samples per symbol']:
 			phase = 0
+
+
+		if this['LastSyncSample'] > 0:
+			if miss1 <= 0:
+				# Zero Crossing
+				this['SyncClock'] *= this['sync rate']
+				this['SyncClock'] //= this['sync step']
+		else:
+			if miss1 > 0:
+				# Zero Crossing
+				this['SyncClock'] *= this['sync rate']
+				this['SyncClock'] //= this['sync step']
+		this['LastSyncSample'] = miss1
+
 	return this
 
 def FullProcess(state):
@@ -151,11 +198,11 @@ def FullProcess(state):
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
 
-	
+
 	DemodulatorCount = 0
 	FSK4Demodulator = [{}]
 	for DemodulatorNumber in range(4):
-		
+
 		if config.has_section(f'FSK4 Demodulator {DemodulatorNumber}'):
 			print(f'Reading settings for FSK4 Demodulator {DemodulatorNumber}')
 			DemodulatorCount += 1
@@ -188,7 +235,7 @@ def FullProcess(state):
 	print(f'\nFiltering and decimating audio. ')
 	FilterDecimator['FilterBuffer'] = audio
 	FilterDecimator = demod.FilterDecimate(FilterDecimator)
-	
+
 	FSK4Demodulator[1]['InputAudio'] = FilterDecimator['FilterBuffer']
 	if FSK4Demodulator[1]['invert'] == True:
 		FSK4Demodulator[1]['InputAudio'] = -FSK4Demodulator[1]['InputAudio']
@@ -216,7 +263,7 @@ def FullProcess(state):
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
 
-	if 1 == 1:
+	if 1 == 0:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
