@@ -34,14 +34,14 @@ def GetFSK4DemodulatorConfig(config, num):
 		
 	key_string = "samples per symbol"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 		
 	key_string = "threshold"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
@@ -55,7 +55,7 @@ def GetFSK4DemodulatorConfig(config, num):
 
 	key_string = "sample phase"
 	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
@@ -65,6 +65,8 @@ def GetFSK4DemodulatorConfig(config, num):
 def InitFSK4Demod(this):
 	this['FirstBitDemap'] = np.zeros(4)
 	this['SecondBitDemap'] = np.zeros(4)
+	this['Perfect1'] = int(this['threshold'] / 2)
+	this['Perfect3'] = int(this['Perfect1'] * 3);
 	# index position 0 = symbol value -3, index position 3 = symbol value 3
 	for index in range(4):
 		value_number = 0
@@ -78,16 +80,30 @@ def InitFSK4Demod(this):
 			value_number = 3
 		this['FirstBitDemap'][value_number] = np.right_shift(index & 2, 1)
 		this['SecondBitDemap'][value_number] = index & 1
-	print(this)
+	#print(this)
 	return this
 	
 def Demodulate4FSK(this):
 	this['Result'] = np.zeros(len(this['InputAudio'] * 2.2 / this['samples per symbol']))
+	this['SampleAudio'] = np.zeros(len(this['InputAudio']))
+	this['MissDistance'] = np.zeros(len(this['InputAudio']))
 	bit_index = 0
 	phase = 0
 	symbol = 0
+	sample_index = 0
 	for sample in this['InputAudio']:
+		# Determine the miss distance
+		miss1 = abs(sample - this['Perfect1'])
+		miss3 = abs(sample - this['Perfect3'])
+		if miss1 < miss3:
+			this['MissDistance'][sample_index] = miss1
+		else:
+			this['MissDistance'][sample_index] = miss3
+	
+		if this['invert'] == True:
+			sample = -sample
 		if phase == this['sample phase']:
+			this['SampleAudio'][sample_index] = sample
 			if sample > 0:
 				if sample >= this['threshold']:
 					symbol = 3
@@ -99,8 +115,12 @@ def Demodulate4FSK(this):
 				else:
 					symbol = 1
 			# demap the symbol
-			
-		phase = phase + 1
+			this['Result'][bit_index] = this['FirstBitDemap'][symbol]
+			bit_index += 1
+			this['Result'][bit_index] = this['SecondBitDemap'][symbol]
+			bit_index += 1
+		sample_index += 1
+		phase += 1
 		if phase >= this['samples per symbol']:
 			phase = 0
 	return this
@@ -117,11 +137,12 @@ def FullProcess(state):
 	while True:
 		run_number = run_number + 1
 		dirname = f'./run{run_number}/'
-		try:
-			os.mkdir(dirname)
-		except:
-			print(dirname + ' exists')
-			continue
+		if 1 == 0:
+			try:
+				os.mkdir(dirname)
+			except:
+				print(dirname + ' exists')
+				continue
 		break
 
 	print(f'Reading settings for Filter Decimator')
@@ -173,6 +194,7 @@ def FullProcess(state):
 	FSK4Demodulator[1]['InputAudio'] = FilterDecimator['FilterBuffer']
 	FSK4Demodulator[1] = Demodulate4FSK(FSK4Demodulator[1])
 
+	total_packets = 0
 	for data_bit in FSK4Demodulator[1]['Result']:
 		Descrambler[1]['NewBit'] = data_bit
 		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
@@ -185,62 +207,67 @@ def FullProcess(state):
 			decodernum = '1'
 			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
 			print(f'{dirname+filename}')
-			# try:
-			# 	bin_file = open(dirname + filename + '.bin', '+wb')
-			# except:
-			# 	pass
-			# with bin_file:
-			# 	for byte in AX25Decoder[2]['Output']:
-			# 		bin_file.write(byte.astype('uint8'))
-			# 	bin_file.close()
+			#try:
+			#	bin_file = open(dirname + filename + '.bin', '+wb')
+			#except:
+			#	pass
+			#with bin_file:
+			#	for byte in AX25Decoder[1]['Output']:
+			#		bin_file.write(byte.astype('uint8'))
+			#	bin_file.close()
 
+	if 1 == 0:
+		plt.figure()
+		plt.subplot(221)
+		plt.plot(audio)
+		plt.title('Input Signal')
+		plt.subplot(222)
+		plt.plot(FilterDecimator['FilterBuffer'])
+		plt.plot(FSK4Demodulator[1]['SampleAudio'])
+		plt.plot(FSK4Demodulator[1]['MissDistance'])
+		plt.title('Filtered Signal')
+		plt.subplot(223)
+		plt.plot(FilterDecimator['Filter'])
+		plt.title('Filter Kernel')
+		#plt.plot(QPSKDemodulator[1]['SamplePulse'])
+		plt.subplot(224)
+		plt.plot(FilterDecimator['EnvelopeBuffer'])
+		plt.title('Envelope Buffer')
+		plt.show()
 
-	plt.figure()
-	plt.subplot(221)
-	plt.plot(audio)
-	plt.title('Input Signal')
-	plt.subplot(222)
-	plt.plot(FilterDecimator['FilterBuffer'])
-	plt.title('Filtered Signal')
-	plt.subplot(223)
-	plt.plot(FilterDecimator['Filter'])
-	plt.title('Filter Kernel')
-	#plt.plot(QPSKDemodulator[1]['SamplePulse'])
-	plt.subplot(224)
-	plt.plot(FilterDecimator['EnvelopeBuffer'])
-	plt.title('Envelope Buffer')
-	plt.show()
-
-
-	scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
-
-	# Generate and save report file
-	report_file_name = f'run{run_number}_report.txt'
 	try:
-		report_file = open(dirname + report_file_name, 'w+')
+		scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 	except:
-		print('Unable to create report file.')
-	with report_file:
-		report_file.write('# Command line: ')
-		for argument in sys.argv:
-			report_file.write(f'{argument} ')
-		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+		pass
+
+	if 1 == 0:
+		# Generate and save report file
+		report_file_name = f'run{run_number}_report.txt'
 		try:
-			ini_file = open(sys.argv[1])
+			report_file = open(dirname + report_file_name, 'w+')
 		except:
-			report_file.write('Unable to open .ini file.')
-		with ini_file:
-			for character in ini_file:
-				report_file.write(character)
+			print('Unable to create report file.')
+		with report_file:
+			report_file.write('# Command line: ')
+			for argument in sys.argv:
+				report_file.write(f'{argument} ')
+			report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+			try:
+				ini_file = open(sys.argv[1])
+			except:
+				report_file.write('Unable to open .ini file.')
+			with ini_file:
+				for character in ini_file:
+					report_file.write(character)
 
-		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+			report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
 
 
 
-		report_file.write('\n')
-		report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
-		report_file.write('\n\n')
+			report_file.write('\n')
+			report_file.write(fo.GenInt16ArrayC(f'AGCScaleTable', FilterDecimator['AGCScaleTable'], 16))
+			report_file.write('\n\n')
 
-		report_file.close()
+			report_file.close()
 
-	return
+	return total_packets
