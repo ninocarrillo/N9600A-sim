@@ -386,7 +386,7 @@ def FullProcess(state):
 			#	bin_file.close()
 		absolute_bit_index += 1
 
-	if 1 == 0:
+	if 1 == 1:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
