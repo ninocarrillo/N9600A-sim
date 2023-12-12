@@ -254,7 +254,6 @@ def FilterDecimate(filter):
 
 		scale = filter['AGCScaleTable'][int(filter['PeakDetector']['Envelope'] / 128)]
 
-
 		if filter['InputAGCEnabled'] == True:
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 			filter['GainChange'] = 0

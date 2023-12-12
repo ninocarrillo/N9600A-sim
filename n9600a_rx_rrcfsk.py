@@ -60,7 +60,14 @@ def GetFSK4DemodulatorConfig(config, num):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "sync rate"
+	key_string = "sync rate 1"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync rate 2"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
@@ -81,14 +88,28 @@ def GetFSK4DemodulatorConfig(config, num):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "sync offset"
+	key_string = "sync offset 1"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "sync delay"
+	key_string = "sync offset 2"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync delay 1"
+	try:
+		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "sync delay 2"
 	try:
 		this[f'{key_string}'] = int(float(config[f'{id_string}{num}'][f'{key_string}']))
 	except:
@@ -119,7 +140,8 @@ def InitFSK4Demod(this):
 	this['LastSyncSample'] = 0
 	this['SampleHistory'] = np.zeros(this['samples per symbol'])
 	this['SampleIndex'] = 0
-	this['DelayIndex'] = 1
+	this['DelayIndex1'] = 1
+	this['DelayIndex2'] = 1
 	#print(this)
 	return this
 
@@ -131,6 +153,7 @@ def Demodulate4FSK(this):
 	phase = 0
 	symbol = 0
 	sample_index = 0
+	absolute_sample_index = 0
 	for sample in this['InputAudio']:
 
 		# Determine the miss distance
@@ -177,12 +200,12 @@ def Demodulate4FSK(this):
 			if this['LastSyncSample'] > 0:
 				if miss1 <= 0:
 					# Zero Crossing
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
 			else:
 				if miss1 > 0:
 					# Zero Crossing
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
 			this['LastSyncSample'] = miss1
 
@@ -190,38 +213,60 @@ def Demodulate4FSK(this):
 			if this['LastSyncSample'] > 0:
 				if sample <= 0:
 					# Zero Crossing
-					this['SyncClock'] -= this['sync offset']
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] -= this['sync offset 1']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
-					this['SyncClock'] += this['sync offset']
+					this['SyncClock'] += this['sync offset 1']
 			else:
 				if sample > 0:
 					# Zero Crossing
-					this['SyncClock'] -= this['sync offset']
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] -= this['sync offset 1']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
-					this['SyncClock'] += this['sync offset']
+					this['SyncClock'] += this['sync offset 1']
 			this['LastSyncSample'] = sample
 
 		if 3 == 3:
-			if this['SampleHistory'][this['DelayIndex']] < -this['threshold']:
+			if this['SampleHistory'][this['DelayIndex1']] < -this['threshold']:
 				if sample >= this['threshold']:
 					# Zero Crossing
-					this['SyncClock'] -= this['sync offset']
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] -= this['sync offset 1']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
-					this['SyncClock'] += this['sync offset']
+					this['SyncClock'] += this['sync offset 1']
 
 
 					this['MissDistance'][sample_index] = this['threshold']
 
-			elif this['SampleHistory'][this['DelayIndex']] >= this['threshold']:
+			elif this['SampleHistory'][this['DelayIndex1']] >= this['threshold']:
 				if sample < -this['threshold']:
 					# Zero Crossing
-					this['SyncClock'] -= this['sync offset']
-					this['SyncClock'] *= this['sync rate']
+					this['SyncClock'] -= this['sync offset 1']
+					this['SyncClock'] *= this['sync rate 1']
 					this['SyncClock'] //= this['sync step']
-					this['SyncClock'] += this['sync offset']
+					this['SyncClock'] += this['sync offset 1']
+
+					this['MissDistance'][sample_index] = this['threshold']
+
+		if 4 == 4:
+			if this['SampleHistory'][this['DelayIndex2']] < 0:
+				if sample >= 0 and sample < this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset 2']
+					this['SyncClock'] *= this['sync rate 2']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset 2']
+
+
+					this['MissDistance'][sample_index] = this['threshold']
+
+			else:
+				if sample < 0 and sample >= -this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset 2']
+					this['SyncClock'] *= this['sync rate 2']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset 2']
 
 					this['MissDistance'][sample_index] = this['threshold']
 
@@ -230,10 +275,13 @@ def Demodulate4FSK(this):
 		this['SampleIndex'] += 1
 		if this['SampleIndex'] >= this['samples per symbol']:
 			this['SampleIndex'] = 0
-		this['DelayIndex'] = this['SampleIndex'] + this['sync delay']
-		if this['DelayIndex'] >= this['samples per symbol']:
-			this['DelayIndex'] -= this['samples per symbol']
-
+		this['DelayIndex1'] = this['SampleIndex'] + this['sync delay 1']
+		if this['DelayIndex1'] >= this['samples per symbol']:
+			this['DelayIndex1'] -= this['samples per symbol']
+		this['DelayIndex2'] = this['SampleIndex'] + this['sync delay 2']
+		if this['DelayIndex2'] >= this['samples per symbol']:
+			this['DelayIndex2'] -= this['samples per symbol']
+		absolute_sample_index += 1
 	return this
 
 def FullProcess(state):
@@ -308,6 +356,8 @@ def FullProcess(state):
 	FSK4Demodulator[1] = Demodulate4FSK(FSK4Demodulator[1])
 
 	total_packets = 0
+	absolute_bit_index = 0
+	last_absolute_bit_index = 0
 	for data_bit in FSK4Demodulator[1]['Result']:
 		Descrambler[1]['NewBit'] = data_bit
 		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
@@ -318,8 +368,14 @@ def FullProcess(state):
 			total_packets += 1
 			CRC = AX25Decoder[1]['CRC'][0]
 			decodernum = '1'
-			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
-			print(f'{dirname+filename}')
+			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{absolute_bit_index}'
+			bit_difference = absolute_bit_index - last_absolute_bit_index
+			bit_delta = f'-{bit_difference}'
+			print(f'{dirname+filename+bit_delta}')
+			last_absolute_bit_index = absolute_bit_index
+			#for byte in AX25Decoder[1]['Output'][16:]:
+			#	print(str(byte & 0x7F,"ascii"), end='')
+			print(str(AX25Decoder[1]['Output'][16:] & 0x7F, "ascii"), end='\n\n')
 			#try:
 			#	bin_file = open(dirname + filename + '.bin', '+wb')
 			#except:
@@ -328,8 +384,9 @@ def FullProcess(state):
 			#	for byte in AX25Decoder[1]['Output']:
 			#		bin_file.write(byte.astype('uint8'))
 			#	bin_file.close()
+		absolute_bit_index += 1
 
-	if 1 == 1:
+	if 1 == 0:
 		plt.figure()
 		plt.subplot(221)
 		plt.plot(audio)
