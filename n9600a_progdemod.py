@@ -258,15 +258,17 @@ def FilterDecimate(filter):
 			filter['PeakDetector'] = PeakDetect(data, filter['PeakDetector'])
 			filter['GainChange'] = 0
 			if filter['PeakDetector']['Envelope'] > 30000:
-				filter['FilterShift'] = filter['FilterShift'] + 1
-				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
-				if filter['FilterShift'] > filter['MaxAGCShift']:
+				if filter['FilterShift'] >= filter['MaxAGCShift']:
 					filter['FilterShift'] = filter['MaxAGCShift']
+				else:
+					filter['FilterShift'] = filter['FilterShift'] + 1
+					filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] / 2
 			if filter['PeakDetector']['Envelope'] < 10000:
-				filter['FilterShift'] = filter['FilterShift'] - 1
-				filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
-				if filter['FilterShift'] < filter['MinAGCShift']:
+				if filter['FilterShift'] <= filter['MinAGCShift']:
 					filter['FilterShift'] = filter['MinAGCShift']
+				else:
+					filter['FilterShift'] = filter['FilterShift'] - 1
+					filter['PeakDetector']['Envelope'] = filter['PeakDetector']['Envelope'] * 2
 
 		data = (data * scale) // 32768
 		#data = np.rint(data * 8191 / filter['PeakDetector']['Envelope'])
