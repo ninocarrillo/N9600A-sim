@@ -270,6 +270,28 @@ def Demodulate4FSK(this):
 
 					this['MissDistance'][sample_index] = this['threshold']
 
+		if 5 == 0:
+			if this['SampleHistory'][this['DelayIndex2']] < 0:
+				if sample >= 0 and sample < this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset 2']
+					this['SyncClock'] *= this['sync rate 2']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset 2']
+
+
+					this['MissDistance'][sample_index] = this['threshold']
+
+			else:
+				if sample < 0 and sample >= -this['threshold']:
+					# Zero Crossing
+					this['SyncClock'] -= this['sync offset 2']
+					this['SyncClock'] *= this['sync rate 2']
+					this['SyncClock'] //= this['sync step']
+					this['SyncClock'] += this['sync offset 2']
+
+					this['MissDistance'][sample_index] = this['threshold']
+
 		sample_index += 1
 		this['SampleHistory'][this['SampleIndex']] = sample
 		this['SampleIndex'] += 1
