@@ -58,6 +58,19 @@ def GetInputFilterConfig(state):
 	except:
 		print(f'{argv[1]} [Input Filter] \'decimation\' is missing or invalid')
 		sys.exit(-2)
+
+	try:
+		this['MaxAGCShift'] = int(float(config['Input Filter']['agc max shift']))
+	except:
+		print(f'{argv[1]} [Input Filter] \'agc max shift\' is missing or invalid')
+		sys.exit(-2)
+
+	try:
+		this['MinAGCShift'] = int(float(config['Input Filter']['agc min shift']))
+	except:
+		print(f'{argv[1]} [Input Filter] \'agc min shift\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def GetInputFilterConfig2(state):
