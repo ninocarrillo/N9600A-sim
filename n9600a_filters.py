@@ -77,12 +77,7 @@ def MultiplySaturateScale(val1, val2, pos_sat, neg_sat, scale_bits):
 		result = pos_sat
 	elif result < neg_sat:
 		result = neg_sat
-	try:
-		result = int(result) >> int(scale_bits)
-	except:
-		print(f'scale_bits {scale_bits}')
-		print(f'result {result}')
-		sys.exit(3)
+	result = int(result) >> int(scale_bits)
 	return result
 
 def MultiplySaturate(val1, val2, pos_sat, neg_sat):
@@ -117,14 +112,15 @@ def UpdateIIR(this, sample):
 	# Calculate the intermediate sum
 	v = 0
 	for index in range(this['iir order'] + 1):
-		v += MultiplySaturateScale(this['X'][index], this['iir b coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
-		#v = np.clip(v, this['NegativeSaturation'], this['PositiveSaturation'])
+		#v += MultiplySaturateScale(this['X'][index], this['iir b coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+		v += (int(this['X'][index] * this['iir b coefs'][index]) >> int(this['iir scale bits']))
 	# Update the output delay registers
 	for index in range(this['iir order'], 0, -1):
 		this['Y'][index] = this['Y'][index - 1]
 	# Calculate the final sum
 	for index in range(1, this['iir order'] + 1):
-		v += MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+		#v += MultiplySaturateScale(this['Y'][index], this['iir a coefs'][index], this['PositiveSaturation'], this['NegativeSaturation'], this['iir scale bits'])
+		v += (int(this['Y'][index] * this['iir a coefs'][index]) >> int(this['iir scale bits']))
 	this['Y'][0] = v
 	this['Output'] = v
 	return this

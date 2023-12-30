@@ -88,8 +88,10 @@ def UpdateNCO(this):
 	# 	this['QuadraturePhaseRollover'] = False
 
 	# now add dither and enter the lookup table
-	inphase = this['InPhase'] + this['Dither']
+	inphase = this['InPhase']
+	inphase += this['Dither']
 	quadraturephase = inphase + this['QuadraturePhaseOffset']
+
 
 	# scale by the normalization factor
 	inphase = int(inphase // this['NormalizationFactor'])
