@@ -279,7 +279,9 @@ def DemodulateBPSK(this):
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
-			this['NCO']['Control'] = np.rint((p + (integral * this['LoopFilter']['loop filter i'])) * this['LoopFilter']['loop filter gain'])
+			i = np.rint(integral * this['LoopFilter']['loop filter i'])
+			this['NCO']['Control'] = p + i
+			#this['NCO']['Control'] = np.rint((p + (integral * this['LoopFilter']['loop filter i'])) * this['LoopFilter']['loop filter gain'])
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
@@ -296,80 +298,6 @@ def DemodulateBPSK(this):
 	return this
 
 
-def DemodulateBPSKNew(this):
-	this['I_Mixer'] = np.zeros(len(this['InputBuffer']))
-	this['Q_Mixer'] = np.zeros(len(this['InputBuffer']))
-	this['LoopMixer'] = np.zeros(len(this['InputBuffer']))
-	this['I_LPFOutput'] = np.zeros(len(this['InputBuffer']))
-	this['Q_LPFOutput'] = np.zeros(len(this['InputBuffer']))
-	this['LoopFilterOutput'] = np.zeros(len(this['InputBuffer']))
-	this['PhaseAccumulator'] = np.zeros(len(this['InputBuffer']))
-	this['SamplePulse'] = np.zeros(len(this['InputBuffer']))
-	this['SineOutput'] = np.zeros(len(this['InputBuffer']))
-	this['LoopIntegral'] = np.zeros(len(this['InputBuffer']))
-
-	this['NCOControlOutput'] = np.zeros(len(this['InputBuffer']))
-	this['CosineOutput'] = np.zeros(len(this['InputBuffer']))
-	this['Result'] = np.zeros(int(len(this['InputBuffer']) * 1.1 * this['NCO']['nco set frequency'] / this['NCO']['nco design sample rate']))
-	index = 0
-	last_progress_print = -1
-	progress_steps = 100
-	sample_count = len(this['InputBuffer']) // progress_steps
-	databit_index = 0
-	start_time = time.time()
-	if this['enabled'] == True:
-		integral = 0
-		for sample in this['InputBuffer']:
-			progress = index // sample_count
-			if progress != last_progress_print:
-				last_progress_print = progress
-				interval_time = time.time() - start_time
-				if (progress > 0):
-					time_remaining = np.rint(interval_time * (progress_steps - progress) / progress)
-					print(f'Interval: {progress}, Time Remaining: {time_remaining}')
-					print(this['NCO']['Control'])
-			this['NCO'] = nco.UpdateNCO(this['NCO'])
-			this['SineOutput'][index] = this['NCO']['Sine']
-			this['CosineOutput'][index] = this['NCO']['Cosine']
-			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) // 32768) # simulate 15 bit fractional integer multiplication
-			# low-pass filter the mix product
-			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
-			this['I_LPFOutput'][index] = this['I_LPF']['Output']
-
-			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) // 32768) # simulate 15 bit fractional integer multiplication
-			# low-pass filter the mix product
-			#this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
-			#this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
-
-			# mix the I and Q branch
-			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] // 32768) # simulate 15 bit fractional integer multiplication
-			this['LoopMixer'][index] = np.rint((this['Q_Mixer'][index] * this['I_Mixer'][index]) // 32768)
-			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['LoopMixer'][index])
-			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['Q_LPF']['Output'])
-			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
-			# scale the NCO control signal
-			p = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
-			integral += this['LoopFilterOutput'][index] + this['LoopFilter']['loop integrator trim']
-			if abs(integral) > this['LoopFilter']['loop filter i max']:
-				integral = 0
-			this['LoopIntegral'][index] = integral
-			this['NCO']['Control'] = np.rint((p + (integral * this['LoopFilter']['loop filter i'])) * this['LoopFilter']['loop filter gain'])
-
-			this['NCOControlOutput'][index] = this['NCO']['Control']
-
-
-			# save the data signal
-			this['I_LPFOutput'][index] = this['I_LPF']['Output']
-
-			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
-
-
-
-			index += 1
-
-	return this
 
 def FullProcess(state):
 	argv = state['argv']

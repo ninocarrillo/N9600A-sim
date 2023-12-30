@@ -336,33 +336,33 @@ def DemodulateBPSK2(this):
 			this['SineOutput'][index] = this['NCO']['Sine']
 			this['CosineOutput'][index] = this['NCO']['Cosine']
 			# mix sample stream with NCO sinewave to create I branch
-			this['I_Mixer'][index] = np.ceil(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Sine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['I_LPF'] = filters.UpdateIIR(this['I_LPF'], this['I_Mixer'][index])
 			# print(this)
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
 
 			# mix sample stream with NCO cosine to create Q branch
-			this['Q_Mixer'][index] = np.ceil(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
+			this['Q_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
 			this['Q_LPF'] = filters.UpdateIIR(this['Q_LPF'], this['Q_Mixer'][index])
 			this['Q_LPFOutput'][index] = this['Q_LPF']['Output']
 
 			# mix the I and Q branch
-			this['LoopMixer'][index] = np.ceil(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
+			this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilter2'] = filters.UpdateIIR(this['LoopFilter2'], this['LoopFilter']['Output'])
 			this['LoopFilter3'] = filters.UpdateIIR(this['LoopFilter3'], this['LoopFilter2']['Output'])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
-			p = np.ceil(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
+			p = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
 			integral += this['LoopFilterOutput'][index]
 			integral += this['LoopFilter']['loop integrator trim']
 			#integral = 0
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
 			this['LoopIntegral'][index] = integral
-			i = np.ceil(integral * this['LoopFilter']['loop filter i'])
+			i = np.rint(integral * this['LoopFilter']['loop filter i'])
 			#this['NCO']['Control'] = np.rint((p + integral) * this['LoopFilter']['loop filter gain'])
 			this['NCO']['Control'] = p + i
 
