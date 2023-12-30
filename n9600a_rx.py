@@ -165,6 +165,9 @@ if state['iterators'] > 0:
 		elif DemodulatorType == 'bpsk32':
 			IteratorResults[state['iterators']][cycle_number] = bpsk32.FullProcess(state)
 
+		elif DemodulatorType == 'newbpsk32':
+			IteratorResults[state['iterators']][cycle_number] = bpsk32.FullProcessNew(state)
+
 		#now update the appropriate iterators
 		cycle_number += 1
 		iterating = False
@@ -231,3 +234,6 @@ else:
 
 	elif DemodulatorType == 'bpsk32':
 		bpsk32.FullProcess(state)
+		
+	elif DemodulatorType == 'newbpsk32':
+		bpsk32.FullProcessNew(state)
