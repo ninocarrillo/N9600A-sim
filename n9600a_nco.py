@@ -57,12 +57,14 @@ def InitNCO(this):
 	try:
 		this['Amplitude'] = this['Amplitude']
 	except:
-		this['Amplitude'] = pow(2,this['nco amplitude bits'] - 1) - 1
+		this['Amplitude'] = pow(2,this['nco amplitude bits']) - 1
+		#print('NCO Amplitude:', this['Amplitude'])
 	this['WaveTable'] = np.zeros(this['nco wavetable size'])
 	this['InPhaseRollover'] = False
 	this['QuadraturePhaseRollover'] = False
 	for i in range(this['nco wavetable size']):
 		this['WaveTable'][i] = np.rint(this['Amplitude'] * np.sin(i * 2 * np.pi / this['nco wavetable size']))
+	#print('NCO WaveTable', this['WaveTable'])
 	return this
 
 def UpdateNCO(this):
