@@ -293,11 +293,14 @@ def DemodulateBPSK(this):
 			integral += this['LoopFilterOutput'][index] + this['LoopFilter']['loop integrator trim']
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
-			this['LoopIntegral'][index] = integral
-			i = np.rint(integral * this['LoopFilter']['loop filter i'])
-			this['NCO']['Control'] = p + i
-			this['NCOControlOutput'][index] = this['NCO']['Control']
 
+			this['LoopIntegral'][index] = integral
+
+			i = np.rint(integral * this['LoopFilter']['loop filter i'])
+
+			this['NCO']['Control'] = p + i
+
+			this['NCOControlOutput'][index] = this['NCO']['Control']
 
 			# save the data signal
 			this['I_LPFOutput'][index] = this['I_LPF']['Output']
@@ -318,13 +321,24 @@ def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
 
+	if state['reports'] == True:
+		#generate a new directory for the reports
+		run_number = 0
+		print('trying to make a new directory')
+		while True:
+			run_number = run_number + 1
+			dirname = f'./run{run_number}/'
+			try:
+				os.mkdir(dirname)
+			except:
+				print(dirname + ' exists')
+				continue
+			break
+
 	print(f'Started BPSK Demodulation process')
 	print(f'Reading settings for Filter Decimator')
-	FilterDecimator = input_filter.GetInputFilterConfig(state)
-	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
-	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
-	FilterDecimator['sample rate'] = FilterDecimator['InputSampleRate']
+	FilterDecimator = input_filter.GetInputFilterConfig(state)
 	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
 
 	DemodulatorNumber = 1
@@ -333,9 +347,11 @@ def FullProcess(state):
 	BPSKDemodulator = GetBPSKDemodConfig(config, DemodulatorNumber, id_string)
 	BPSKDemodulator['InputSampleRate'] = FilterDecimator['OutputSampleRate']
 	BPSKDemodulator = InitBPSKDemod(BPSKDemodulator)
-	ReceivePulseFilter = PulseFilter.copy()
+
+	ReceivePulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	ReceivePulseFilter['sample rate'] = BPSKDemodulator['OutputSampleRate']
 	ReceivePulseFilter = pulse_filter.InitRRCFilter(ReceivePulseFilter)
+
 	DataSlicer = {}
 	try:
 		DataSlicer['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
@@ -352,21 +368,7 @@ def FullProcess(state):
 	print('Data Slicer Sample Rate: ', DataSlicer['InputSampleRate'])
 	DataSlicer = demod.InitDataSlicer(DataSlicer)
 
-	if state['reports'] == True:
-		#generate a new directory for the reports
-		run_number = 0
-		print('trying to make a new directory')
-		while True:
-			run_number = run_number + 1
-			dirname = f'./run{run_number}/'
-			try:
-				os.mkdir(dirname)
-			except:
-				print(dirname + ' exists')
-				continue
-			break
-
-	print(f'Initializing AX25Decoder and Descrambler')
+	print(f'Initializing Descrambler and AX25Decoder')
 	AX25Decoder = demod.InitAX25Decoder()
 	Descrambler = {}
 	Descrambler['Polynomial'] = int('0x63003',16) # G3RUH poly * differential decoding
@@ -374,7 +376,7 @@ def FullProcess(state):
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(argv[2])
-		# Take two bits of resolution away
+		# Adjust bit resolution as specified
 		audio = audio >> (16 - FilterDecimator['InputBitCount'])
 	except:
 		print('Unable to open wave file.')
@@ -406,8 +408,6 @@ def FullProcess(state):
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 
 	total_packets = 0
-
-
 
 	loop_count = len(FilteredIOutput)
 	for index in range(loop_count):

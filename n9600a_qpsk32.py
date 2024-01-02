@@ -208,6 +208,20 @@ def GetQPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "intermediate decimation"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "post decimation"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def InitQPSKDemod(this):
@@ -220,6 +234,7 @@ def InitQPSKDemod(this):
 	this['I_LPF'] = filters.InitIIR(this['I_LPF'])
 	this['Q_LPF'] = filters.InitIIR(this['Q_LPF'])
 	this['BitAccumulator'] = 0
+	this['OutputSampleRate'] = this['InputSampleRate'] // this['intermediate decimation']
 	return this
 
 def DemodulateQPSK(this):
@@ -243,7 +258,6 @@ def DemodulateQPSK(this):
 	sample_count = len(this['InputBuffer']) // progress_steps
 	databit_index = 0
 	start_time = time.time()
-	last_time_remaining = 0
 	if this['enabled'] == True:
 		integral = 0
 		for sample in this['InputBuffer']:
@@ -253,14 +267,11 @@ def DemodulateQPSK(this):
 				interval_time = time.time() - start_time
 				if (progress > 0):
 					time_remaining = np.rint(interval_time * (progress_steps - progress) / progress)
-					if last_time_remaining != time_remaining:
-						print(f'{time_remaining},', end='', flush=True)
-					last_time_remaining = time_remaining
-			# print(f'{index}')
+					print(f'Interval: {progress}, Time Remaining: {time_remaining}')
+					print(this['NCO']['Control'])
 			this['NCO'] = nco.UpdateNCO(this['NCO'])
 			this['SineOutput'][index] = this['NCO']['Sine']
 			this['CosineOutput'][index] = this['NCO']['Cosine']
-			#branch_gain = 0.125
 			# mix sample stream with NCO sinewave to create I branch
 			this['I_Mixer'][index] = np.rint(sample * (this['NCO']['Cosine']) / 32768) # simulate 15 bit fractional integer multiplication
 			# low-pass filter the mix product
@@ -291,33 +302,28 @@ def DemodulateQPSK(this):
 
 			this['LoopMixer'][index] = I - Q
 
-
-			#this['LoopMixer'][index] = np.rint(this['Q_LPF']['Output'] * this['I_LPF']['Output'] / 32768) # simulate 15 bit fractional integer multiplication
 			this['LoopFilter'] = filters.UpdateIIR(this['LoopFilter'], this['LoopMixer'][index])
 			this['LoopFilterOutput'][index] = np.rint(this['LoopFilter']['Output'])
 			# scale the NCO control signal
-			p = this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p']
+			p = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
 			integral += this['LoopFilterOutput'][index] + this['LoopFilter']['loop integrator trim']
 			if abs(integral) > this['LoopFilter']['loop filter i max']:
 				integral = 0
+
 			this['LoopIntegral'][index] = integral
-			this['NCO']['Control'] = np.rint((p + (np.rint(integral * this['LoopFilter']['loop filter i']))) * this['LoopFilter']['loop filter gain'])
+
+			i = np.rint(integral * this['LoopFilter']['loop filter i'])
+
+			this['NCO']['Control'] = p + i
 
 			this['NCOControlOutput'][index] = this['NCO']['Control']
 
-
-			# save the data signal
-			#this['I_LPFOutput'][index] = this['I_LPF']['Output']
-
-
-
-
-
 			this['PhaseAccumulator'][index] = this['NCO']['InPhase']
 
-
-
 			index += 1
+
+		this['I_LPFOutput'] = this['I_LPFOutput'][0::this['intermediate decimation']]
+		this['Q_LPFOutput'] = this['Q_LPFOutput'][0::this['intermediate decimation']]
 	return this
 
 
@@ -325,52 +331,6 @@ def DemodulateQPSK(this):
 def FullProcess(state):
 	argv = state['argv']
 	config = state['config']
-
-	print(f'Started QPSK Demodulation process')
-
-
-
-	print(f'Reading settings for Filter Decimator')
-	FilterDecimator = input_filter.GetInputFilterConfig(state)
-	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
-
-	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
-	PulseFilter['sample rate'] = FilterDecimator['OutputSampleRate']
-	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
-
-
-	print(f'Reading settings for QPSK Demodulators')
-	QPSKDemodulator = []
-	ReceivePulseFilter = []
-	DataSlicer = []
-	DemodulatorCount = 0
-	id_string = "QPSK Demodulator "
-	for DemodulatorNumber in range(4):
-		QPSKDemodulator.append({})
-		ReceivePulseFilter.append({})
-		DataSlicer.append({})
-		if config.has_section(f'{id_string}{DemodulatorNumber}'):
-			print(f'Reading settings for {id_string}{DemodulatorNumber}')
-			DemodulatorCount += 1
-			QPSKDemodulator[DemodulatorNumber] = GetQPSKDemodConfig(config, DemodulatorNumber, id_string)
-			QPSKDemodulator[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
-			QPSKDemodulator[DemodulatorNumber] = InitQPSKDemod(QPSKDemodulator[DemodulatorNumber])
-			ReceivePulseFilter[DemodulatorNumber] = PulseFilter.copy()
-			ReceivePulseFilter[DemodulatorNumber]['sample rate'] = QPSKDemodulator[DemodulatorNumber]['InputSampleRate']
-			ReceivePulseFilter[DemodulatorNumber] = pulse_filter.InitRRCFilter(ReceivePulseFilter[DemodulatorNumber])
-			try:
-				DataSlicer[DemodulatorNumber]['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
-			except:
-				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer bit rate\' is missing or invalid')
-				sys.exit(-2)
-			try:
-				DataSlicer[DemodulatorNumber]['Rate'] = float(config[f'Data Slicer {DemodulatorNumber}']['slicer lock rate'])
-			except:
-				print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
-				sys.exit(-2)
-
-			DataSlicer[DemodulatorNumber]['InputSampleRate'] = FilterDecimator['OutputSampleRate']
-			DataSlicer[DemodulatorNumber] = demod.InitDataSlicer(DataSlicer[DemodulatorNumber])
 
 	if state['reports'] == True:
 		#generate a new directory for the reports
@@ -386,19 +346,48 @@ def FullProcess(state):
 				continue
 			break
 
-	AX25Decoder = [{}]
-	Descrambler = [{}]
-	for index in range(1,DemodulatorCount+1):
-		print(f'Initializing AX25Decoder {index} and Descrambler {index}')
-		AX25Decoder.append({})
-		Descrambler.append({})
-		AX25Decoder[index] = demod.InitAX25Decoder()
-		Descrambler[index]['Polynomial'] = int('0x21001',16) # G3RUH poly
-		Descrambler[index] = demod.InitDescrambler(Descrambler[index])
+	print(f'Started QPSK Demodulation process')
+	print(f'Reading settings for Filter Decimator')
+
+	FilterDecimator = input_filter.GetInputFilterConfig(state)
+	FilterDecimator = demod.InitFilterDecimator(FilterDecimator)
+
+	DemodulatorNumber = 1
+	id_string = "QPSK Demodulator "
+	print(f'Reading settings for {id_string}{DemodulatorNumber}')
+	QPSKDemodulator = GetQPSKDemodConfig(config, DemodulatorNumber, id_string)
+	QPSKDemodulator['InputSampleRate'] = FilterDecimator['OutputSampleRate']
+	QPSKDemodulator = InitQPSKDemod(QPSKDemodulator)
+
+	ReceivePulseFilter = pulse_filter.GetRRCFilterConfig(state)
+	ReceivePulseFilter['sample rate'] = QPSKDemodulator['OutputSampleRate']
+	ReceivePulseFilter = pulse_filter.InitRRCFilter(ReceivePulseFilter)
+
+	DataSlicer = {}
+	try:
+		DataSlicer['BitRate'] = int(config[f'Data Slicer {DemodulatorNumber}']['slicer bit rate'])
+	except:
+		print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer bit rate\' is missing or invalid')
+		sys.exit(-2)
+	try:
+		DataSlicer['Rate'] = float(config[f'Data Slicer {DemodulatorNumber}']['slicer lock rate'])
+	except:
+		print(f'{sys.argv[1]} [Data Slicer {DemodulatorNumber}] \'slicer lock rate\' is missing or invalid')
+		sys.exit(-2)
+
+	DataSlicer['InputSampleRate'] = QPSKDemodulator['OutputSampleRate'] // QPSKDemodulator['post decimation']
+	print('Data Slicer Sample Rate: ', DataSlicer['InputSampleRate'])
+	DataSlicer = demod.InitDataSlicer(DataSlicer)
+
+	print(f'Initializing Descrambler and AX25Decoder')
+	AX25Decoder = demod.InitAX25Decoder()
+	Descrambler = {}
+	Descrambler['Polynomial'] = int('0x21001',16) # G3RUH poly
+	Descrambler= demod.InitDescrambler(Descrambler)
 
 	try:
 		samplerate, audio = scipy.io.wavfile.read(argv[2])
-		# Take two bits of resolution away
+		# Adjust bit resolution as specified
 		audio = audio >> (16 - FilterDecimator['InputBitCount'])
 	except:
 		print('Unable to open wave file.')
@@ -415,37 +404,38 @@ def FullProcess(state):
 		scipy.io.wavfile.write(dirname+"FilteredSignal.wav", FilterDecimator['OutputSampleRate'], FilterDecimator['FilterBuffer'].astype(np.int16))
 
 	print(f'\nDemodulating audio. ')
-	QPSKDemodulator[1]['InputBuffer'] = FilterDecimator['FilterBuffer']
-	QPSKDemodulator[1] = DemodulateQPSK(QPSKDemodulator[1])
+	QPSKDemodulator['InputBuffer'] = FilterDecimator['FilterBuffer']
+	QPSKDemodulator = DemodulateQPSK(QPSKDemodulator)
 	print(f'Done.')
+
+	ReceivePulseFilter['Taps'] = np.rint(ReceivePulseFilter['Taps'] * 8191)
+
+	FilteredIOutput = np.convolve(QPSKDemodulator['I_LPFOutput'], ReceivePulseFilter['Taps'], 'valid') // 65536
+	FilteredQOutput = np.convolve(QPSKDemodulator['Q_LPFOutput'], ReceivePulseFilter['Taps'], 'valid') // 65536
+
+	FilteredIOutput = FilteredIOutput[0::QPSKDemodulator['post decimation']]
+	FilteredQOutput = FilteredQOutput[0::QPSKDemodulator['post decimation']]
 
 	print(f'\nSlicing, differential decoding, and AX25 decoding data. ')
 
 	total_packets = 0
 
-	ReceivePulseFilter[1]['Taps'] = np.rint(ReceivePulseFilter[1]['Taps'] * 8191)
+	DataSlicer['IInput'] = FilteredIOutput
+	DataSlicer['QInput'] = FilteredQOutput
 
-	FilteredIOutput = np.convolve(QPSKDemodulator[1]['I_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
-	FilteredQOutput = np.convolve(QPSKDemodulator[1]['Q_LPFOutput'], ReceivePulseFilter[1]['Taps'], 'valid') // 65536
+	DataSlicer = demod.SliceIQData(DataSlicer)
 
-
-	DataSlicer[1]['IInput'] = FilteredIOutput
-	DataSlicer[1]['QInput'] = FilteredQOutput
-
-	DataSlicer[1] = demod.SliceIQData(DataSlicer[1])
-
-	for data_bit in DataSlicer[1]['Result']:
-		Descrambler[1]['NewBit'] = data_bit
-		Descrambler[1] = demod.ProgUnscramble(Descrambler[1])
-		AX25Decoder[1]['NewBit'] = Descrambler[1]['Result']
-		AX25Decoder[1] = demod.ProgDecodeAX25(AX25Decoder[1])
-		if AX25Decoder[1]['OutputTrigger'] == True:
-			AX25Decoder[1]['OutputTrigger'] = False
+	for data_bit in DataSlicer['Result']:
+		Descrambler['NewBit'] = data_bit
+		Descrambler = demod.ProgUnscramble(Descrambler)
+		AX25Decoder['NewBit'] = Descrambler['Result']
+		AX25Decoder = demod.ProgDecodeAX25(AX25Decoder)
+		if AX25Decoder['OutputTrigger'] == True:
+			AX25Decoder['OutputTrigger'] = False
 			# Check for uniqueness
 			total_packets += 1
-			CRC = AX25Decoder[1]['CRC'][0]
-			decodernum = '1'
-			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{decodernum}_Index-{index}'
+			CRC = AX25Decoder['CRC'][0]
+			filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_Index-{index}'
 			print(f'{filename}')
 			if state['reports'] == True:
 				try:
@@ -453,22 +443,22 @@ def FullProcess(state):
 				except:
 					pass
 				with bin_file:
-					for byte in AX25Decoder[1]['Output']:
+					for byte in AX25Decoder['Output']:
 						bin_file.write(byte.astype('uint8'))
 					bin_file.close()
 
 	print(f'Total packets decoded: {total_packets}')
 
 	if state['reports'] == True:
-		scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['Result'].astype(np.int16))
-		scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],QPSKDemodulator[1]['LoopFilterOutput'].astype(np.int16))
-		scipy.io.wavfile.write(dirname+"I_LPF.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['I_LPFOutput'].astype(np.int16))
-		scipy.io.wavfile.write(dirname+"Q_LPF.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['Q_LPFOutput'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"DemodSignal.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['Result'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"LoopFilter.wav", FilterDecimator['OutputSampleRate'],QPSKDemodulator['LoopFilterOutput'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"I_LPF.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['I_LPFOutput'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"Q_LPF.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['Q_LPFOutput'].astype(np.int16))
 
-		scipy.io.wavfile.write(dirname+"SamplePulse.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['SamplePulse'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"SamplePulse.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['SamplePulse'].astype(np.int16))
 
-		scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['I_Mixer'].astype(np.int16))
-		scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator[1]['Q_Mixer'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"I_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['I_Mixer'].astype(np.int16))
+		scipy.io.wavfile.write(dirname+"Q_Mixer.wav", FilterDecimator['OutputSampleRate'], QPSKDemodulator['Q_Mixer'].astype(np.int16))
 
 
 	#print(PulseFilter['Taps'])
@@ -478,15 +468,15 @@ def FullProcess(state):
 		plt.subplot(221)
 		#plt.plot(FilterDecimator['FilterBuffer'])
 		plt.plot(FilterDecimator['FilterBuffer'])
-		plt.plot(QPSKDemodulator[1]['I_LPFOutput'])
+		plt.plot(QPSKDemodulator['I_LPFOutput'])
 		plt.plot(FilterDecimator['EnvelopeBuffer'])
-		#plt.plot(BPSKDemodulator[1]['Q_LPFOutput'])
+		#plt.plot(QPSKDemodulator[1]['Q_LPFOutput'])
 		plt.title('I LPF Output')
 		plt.legend(['Filtered Input','I_LPF Output','Envelope'])
 		plt.subplot(222)
-		plt.plot(QPSKDemodulator[1]['LoopMixer'])
-		plt.plot(QPSKDemodulator[1]['LoopIntegral'])
-		plt.plot(QPSKDemodulator[1]['LoopFilterOutput'])
+		plt.plot(QPSKDemodulator['LoopMixer'])
+		plt.plot(QPSKDemodulator['LoopIntegral'])
+		plt.plot(QPSKDemodulator['LoopFilterOutput'])
 		plt.legend(['LoopMixer','LoopIntegral', 'LoopFilter'])
 		plt.title('Loop Filter Output')
 		plt.subplot(223)
@@ -494,19 +484,8 @@ def FullProcess(state):
 		plt.plot(FilteredQOutput)
 		plt.title('Filtered I/Q Output')
 		plt.subplot(224)
-		plt.plot(QPSKDemodulator[1]['NCOControlOutput'])
+		plt.plot(QPSKDemodulator['NCOControlOutput'])
 		plt.title('NCO Control')
-		plt.show()
-
-
-		plt.figure()
-		plt.title('I/Q Demodulator Constellation')
-		plt.scatter(QPSKDemodulator[1]['I_LPFOutput'], QPSKDemodulator[1]['Q_LPFOutput'], 0.1, c='tab:gray')
-		plt.scatter(FilteredIOutput, FilteredQOutput, 0.1, c='tab:blue')
-		plt.scatter(DataSlicer[1]['IResult'], DataSlicer[1]['QResult'], 5, c='tab:red')
-		plt.legend(['Unfiltered I/Q', 'Filtered I/Q', 'Sample Points'])
-		plt.xlim([-16000,16000])
-		plt.ylim([-12000,12000])
 		plt.show()
 
 	if state['reports'] == True:
