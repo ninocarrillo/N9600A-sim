@@ -505,7 +505,7 @@ def FullProcess(state):
 			report_file.write('\n\n')
 
 			report_file.write('\n')
-			report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter[1]['Taps'], ReceivePulseFilter[1]['Oversample']))
+			report_file.write(fo.GenInt16ArrayC(f'ReceiveFilter', ReceivePulseFilter['Taps'], ReceivePulseFilter['Oversample']))
 			report_file.write('\n\n')
 
 			report_file.write(f'Total packets decoded: {total_packets}')
