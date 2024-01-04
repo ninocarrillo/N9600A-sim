@@ -300,8 +300,8 @@ def DemodulateQPSK(this):
 			# scale the NCO control signal
 			p = np.rint(this['LoopFilterOutput'][index] * this['LoopFilter']['loop filter p'])
 			integral += this['LoopFilterOutput'][index] + this['LoopFilter']['loop integrator trim']
-#			if abs(integral) > this['LoopFilter']['loop filter i max']:
-#				integral = 0
+			if abs(integral) > this['LoopFilter']['loop filter i max']:
+				integral = 0
 
 			this['LoopIntegral'][index] = integral
 
