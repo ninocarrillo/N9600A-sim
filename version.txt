@@ -4,4 +4,8 @@ All 4 are working well, sensitive as expected.
 300 sym/sec modes take too long to lock on to 
 offset carriers.
 
+- 600 QPSK is now retuned, it's very good. Fast and sensitive.
+
+I'm going to retune 300 BPSK again next.
+
 This is a good checkpoint to return to.
