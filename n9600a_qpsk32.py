@@ -432,7 +432,7 @@ def FullProcess(state):
 			print(f'{filename}')
 			if state['reports'] == True:
 				try:
-					bin_file = open(dirname + filename + '.bin', '+wb')
+					bin_file = open(dirname + filename + '.txt', '+wb')
 				except:
 					pass
 				with bin_file:

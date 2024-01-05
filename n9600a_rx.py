@@ -11,8 +11,6 @@ import n9600a_rx_gfsk2 as gfsk2
 import n9600a_rx_rrcfsk as rrcfsk
 import n9600a_nco as nco
 import n9600a_filters as filters
-import n9600a_bpsk as bpsk
-import n9600a_qpsk as qpsk
 import n9600a_qpsk32 as qpsk32
 import n9600a_bpsk32 as bpsk32
 import numpy as np
@@ -153,12 +151,6 @@ if state['iterators'] > 0:
 		elif DemodulatorType == 'rrcfsk':
 			IteratorResults[state['iterators']][cycle_number] = rrcfsk.FullProcess(state)
 
-		elif DemodulatorType== 'bpsk':
-			IteratorResults[state['iterators']][cycle_number] = bpsk.FullProcess(state)
-
-		elif DemodulatorType == 'qpsk':
-			IteratorResults[state['iterators']][cycle_number] = qpsk.FullProcess(state)
-
 		elif DemodulatorType == 'qpsk32':
 			IteratorResults[state['iterators']][cycle_number] = qpsk32.FullProcess(state)
 
@@ -223,17 +215,11 @@ else:
 	elif DemodulatorType == 'rrcfsk':
 		rrcfsk.FullProcess(state)
 
-	elif DemodulatorType== 'bpsk':
-		bpsk.FullProcess(state)
-
-	elif DemodulatorType == 'qpsk':
-		qpsk.FullProcess(state)
-
 	elif DemodulatorType == 'qpsk32':
 		qpsk32.FullProcess(state)
 
 	elif DemodulatorType == 'bpsk32':
 		bpsk32.FullProcess(state)
-		
+
 	elif DemodulatorType == 'newbpsk32':
 		bpsk32.FullProcessNew(state)
