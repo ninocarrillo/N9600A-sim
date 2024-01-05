@@ -194,13 +194,6 @@ def GetBPSKDemodConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "loop filter gain"
-	try:
-		this['LoopFilter'][f'{key_string}'] = float(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
 	key_string = "loop integrator trim"
 	try:
 		this['LoopFilter'][f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
