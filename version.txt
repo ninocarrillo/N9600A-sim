@@ -13,5 +13,7 @@ I'm going to retune 300 BPSK again next.
 - I tried retuning 1200 BPSK but the improvements were slightly worse.
 - Reverted 1200 BSPK to last tune. It's very good.
 
+Next is one more check on QPSK 2400.
+
 
 This is a good checkpoint to return to.
