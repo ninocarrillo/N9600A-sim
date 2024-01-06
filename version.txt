@@ -17,5 +17,8 @@ Next is one more check on QPSK 2400.
 The offset response time is too long (up to 10 packets)!
 Lowering max offset to 25Hz for this mode.
 
+QPSK 600 max offset now 13Hz, 133% limit
+
+Validating for firmware .34 release
 
 This is a good checkpoint to return to.
