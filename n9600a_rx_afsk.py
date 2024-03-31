@@ -254,6 +254,9 @@ def FullProcess(state):
 							CRC = AX25Decoder[demod_index]['CRC'][0]
 							filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
 							print(f'{dirname+filename}')
+							for byte in AX25Decoder[demod_index]['Output']:
+								print(hex(byte), end = ' ')
+							print(' ')
 							try:
 								bin_file = open(dirname + filename + '.bin', '+wb')
 							except:
