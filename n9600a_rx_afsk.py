@@ -254,17 +254,17 @@ def FullProcess(state):
 							CRC = AX25Decoder[demod_index]['CRC'][0]
 							filename = f'Packet-{total_packets}_CRC-{format(CRC,"#06x")}_decoder-{demod_index}'
 							print(f'{dirname+filename}')
-							for byte in AX25Decoder[demod_index]['Output']:
-								print(hex(byte), end = ' ')
-							print(' ')
-							try:
-								bin_file = open(dirname + filename + '.bin', '+wb')
-							except:
-								pass
-							with bin_file:
-								for byte in AX25Decoder[demod_index]['Output']:
-									bin_file.write(byte.astype('uint8'))
-								bin_file.close()
+							# for byte in AX25Decoder[demod_index]['Output']:
+								# print(hex(byte), end = ' ')
+							# print(' ')
+							# try:
+								# bin_file = open(dirname + filename + '.bin', '+wb')
+							# except:
+								# pass
+							# with bin_file:
+								# for byte in AX25Decoder[demod_index]['Output']:
+									# bin_file.write(byte.astype('uint8'))
+								# bin_file.close()
 
 
 	scipy.io.wavfile.write(dirname+"DemodSignal1.wav", FilterDecimator['OutputSampleRate'], AFSKDemodulator[1]['Result'].astype(np.int16))
