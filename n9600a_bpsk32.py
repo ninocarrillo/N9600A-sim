@@ -666,16 +666,16 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
 
-	plt.figure()
-	plt.plot(PulseFilter['FilterWindow'])
-	plt.title('Filter Window')
-	plt.show()
+	#plt.figure()
+	#plt.plot(PulseFilter['FilterWindow'])
+	#plt.title('Filter Window')
+	#plt.show()
 
-	plt.figure()
-	plt.plot(PulseFilter['Taps'])
-	plt.plot(PulseFilter['WindowedRC'])
-	plt.title('Windowed RRC')
-	plt.show()
+	#plt.figure()
+	#plt.plot(PulseFilter['Taps'])
+	#plt.plot(PulseFilter['WindowedRC'])
+	#plt.title('Windowed RRC')
+	#plt.show()
 
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
@@ -683,16 +683,16 @@ def ModulateRRC(state):
 	NCO = nco.InitNCO(NCO)
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
-	print(max(PulseFilter['FilterPatterns']))
-	plt.plot(PulseFilter['FilterPatterns'])
-	plt.show()
+	#print(max(PulseFilter['FilterPatterns']))
+	#plt.plot(PulseFilter['FilterPatterns'])
+	#plt.show()
 
 	#BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 	BitStream = pulse_filter.BytesToSymbols(state['InputData'], PulseFilter)
-	plt.figure()
-	plt.plot(BitStream)
-	plt.title('BitStream')
-	plt.show()
+	#plt.figure()
+	#plt.plot(BitStream)
+	#plt.title('BitStream')
+	#plt.show()
 	#ModulatingWaveform = np.convolve(PulseFilter['Taps'], BitStream)
 	#ModAmplitude = 64
 	#ModulatingWaveform = np.rint(ModAmplitude * ModulatingWaveform / max(ModulatingWaveform))
@@ -711,10 +711,10 @@ def ModulateRRC(state):
 				ModulatingWaveform[i] = PulseFilter['FilterPatterns'][(shift_register * PulseFilter['Oversample']) + phase]
 				i += 1
 
-	plt.figure()
-	plt.plot(ModulatingWaveform)
-	plt.title('Modulating Waveform')
-	plt.show()
+	#plt.figure()
+	#plt.plot(ModulatingWaveform)
+	#plt.title('Modulating Waveform')
+	#plt.show()
 
 	Baseband = np.zeros(len(ModulatingWaveform))
 	i = 0
@@ -723,10 +723,10 @@ def ModulateRRC(state):
 		Baseband[i] = Amplitude * NCO['Sine'] // PulseFilter['amplitude']
 		i += 1
 
-	plt.figure()
-	plt.plot(Baseband)
-	plt.title('Baseband')
-	plt.show()
+	#plt.figure()
+	#plt.plot(Baseband)
+	#plt.title('Baseband')
+	#plt.show()
 
 	try:
 		plt.figure()
@@ -742,7 +742,8 @@ def ModulateRRC(state):
 	plt.subplot(222)
 	plt.plot(ModulatingWaveform, 'b')
 
-	eye_data = pulse_filter.GenEyeData2(ModulatingWaveform, PulseFilter['Oversample'], 0)
+	DemodulatedWaveform = np.convolve(PulseFilter['Taps'], ModulatingWaveform, 'valid')
+	eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(eye_data)
 
