@@ -723,29 +723,25 @@ def ModulateRRC(state):
 		Baseband[i] = Amplitude * NCO['Sine'] // PulseFilter['amplitude']
 		i += 1
 
-	#plt.figure()
-	#plt.plot(Baseband)
-	#plt.title('Baseband')
-	#plt.show()
+	plt.figure()
+	plt.subplot(221)
+	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
+	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	plt.xticks(PulseFilter['SymbolTicks'])
+	plt.xticks(color='w')
+	plt.grid(True)
+	plt.title("RRC Filter Taps")
 
-	try:
-		plt.figure()
-		plt.subplot(221)
-		plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-		#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
-		plt.xticks(PulseFilter['SymbolTicks'])
-		plt.xticks(color='w')
-		plt.grid(True)
-	except:
-			pass
-
-	plt.subplot(222)
-	plt.plot(ModulatingWaveform, 'b')
 
 	DemodulatedWaveform = np.convolve(PulseFilter['Taps'], ModulatingWaveform, 'valid')
-	eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform, PulseFilter['Oversample'], 0)
+	mod_eye_data = pulse_filter.GenEyeData2(ModulatingWaveform / PulseFilter['amplitude'], PulseFilter['Oversample'], 0)
+	demod_eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform / PulseFilter['amplitude'], PulseFilter['Oversample'], 0)
 	plt.subplot(223)
-	plt.plot(eye_data)
+	plt.plot(mod_eye_data)
+	plt.title("Transmit Eye")
+	plt.subplot(224)
+	plt.plot(demod_eye_data)
+	plt.title("Receive Eye")
 
 
 	fft_n = len(ModulatingWaveform)
@@ -755,10 +751,13 @@ def ModulateRRC(state):
 	ModulatingWaveform_fft = fft(ModulatingWaveform)
 	fft_max = max(abs(ModulatingWaveform_fft))
 	ModulatingWaveform_fft = ModulatingWaveform_fft / fft_max
-	plt.subplot(224)
+	plt.subplot(222)
 	plt.plot(x_fft, 10*np.log(np.abs(ModulatingWaveform_fft[0:fft_n//2])))
-	plt.xlim(0,PulseFilter['symbol rate'] * 4)
+	plt.xlim(0,3000)
 	plt.ylim(-100,10)
+	plt.title("Half Bandwidth")
+	plt.grid(True)
+	plt.xticks(range(0,3000,500))
 	plt.show()
 
 	#generate a new directory for the reports
