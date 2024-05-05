@@ -725,8 +725,7 @@ def ModulateRRC(state):
 
 	plt.figure()
 	plt.subplot(221)
-	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	plt.plot(PulseFilter['Taps'], 'b')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
