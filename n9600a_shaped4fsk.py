@@ -36,9 +36,9 @@ def ModulateRRC(state):
 	state['InputData'][index] = 0x48
 	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
 	waveform = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
-	waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform))
-	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform) // (PulseFilter['amplitude'] * 3))
-	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'])
+	waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid'))
+	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
+	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'], 'valid')
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
@@ -63,16 +63,14 @@ def ModulateRRC(state):
 	plt.legend(["RRC", "RC"])
 	plt.grid(True)
 
-	plt.subplot(222)
-	plt.plot(waveform, 'b')
-	plt.plot(waveform_2, 'r')
-	plt.title("Modulation Waveform")
-	plt.legend(["Post Transmit Filter", "Post Receive Filter"])
-
-	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], PulseFilter['Oversample'] // 2)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 1 + PulseFilter['Oversample'] // 2)
+	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 1 + PulseFilter['Oversample'] // 2)
 	plt.subplot(223)
-	plt.plot(eye_data)
-	plt.title("Eye Diagram")
+	plt.plot(tx_eye_data)
+	plt.title("TX Eye")
+	plt.subplot(224)
+	plt.plot(rx_eye_data)
+	plt.title("RX Eye")
 
 	fft_n = len(waveform)
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
@@ -80,7 +78,7 @@ def ModulateRRC(state):
 	waveform_fft = fft(waveform)
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
-	plt.subplot(224)
+	plt.subplot(222)
 	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
