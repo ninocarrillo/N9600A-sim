@@ -404,7 +404,7 @@ def ExpandSampleStream(data, filter):
 		for byte in data:
 			byte = int(byte)
 			for byte_index in range(symbols_per_byte):
-				symbol = np.bitwise_and(byte, symbol_mask)
+				symbol = np.bitwise_and(byte, 255)
 				byte = np.right_shift(byte, filter['SymbolMap']['symbol bits'])
 				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
 				sample_index += 1
