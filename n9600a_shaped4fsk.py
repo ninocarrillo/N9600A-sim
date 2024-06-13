@@ -192,10 +192,10 @@ def ModulateGauss(state):
 
 	plt.subplot(222)
 	plt.plot(waveform, 'b')
-	plt.plot(waveform_2, 'r')
+	#plt.plot(waveform_2, 'r')
 
 
-	eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 0)
+	eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(eye_data)
 
