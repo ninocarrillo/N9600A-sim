@@ -178,6 +178,15 @@ def ModulateGauss(state):
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
+
+	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
+	#step = np.ones(PulseFilter['Oversample'])
+	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], step, 'full') // PulseFilter['Oversample']
+	#PulseFilter['Taps'] = PulseFilter['Taps'][(PulseFilter['Oversample']-1):]
+
+	#create phased filter oversample sections:
+	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
+
 	waveform = np.convolve(PulseFilter['Taps'], BitStream)
 	ReceiveFilter = np.ones(17) / 17
 	waveform_2 = np.convolve(ReceiveFilter, waveform)
@@ -229,6 +238,38 @@ def ModulateGauss(state):
 	waveform = waveform / max(waveform)
 	waveform = waveform * 32767
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], waveform.astype(np.int16))
+
+	# Generate and save report file
+	report_file_name = f'run{run_number}_report.txt'
+	try:
+		report_file = open(dirname + report_file_name, 'w+')
+	except:
+		print('Unable to create report file.')
+	with report_file:
+		report_file.write('# Command line: ')
+		for argument in sys.argv:
+			report_file.write(f'{argument} ')
+		report_file.write('\n#\n########## Begin Transcribed .ini file: ##########\n')
+		try:
+			ini_file = open(sys.argv[1])
+		except:
+			report_file.write('Unable to open .ini file.')
+		with ini_file:
+			for character in ini_file:
+				report_file.write(character)
+
+		report_file.write('\n\n########## End Transcribed .ini file: ##########\n')
+
+		report_file.write('\n\n# Gaussian Pulse Filter\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'GaussFilter', PulseFilter['Taps'], PulseFilter['Oversample']))
+		report_file.write('\n')
+
+		report_file.write('\n\n# Gaussian Pulse Filter Phased Taps\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'PhaseTaps', PulseFilter['PhaseTaps'], PulseFilter['symbol span']))
+		report_file.write('\n')
+
 	return
 
 def GaussFilterGen(state):
