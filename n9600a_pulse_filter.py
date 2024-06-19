@@ -440,7 +440,7 @@ def SampleSync4FSK(samples, oversample):
 		threshold.append(sample_threshold)
 		if phase_clock >= rollover_threshold:
 			phase_clock -= oversample
-			print(hex(register))
+			#print(hex(register))
 			register = (register << 1) & 0xFFFF
 			if sample >= 0:
 				register += 1
