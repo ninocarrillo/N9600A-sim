@@ -417,6 +417,51 @@ def ExpandSampleStream(data, filter):
 		sample_index += 1
 	return samples
 
+def SampleSync4FSK(samples, oversample):
+	threshold_array = [0,0,0,0]
+	threshold_index = 0
+	sync_samples = []
+	phase_clock = 0.0
+	sampling_phase_clock = phase_clock
+	rollover_threshold = (oversample / 2.0)-1
+	lock_rate = 0.8
+	register = int(0)
+	last_sample = 0
+	sample_threshold = 0
+	threshold = []
+	for sample in samples:
+		phase_clock += 1.0
+		sampling_phase_clock += 1.00005
+		if sampling_phase_clock >= rollover_threshold:
+			sampling_phase_clock -= oversample
+			sync_samples.append(sample)
+		else:
+			sync_samples.append(0)
+		threshold.append(sample_threshold)
+		if phase_clock >= rollover_threshold:
+			phase_clock -= oversample
+			print(hex(register))
+			register = (register << 1) & 0xFFFF
+			if sample >= 0:
+				register += 1
+			if register == 0x5555:
+				sampling_phase_clock = phase_clock
+				threshold_array[threshold_index] = abs(sample * 2 / 3)
+				threshold_index += 1
+				if threshold_index > 3:
+					threshold_index = 0
+				sample_threshold = np.mean(threshold_array)
+
+
+		# check for zero-crossing in sample stream
+		if (
+			(last_sample < 0.0 and sample >= 0.0)
+			or (last_sample >= 0.0 and sample < 0.0)
+		):
+			phase_clock = phase_clock * lock_rate
+		last_sample = sample
+	return [sync_samples, threshold]
+
 def GenPhaseData(samples, oversample, depth):
 	phase_index = 0
 	depth_index = 0

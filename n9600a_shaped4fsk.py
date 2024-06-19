@@ -26,8 +26,8 @@ def ModulateRRC(state):
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 
-	for index in range(13):
-		state['InputData'][index] = 119
+	for index in range(8):
+		state['InputData'][index] = 0x77
 	index +=1
 	state['InputData'][index] = 0xF1
 	index +=1
@@ -86,25 +86,31 @@ def ModulateRRC(state):
 	plt.show()
 
 	# calculate mean and variance for each sample phase
-	depth = (2*PulseFilter['Oversample']) + 1
-	phase_data = pulse_filter.GenPhaseData(waveform_2, PulseFilter['Oversample'], depth)
-	plt.figure()
-	plt.subplot(221)
-	plt.plot(phase_data[4],'.')
-	plt.plot(waveform_2)
-	plt.subplot(223)
-	plt.plot(phase_data[1])
-	plt.plot(phase_data[2])
-	plt.plot(waveform_2)
-	plt.title('Max Min Spread (maximize)')
-	plt.subplot(224)
-	plt.plot(phase_data[2])
-	plt.title('Dispersion (minimize)')
-	plt.subplot(222)
-	plt.plot(phase_data[3])
-	plt.plot(phase_data[5])
-	plt.show()
+	# depth = (2*PulseFilter['Oversample']) + 1
+	# phase_data = pulse_filter.GenPhaseData(waveform_2, PulseFilter['Oversample'], depth)
+	# plt.figure()
+	# plt.subplot(221)
+	# plt.plot(phase_data[4],'.')
+	# plt.plot(waveform_2)
+	# plt.subplot(223)
+	# plt.plot(phase_data[1])
+	# plt.plot(phase_data[2])
+	# plt.plot(waveform_2)
+	# plt.title('Max Min Spread (maximize)')
+	# plt.subplot(224)
+	# plt.plot(phase_data[2])
+	# plt.title('Dispersion (minimize)')
+	# plt.subplot(222)
+	# plt.plot(phase_data[3])
+	# plt.plot(phase_data[5])
+	# plt.show()
 
+	sampled_data = pulse_filter.SampleSync4FSK(waveform_2, PulseFilter['Oversample'])
+	plt.figure()
+	plt.plot(sampled_data[0], '.')
+	plt.plot(waveform_2)
+	plt.plot(sampled_data[1], '.')
+	plt.show()
 
 
 	#generate a new directory for the reports
