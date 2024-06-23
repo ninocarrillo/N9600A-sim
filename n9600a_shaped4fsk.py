@@ -26,6 +26,8 @@ def ModulateRRC(state):
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 
+	state['InputData'] = np.random.randint(0,256,1023)
+
 	for index in range(8):
 		state['InputData'][index] = 0x77
 	index +=1
@@ -71,6 +73,8 @@ def ModulateRRC(state):
 	plt.subplot(224)
 	plt.plot(rx_eye_data)
 	plt.title("RX Eye")
+
+	print("Max modulated waveform value: ", max(waveform))
 
 	fft_n = len(waveform)
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)

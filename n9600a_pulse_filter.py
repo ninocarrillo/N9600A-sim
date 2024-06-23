@@ -424,14 +424,16 @@ def SampleSync4FSK(samples, oversample):
 	phase_clock = 0.0
 	sampling_phase_clock = phase_clock
 	rollover_threshold = (oversample / 2.0)-1
-	lock_rate = 0.8
+	lock_rate = 0.7
 	register = int(0)
 	last_sample = 0
 	sample_threshold = 0
 	threshold = []
+	trigger = True
 	for sample in samples:
 		phase_clock += 1.0
-		sampling_phase_clock += 1.00005
+		#sampling_phase_clock += 1.0 + np.random.uniform(-25e-6,25e-6)
+		sampling_phase_clock += 1.0 + 25e-6
 		if sampling_phase_clock >= rollover_threshold:
 			sampling_phase_clock -= oversample
 			sync_samples.append(sample)
@@ -444,12 +446,13 @@ def SampleSync4FSK(samples, oversample):
 			register = (register << 1) & 0xFFFF
 			if sample >= 0:
 				register += 1
-			if register == 0x5555:
+			threshold_array[threshold_index] = abs(sample * 2 / 3)
+			threshold_index += 1
+			if threshold_index > 3:
+				threshold_index = 0
+			if (register == 0x5555) and (trigger == True):
+				trigger = False
 				sampling_phase_clock = phase_clock
-				threshold_array[threshold_index] = abs(sample * 2 / 3)
-				threshold_index += 1
-				if threshold_index > 3:
-					threshold_index = 0
 				sample_threshold = np.mean(threshold_array)
 
 
