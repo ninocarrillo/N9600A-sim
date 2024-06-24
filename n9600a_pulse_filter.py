@@ -226,7 +226,11 @@ def InitGaussFilter(this):
 		except:
 			pass
 		index += 1
+	print("Tap count", len(this['Taps']))
 	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	this['Taps'] = np.convolve(this['Taps'], np.ones(this['Oversample']), 'same')
+	print("Oversample", this['Oversample'])
+	print("Tap count", len(this['Taps']))
 	return this
 
 

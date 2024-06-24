@@ -186,8 +186,10 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
+	state['InputData'] = np.random.randint(0,256,1023)
+	for i in range (100):
+		state['InputData'][i] = 0x77
 	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
-
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	#step = np.ones(PulseFilter['Oversample'])
@@ -198,9 +200,6 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	waveform = np.convolve(PulseFilter['Taps'], BitStream)
-	ReceiveFilter = np.ones(17) / 17
-	waveform_2 = np.convolve(ReceiveFilter, waveform)
-	PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.subplot(221)
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
