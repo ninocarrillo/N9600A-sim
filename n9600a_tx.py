@@ -40,7 +40,7 @@ state = {}
 state['argv'] = sys.argv
 state['config'] = config
 
-data_count = 2000
+data_count = 10000
 np.random.seed(0)
 state['InputData'] = np.random.randint(0,256, data_count)
 # try:
