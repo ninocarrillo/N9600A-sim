@@ -124,8 +124,19 @@ def ModulateRRC(state):
 		energy_sum += np.abs(waveform_fft[i]) / total_energy
 	obw = x_fft[i] * 2
 
+	obw_mask = np.zeros(4)
+	obw_x = np.zeros(4)
+	obw_mask[0] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[1] = 0
+	obw_mask[2] = 0
+	obw_mask[3] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_x[0] = -x_fft[i]
+	obw_x[1] = -x_fft[i]
+	obw_x[2] = x_fft[i]
+	obw_x[3] = x_fft[i]
 
 	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	plt.plot(obw_x, obw_mask)
 	plt.grid(True)
 	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
 	#plt.plot(np.abs(waveform_fft), linewidth=1)
@@ -293,8 +304,20 @@ def ModulateGauss(state):
 		energy_sum += np.abs(waveform_fft[i]) / total_energy
 	obw = x_fft[i] * 2
 
+	obw_mask = np.zeros(4)
+	obw_x = np.zeros(4)
+	obw_mask[0] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[1] = 0
+	obw_mask[2] = 0
+	obw_mask[3] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_x[0] = -x_fft[i]
+	obw_x[1] = -x_fft[i]
+	obw_x[2] = x_fft[i]
+	obw_x[3] = x_fft[i]
+
 
 	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	plt.plot(obw_x, obw_mask)
 	plt.grid(True)
 	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
 	#plt.plot(np.abs(waveform_fft), linewidth=1)
