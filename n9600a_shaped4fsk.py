@@ -23,29 +23,24 @@ def ModulateRRC(state):
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 
 
+	state['InputData'] = np.random.randint(0,256,1023)
+	for index in range(20):
+		state['InputData'][index] = 0x77
+	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+
+	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+
+	#plt.figure()
+	#plt.plot(modulating_waveform)
+	#plt.show()
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
-
-	state['InputData'] = np.random.randint(0,256,1023)
-
-	for index in range(8):
-		state['InputData'][index] = 0x77
-	index +=1
-	state['InputData'][index] = 0xF1
-	index +=1
-	state['InputData'][index] = 0x5E
-	index +=1
-	state['InputData'][index] = 0x48
-	waveform = pulse_filter.ImpulseOversample2(state['InputData'], PulseFilter)
-	waveform = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
-	waveform = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid'))
+	waveform = np.rint(np.convolve(PulseFilter['Taps'], symbol_stream, 'valid'))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
-	waveform_3 = np.convolve(PulseFilter['Taps'], state['InputData'], 'valid')
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
-	#PulseFilter['RC'] = np.convolve(PulseFilter['Taps'], PulseFilter['Taps'], 'same')
 	plt.figure()
 	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
@@ -65,14 +60,19 @@ def ModulateRRC(state):
 	plt.legend(["RRC", "RC"])
 	plt.grid(True)
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 1 + PulseFilter['Oversample'] // 2)
-	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 1 + PulseFilter['Oversample'] // 2)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
 	plt.subplot(223)
-	plt.plot(tx_eye_data)
+	plt.plot(tx_eye_data, linewidth=1)
 	plt.title("TX Eye")
+	plt.grid(True)
+	plt.xticks(range(PulseFilter['Oversample']))
+
+	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
 	plt.subplot(224)
-	plt.plot(rx_eye_data)
+	plt.plot(rx_eye_data, linewidth=1)
 	plt.title("RX Eye")
+	plt.grid(True)
+	plt.xticks(range(PulseFilter['Oversample']))
 
 	print("Max modulated waveform value: ", max(waveform))
 
@@ -83,39 +83,42 @@ def ModulateRRC(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 	plt.subplot(222)
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
+	plt.grid(True)
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
-	plt.title("Frequency Spectrum")
+	plt.title("Baseband Spectrum")
 	plt.show()
-
-	# calculate mean and variance for each sample phase
-	# depth = (2*PulseFilter['Oversample']) + 1
-	# phase_data = pulse_filter.GenPhaseData(waveform_2, PulseFilter['Oversample'], depth)
-	# plt.figure()
-	# plt.subplot(221)
-	# plt.plot(phase_data[4],'.')
-	# plt.plot(waveform_2)
-	# plt.subplot(223)
-	# plt.plot(phase_data[1])
-	# plt.plot(phase_data[2])
-	# plt.plot(waveform_2)
-	# plt.title('Max Min Spread (maximize)')
-	# plt.subplot(224)
-	# plt.plot(phase_data[2])
-	# plt.title('Dispersion (minimize)')
-	# plt.subplot(222)
-	# plt.plot(phase_data[3])
-	# plt.plot(phase_data[5])
-	# plt.show()
 
 	sampled_data = pulse_filter.SampleSync4FSK(waveform_2, PulseFilter['Oversample'])
 	plt.figure()
+	plt.title("Samples and decision threshold")
 	plt.plot(sampled_data[0], '.')
 	plt.plot(waveform_2)
 	plt.plot(sampled_data[1], '.')
 	plt.show()
 
+
+	# create an FM waveform
+	inner_deviation = 648
+	fm_waveform = np.zeros(len(waveform))
+	t = 0
+	for i in range(len(fm_waveform)):
+		t += inner_deviation * modulating_waveform[i] / PulseFilter['sample rate']
+		fm_waveform[i] = np.sin(2*np.pi*t)
+
+	plt.figure()
+
+	fft_n = len(fm_waveform)
+	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
+	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])
+	waveform_fft = fft(fm_waveform)
+	fft_max = max(abs(waveform_fft))
+	waveform_fft = waveform_fft / fft_max
+
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+
+	plt.show()
 
 	#generate a new directory for the reports
 	run_number = 0
@@ -187,49 +190,77 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	state['InputData'] = np.random.randint(0,256,1023)
-	for i in range (100):
+	for i in range (20):
 		state['InputData'][i] = 0x77
-	BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+
+	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+
+	plt.figure()
+	plt.plot(modulating_waveform)
+	plt.show()
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
-	#step = np.ones(PulseFilter['Oversample'])
-	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], step, 'full') // PulseFilter['Oversample']
-	#PulseFilter['Taps'] = PulseFilter['Taps'][(PulseFilter['Oversample']-1):]
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
-	waveform = np.convolve(PulseFilter['Taps'], BitStream)
+	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
 	plt.figure()
+	plt.suptitle(f"Gauss 4FSK BT:{PulseFilter['BT']}, Expander: {PulseFilter['expander']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
+	plt.title("Impulse Response")
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
-
-	plt.subplot(222)
-	plt.plot(waveform, 'b')
-	#plt.plot(waveform_2, 'r')
-
-
-	eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
-	plt.subplot(223)
-	plt.plot(eye_data)
-
 
 	fft_n = len(waveform)
 	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
 	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
 	waveform_fft = fft(waveform)
-	waveform_fft = fft(waveform)
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
-	plt.subplot(224)
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])))
+	plt.subplot(222)
+	plt.title("Baseband Spectrum")
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
+	plt.grid(True)
+
+	eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	plt.subplot(223)
+	plt.title("Eye Diagram")
+	plt.plot(eye_data, linewidth=1)
+	plt.xticks(range(PulseFilter['Oversample']))
+	plt.grid(True)
+
+	plt.subplot(224)
+	plt.title("Modulating Waveform")
+	plt.plot(waveform, 'b', linewidth=1)
 	plt.show()
+
+	# create an FM waveform
+	inner_deviation = 1200
+	fm_waveform = np.zeros(len(waveform))
+	t = 0
+	for i in range(len(fm_waveform)):
+		t += inner_deviation * modulating_waveform[i] / PulseFilter['sample rate']
+		fm_waveform[i] = np.sin(2*np.pi*t)
+
+	plt.figure()
+
+	fft_n = len(fm_waveform)
+	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
+	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])
+	waveform_fft = fft(fm_waveform)
+	fft_max = max(abs(waveform_fft))
+	waveform_fft = waveform_fft / fft_max
+
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+
+	plt.show()
+
 
 	#generate a new directory for the reports
 	run_number = 0

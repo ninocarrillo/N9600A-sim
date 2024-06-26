@@ -9,13 +9,6 @@ def GetSymbolMapConfig(state):
 	this = {}
 	id_string = "Symbol Map"
 
-	key_string = "expander"
-	try:
-		this[key_string] = config[f'{id_string}'][f'{key_string}']
-	except:
-		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
 	key_string = "symbol bits"
 	try:
 		this[key_string] = int(config[f'{id_string}'][f'{key_string}'])
@@ -193,6 +186,12 @@ def GetGaussFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "expander"
+	try:
+		this[f'{key_string}'] = config[f'{id_string}'][f'{key_string}']
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 	return this
 
 def InitFilterDecimator(filter_decimator):
@@ -226,11 +225,9 @@ def InitGaussFilter(this):
 		except:
 			pass
 		index += 1
-	print("Tap count", len(this['Taps']))
-	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
-	this['Taps'] = np.convolve(this['Taps'], np.ones(this['Oversample']), 'same')
-	print("Oversample", this['Oversample'])
-	print("Tap count", len(this['Taps']))
+	if this['expander'] == 'step':
+		this['Taps'] = np.convolve(this['Taps'], np.ones(this['Oversample']), 'same')
+	this['Taps'] = this['Taps'] / max(this['Taps'])
 	return this
 
 
@@ -262,7 +259,8 @@ def InitRRCFilter(this):
 			except:
 				pass
 		index += 1
-	this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	#this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	this['Taps'] = this['Taps'] / max(this['Taps'])
 	this['RC'] = np.convolve(this['Taps'], this['Taps'], 'same')
 
 	this['FilterWindow'] = np.zeros(this['TapCount'])
@@ -392,30 +390,30 @@ def ExpandSampleStream(data, filter):
 	samples = np.zeros(sample_count + flush_count)
 	sample_index = 0
 	symbols_per_byte = 8 // filter['SymbolMap']['symbol bits']
-	if filter['SymbolMap']['expander'] == 'impulse':
-		for byte in data:
-			byte = int(byte)
-			for byte_index in range(symbols_per_byte):
-				symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
-				byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
-				byte = np.bitwise_and(byte, 255)
-				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+	#if filter['SymbolMap']['expander'] == 'impulse':
+	for byte in data:
+		byte = int(byte)
+		for byte_index in range(symbols_per_byte):
+			symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
+			byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
+			byte = np.bitwise_and(byte, 255)
+			samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+			sample_index += 1
+			for extend_index in range(filter['Oversample'] - 1):
+				samples[sample_index] = 0
 				sample_index += 1
-				for extend_index in range(filter['Oversample'] - 1):
-					samples[sample_index] = 0
-					sample_index += 1
-	elif filter['SymbolMap']['expander'] == 'step':
-		for byte in data:
-			byte = int(byte)
-			for byte_index in range(symbols_per_byte):
-				symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
-				byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
-				byte = np.bitwise_and(byte, 255)
-				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
-				sample_index += 1
-				for extend_index in range(filter['Oversample'] - 1):
-					samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
-					sample_index += 1
+	# elif filter['SymbolMap']['expander'] == 'step':
+	# 	for byte in data:
+	# 		byte = int(byte)
+	# 		for byte_index in range(symbols_per_byte):
+	# 			symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
+	# 			byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
+	# 			byte = np.bitwise_and(byte, 255)
+	# 			samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+	# 			sample_index += 1
+	# 			for extend_index in range(filter['Oversample'] - 1):
+	# 				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+	# 				sample_index += 1
 	for flush_index in range(flush_count):
 		samples[sample_index] = 0
 		sample_index += 1
