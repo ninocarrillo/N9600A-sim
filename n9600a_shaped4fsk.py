@@ -30,10 +30,6 @@ def ModulateRRC(state):
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
 
-	#plt.figure()
-	#plt.plot(modulating_waveform)
-	#plt.show()
-
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	waveform = np.rint(np.convolve(PulseFilter['Taps'], symbol_stream, 'valid'))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
@@ -55,7 +51,6 @@ def ModulateRRC(state):
 
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
-	#plt.xlabel("Symbol Intervals")
 	plt.title("Impulse Response")
 	plt.legend(["RRC", "RC"])
 	plt.grid(True)
@@ -195,10 +190,6 @@ def ModulateGauss(state):
 	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
-
-	plt.figure()
-	plt.plot(modulating_waveform)
-	plt.show()
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 
