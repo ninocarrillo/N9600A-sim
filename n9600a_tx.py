@@ -15,7 +15,7 @@ import os
 import numpy as np
 import random
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 2:
 	print("Not enough arguments. Usage: py -3 n9600a_tx.py <ini file>")
 	sys.exit(-1)
 
@@ -40,7 +40,7 @@ state = {}
 state['argv'] = sys.argv
 state['config'] = config
 
-data_count = 10000
+data_count = 2000
 np.random.seed(0)
 state['InputData'] = np.random.randint(0,256, data_count)
 # try:
