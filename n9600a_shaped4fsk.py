@@ -241,7 +241,7 @@ def ModulateGauss(state):
 	plt.show()
 
 	# create an FM waveform
-	inner_deviation = 1200
+	inner_deviation = 648
 	fm_waveform = np.zeros(len(waveform))
 	t = 0
 	for i in range(len(fm_waveform)):
