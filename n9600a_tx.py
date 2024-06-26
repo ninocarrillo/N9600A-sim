@@ -43,6 +43,9 @@ state['config'] = config
 data_count = 10000
 np.random.seed(0)
 state['InputData'] = np.random.randint(0,256, data_count)
+#for i in range(data_count):
+	#pass
+	#state['InputData'][i] = 0x5F
 # try:
 # 	with open(sys.argv[2], 'rb') as f:
 # 		file_size = os.path.getsize(sys.argv[2])
