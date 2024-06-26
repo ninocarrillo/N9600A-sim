@@ -11,6 +11,7 @@ import n9600a_pulse_filter as pulse_filter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
+from scipy.signal import firwin
 import random
 
 def ModulateRRC(state):
@@ -197,6 +198,18 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+
+	# Create receive lpf
+	PulseFilter['LPFTaps'] = firwin(
+				PulseFilter['Oversample'] * 3,
+				[ PulseFilter['symbol rate'] * 0.8],
+				pass_zero='lowpass',
+				fs=PulseFilter['sample rate']
+			)
+
+	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
+
+
 	plt.figure()
 	plt.suptitle(f"Gauss 4FSK BT:{PulseFilter['BT']}, Expander: {PulseFilter['expander']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
@@ -219,16 +232,19 @@ def ModulateGauss(state):
 	plt.ylim(-100,10)
 	plt.grid(True)
 
-	eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
 	plt.subplot(223)
-	plt.title("Eye Diagram")
-	plt.plot(eye_data, linewidth=1)
+	plt.title("TX Eye")
+	plt.plot(tx_eye_data, linewidth=1)
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.grid(True)
 
+	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 0)
 	plt.subplot(224)
-	plt.title("Modulating Waveform")
-	plt.plot(waveform, 'b', linewidth=1)
+	plt.plot(rx_eye_data, linewidth=1)
+	plt.title("RX Eye")
+	plt.grid(True)
+	plt.xticks(range(PulseFilter['Oversample']))
 	plt.show()
 
 	# create an FM waveform
@@ -249,7 +265,20 @@ def ModulateGauss(state):
 	waveform_fft = waveform_fft / fft_max
 
 	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	#plt.plot(x_fft, np.abs(waveform_fft), linewidth=1)
 
+	plt.show()
+
+	# Calculate cumulative power
+	total_energy = sum(np.abs(waveform_fft))
+	energy = np.zeros(len(waveform_fft))
+	energy_sum = 0
+	for i in range(len(energy)):
+		energy_sum += (np.abs(waveform_fft[i]) / total_energy)
+		energy[i] = energy_sum
+
+	plt.figure()
+	plt.plot(energy)
 	plt.show()
 
 
