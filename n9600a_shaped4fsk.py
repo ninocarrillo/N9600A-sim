@@ -220,7 +220,7 @@ def ModulateGauss(state):
 	# Create receive lpf
 	PulseFilter['LPFTaps'] = firwin(
 				PulseFilter['Oversample'] * 3,
-				[ PulseFilter['symbol rate'] * 0.8],
+				[ PulseFilter['symbol rate'] * 0.8 ],
 				pass_zero='lowpass',
 				fs=PulseFilter['sample rate']
 			)
