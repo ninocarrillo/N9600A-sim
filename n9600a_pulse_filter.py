@@ -528,9 +528,9 @@ def GenPhaseData(samples, oversample, depth):
 	return [mean,variance1, variance2, phase_error, selected_samples, best_phase]
 
 def GenEyeData2(samples, oversample, delay):
-	trace_count = int(np.floor((len(samples) - delay) / oversample))
 	#print(trace_count)
-	samples = samples[delay:]
+	samples = samples[(10 * oversample) + delay:-(10*oversample)]
+	trace_count = int(np.floor(len(samples) / oversample))
 	traces = np.zeros([oversample, trace_count])
 	index = 0
 	for trace_number in range(trace_count):

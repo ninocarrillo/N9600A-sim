@@ -39,7 +39,7 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	plt.figure()
-	plt.suptitle(f"RRC 4FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
+	plt.suptitle(f"RRC FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
 	try:
 		plt.plot(PulseFilter['Time'], PulseFilter['Taps'] / max(PulseFilter['Taps']), 'b')
@@ -240,7 +240,7 @@ def ModulateGauss(state):
 
 
 	plt.figure()
-	plt.suptitle(f"Gauss 4FSK BT:{PulseFilter['BT']}, Expander: {PulseFilter['expander']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
+	plt.suptitle(f"Gauss FSK BT:{PulseFilter['BT']}, Expander: {PulseFilter['expander']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
 	plt.title("Impulse Response")
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
