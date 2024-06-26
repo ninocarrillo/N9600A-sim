@@ -24,9 +24,9 @@ def ModulateRRC(state):
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 
 
-	state['InputData'] = np.random.randint(0,256,1023)
-	for index in range(20):
-		state['InputData'][index] = 0x77
+	#state['InputData'] = np.random.randint(0,256,2000)
+	#for index in range(20):
+	#	state['InputData'][index] = 0x77
 	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
@@ -87,20 +87,19 @@ def ModulateRRC(state):
 	plt.show()
 
 	sampled_data = pulse_filter.SampleSync4FSK(waveform_2, PulseFilter['Oversample'])
-	plt.figure()
-	plt.title("Samples and decision threshold")
-	plt.plot(sampled_data[0], '.')
-	plt.plot(waveform_2)
-	plt.plot(sampled_data[1], '.')
-	plt.show()
+	# plt.figure()
+	# plt.title("Samples and decision threshold")
+	# plt.plot(sampled_data[0], '.')
+	# plt.plot(waveform_2)
+	# plt.plot(sampled_data[1], '.')
+	# plt.show()
 
 
 	# create an FM waveform
-	inner_deviation = 648
 	fm_waveform = np.zeros(len(waveform))
 	t = 0
 	for i in range(len(fm_waveform)):
-		t += inner_deviation * modulating_waveform[i] / PulseFilter['sample rate']
+		t += PulseFilter['inner deviation'] * modulating_waveform[i] / PulseFilter['sample rate']
 		fm_waveform[i] = np.sin(2*np.pi*t)
 
 	plt.figure()
@@ -112,7 +111,26 @@ def ModulateRRC(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 
+
+	# calculate 99% power bandwidth
+	# first determine half of total
+	total_energy = sum(np.abs(waveform_fft)) / 2
+	# now sum from center of spectrum out
+
+	energy_sum = 0
+	i = -1
+	while (energy_sum < 0.99) and (i < len(waveform_fft)):
+		i += 1
+		energy_sum += np.abs(waveform_fft[i]) / total_energy
+	obw = x_fft[i] * 2
+
+
 	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	plt.grid(True)
+	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
+	#plt.plot(np.abs(waveform_fft), linewidth=1)
+
+
 
 	plt.show()
 
@@ -185,9 +203,9 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GetGaussFilterConfig(state)
 	PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
-	state['InputData'] = np.random.randint(0,256,1023)
-	for i in range (20):
-		state['InputData'][i] = 0x77
+	#state['InputData'] = np.random.randint(0,256,2000)
+	#for i in range (20):
+	#	state['InputData'][i] = 0x77
 	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
@@ -248,11 +266,10 @@ def ModulateGauss(state):
 	plt.show()
 
 	# create an FM waveform
-	inner_deviation = 648
 	fm_waveform = np.zeros(len(waveform))
 	t = 0
 	for i in range(len(fm_waveform)):
-		t += inner_deviation * modulating_waveform[i] / PulseFilter['sample rate']
+		t += PulseFilter['inner deviation'] * modulating_waveform[i] / PulseFilter['sample rate']
 		fm_waveform[i] = np.sin(2*np.pi*t)
 
 	plt.figure()
@@ -264,23 +281,25 @@ def ModulateGauss(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
-	#plt.plot(x_fft, np.abs(waveform_fft), linewidth=1)
+	# calculate 99% power bandwidth
+	# first determine half of total
+	total_energy = sum(np.abs(waveform_fft)) / 2
+	# now sum from center of spectrum out
 
-	plt.show()
-
-	# Calculate cumulative power
-	total_energy = sum(np.abs(waveform_fft))
-	energy = np.zeros(len(waveform_fft))
 	energy_sum = 0
-	for i in range(len(energy)):
-		energy_sum += (np.abs(waveform_fft[i]) / total_energy)
-		energy[i] = energy_sum
+	i = -1
+	while (energy_sum < 0.99) and (i < len(waveform_fft)):
+		i += 1
+		energy_sum += np.abs(waveform_fft[i]) / total_energy
+	obw = x_fft[i] * 2
 
-	plt.figure()
-	plt.plot(energy)
+
+	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	plt.grid(True)
+	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
+	#plt.plot(np.abs(waveform_fft), linewidth=1)
+
 	plt.show()
-
 
 	#generate a new directory for the reports
 	run_number = 0

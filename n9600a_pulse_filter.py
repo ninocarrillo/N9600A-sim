@@ -66,6 +66,14 @@ def GetRRCFilterConfig(state):
 	this = {}
 	id_string = "Pulse Filter"
 
+
+	key_string = "inner deviation"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	key_string = "sample rate"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
@@ -129,6 +137,14 @@ def GetGaussFilterConfig(state):
 	config = state['config']
 	this = {}
 	id_string = "Pulse Filter"
+
+
+	key_string = "inner deviation"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 
 	key_string = "sample rate"
 	try:

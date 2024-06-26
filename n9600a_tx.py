@@ -16,7 +16,7 @@ import numpy as np
 import random
 
 if len(sys.argv) < 3:
-	print("Not enough arguments. Usage: py -3 n9600a_tx.py <ini file> <input bin file> <output wav file>")
+	print("Not enough arguments. Usage: py -3 n9600a_tx.py <ini file>")
 	sys.exit(-1)
 
 # read demodulator description from ini file:
@@ -40,20 +40,23 @@ state = {}
 state['argv'] = sys.argv
 state['config'] = config
 
-try:
-	with open(sys.argv[2], 'rb') as f:
-		file_size = os.path.getsize(sys.argv[2])
-		print("File Size: ", file_size)
-		state['InputData'] = np.zeros(file_size)
-		index = 0
-		while(byte := f.read(1)):
-			#state['InputData'][index] = int.from_bytes(byte, "big")
-			state['InputData'][index] = random.randint(0,255)
-			index += 1
-		f.close()
-except:
-	print(f'Unable to open input file {sys.argv[2]}')
-	sys.exit(-3)
+data_count = 10000
+np.random.seed(0)
+state['InputData'] = np.random.randint(0,256, data_count)
+# try:
+# 	with open(sys.argv[2], 'rb') as f:
+# 		file_size = os.path.getsize(sys.argv[2])
+# 		print("File Size: ", file_size)
+# 		state['InputData'] = np.zeros(file_size)
+# 		index = 0
+# 		while(byte := f.read(1)):
+# 			#state['InputData'][index] = int.from_bytes(byte, "big")
+# 			state['InputData'][index] = random.randint(0,255)
+# 			index += 1
+# 		f.close()
+# except:
+# 	print(f'Unable to open input file {sys.argv[2]}')
+# 	sys.exit(-3)
 
 
 
