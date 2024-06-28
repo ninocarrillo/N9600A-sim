@@ -39,7 +39,7 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	plt.figure()
-	plt.suptitle(f"RRC FSK Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
+	plt.suptitle(f"RRC Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
 	try:
 		plt.plot(PulseFilter['Time'], PulseFilter['Taps'] / max(PulseFilter['Taps']), 'b')
@@ -79,7 +79,7 @@ def ModulateRRC(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 	plt.subplot(222)
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
+	plt.plot(x_fft, 10*np.log10(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
 	plt.grid(True)
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
@@ -93,7 +93,6 @@ def ModulateRRC(state):
 	# plt.plot(waveform_2)
 	# plt.plot(sampled_data[1], '.')
 	# plt.show()
-
 
 	# create an FM waveform
 	fm_waveform = np.zeros(len(waveform))
@@ -111,36 +110,42 @@ def ModulateRRC(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 
+	# create power spectrum
+	waveform_psd = np.zeros(len(waveform_fft))
+	for i in range(len(waveform_fft)):
+		waveform_psd[i] = pow(abs(waveform_fft[i]),2)
 
 	# calculate 99% power bandwidth
-	# first determine half of total
-	total_energy = sum(np.abs(waveform_fft)) / 2
+	# first determine total
+	total_power = 0
+	for sample in waveform_psd:
+		total_power += sample
 	# now sum from center of spectrum out
+	total_power = total_power / 2
 
-	energy_sum = 0
+	power_sum = 0
 	i = -1
-	while (energy_sum < 0.99) and (i < len(waveform_fft)):
+	while (power_sum < 0.999) and (i < len(waveform_psd)):
 		i += 1
-		energy_sum += np.abs(waveform_fft[i]) / total_energy
+		power_sum += waveform_psd[i] / total_power
 	obw = x_fft[i] * 2
 
 	obw_mask = np.zeros(4)
 	obw_x = np.zeros(4)
-	obw_mask[0] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[0] = 10*np.log10(np.abs(waveform_psd[i]))
 	obw_mask[1] = 0
 	obw_mask[2] = 0
-	obw_mask[3] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[3] = 10*np.log10(np.abs(waveform_psd[i]))
 	obw_x[0] = -x_fft[i]
 	obw_x[1] = -x_fft[i]
 	obw_x[2] = x_fft[i]
 	obw_x[3] = x_fft[i]
 
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+
+	plt.plot(x_fft, 10*np.log10(np.abs(waveform_psd)), '.', markersize=1)
 	plt.plot(obw_x, obw_mask)
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
-	#plt.plot(np.abs(waveform_fft), linewidth=1)
-
+	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(obw/1000,2)} kHz")
 
 
 	plt.show()
@@ -256,7 +261,7 @@ def ModulateGauss(state):
 	waveform_fft = waveform_fft / fft_max
 	plt.subplot(222)
 	plt.title("Baseband Spectrum")
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
+	plt.plot(x_fft, 10*np.log10(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
 	plt.xlim(0,10000)
 	plt.ylim(-100,10)
 	plt.grid(True)
@@ -292,35 +297,42 @@ def ModulateGauss(state):
 	fft_max = max(abs(waveform_fft))
 	waveform_fft = waveform_fft / fft_max
 
-	# calculate 99% power bandwidth
-	# first determine half of total
-	total_energy = sum(np.abs(waveform_fft)) / 2
-	# now sum from center of spectrum out
+	# create power spectrum
+	waveform_psd = np.zeros(len(waveform_fft))
+	for i in range(len(waveform_fft)):
+		waveform_psd[i] = pow(abs(waveform_fft[i]),2)
 
-	energy_sum = 0
+	# calculate 99% power bandwidth
+	# first determine total
+	total_power = 0
+	for sample in waveform_psd:
+		total_power += sample
+	# now sum from center of spectrum out
+	total_power = total_power / 2
+
+	power_sum = 0
 	i = -1
-	while (energy_sum < 0.99) and (i < len(waveform_fft)):
+	while (power_sum < 0.999) and (i < len(waveform_psd)):
 		i += 1
-		energy_sum += np.abs(waveform_fft[i]) / total_energy
+		power_sum += waveform_psd[i] / total_power
 	obw = x_fft[i] * 2
 
 	obw_mask = np.zeros(4)
 	obw_x = np.zeros(4)
-	obw_mask[0] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[0] = 10*np.log10(np.abs(waveform_psd[i]))
 	obw_mask[1] = 0
 	obw_mask[2] = 0
-	obw_mask[3] = 10*np.log(np.abs(waveform_fft[i]))
+	obw_mask[3] = 10*np.log10(np.abs(waveform_psd[i]))
 	obw_x[0] = -x_fft[i]
 	obw_x[1] = -x_fft[i]
 	obw_x[2] = x_fft[i]
 	obw_x[3] = x_fft[i]
 
 
-	plt.plot(x_fft, 10*np.log(np.abs(waveform_fft)), linewidth=1)
+	plt.plot(x_fft, 10*np.log10(np.abs(waveform_psd)), '.', markersize=1)
 	plt.plot(obw_x, obw_mask)
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99% Power Bandwidth: {round(obw/1000,2)} kHz")
-	#plt.plot(np.abs(waveform_fft), linewidth=1)
+	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(obw/1000,2)} kHz")
 
 	plt.show()
 
