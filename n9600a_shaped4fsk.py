@@ -14,6 +14,56 @@ from scipy.fft import fft, fftfreq
 from scipy.signal import firwin
 import random
 
+def ModulateFM(waveform, deviation, sample_rate):
+	# create an FM waveform
+	fm_waveform = np.zeros(len(waveform))
+	t = 0
+	for i in range(len(fm_waveform)):
+	 	t += deviation * waveform[i] / sample_rate
+	 	fm_waveform[i] = np.sin(2*np.pi*t)
+	return fm_waveform
+
+def AnalyzeSpectrum(waveform, sample_rate, power_ratio):
+	fft_n = len(waveform)
+	time_step = 1 / sample_rate
+	x = np.linspace(0.0, fft_n * time_step, fft_n, endpoint = False)
+	x_fft = fftfreq(fft_n, time_step)
+	waveform_fft = fft(waveform)
+	fft_max = max(abs(waveform_fft))
+	waveform_fft = waveform_fft / fft_max
+
+	# create power spectrum
+	waveform_psd = np.zeros(len(waveform_fft))
+	for i in range(len(waveform_fft)):
+		waveform_psd[i] = pow(abs(waveform_fft[i]),2)
+
+	# calculate power bandwidth
+	# first determine total
+	total_power = 0
+	for sample in waveform_psd:
+		total_power += sample
+	# now sum from center of spectrum out
+	total_power = total_power / 2
+
+	power_sum = 0
+	i = -1
+	while (power_sum < power_ratio) and (i < len(waveform_psd)):
+		i += 1
+		power_sum += waveform_psd[i] / total_power
+	obw = x_fft[i] * 2
+
+	obw_mask = np.zeros(4)
+	obw_x = np.zeros(4)
+	obw_mask[0] = 10*np.log10(waveform_psd[i])
+	obw_mask[1] = 0
+	obw_mask[2] = 0
+	obw_mask[3] = 10*np.log10(waveform_psd[i])
+	obw_x[0] = -x_fft[i]
+	obw_x[1] = -x_fft[i]
+	obw_x[2] = x_fft[i]
+	obw_x[3] = x_fft[i]
+	return([x_fft, 10*np.log10(waveform_psd), obw_x, obw_mask, obw])
+
 def ModulateRRC(state):
 	argv = state['argv']
 	config = state['config']
@@ -94,60 +144,18 @@ def ModulateRRC(state):
 	# plt.plot(sampled_data[1], '.')
 	# plt.show()
 
-	# create an FM waveform
-	fm_waveform = np.zeros(len(waveform))
-	t = 0
-	for i in range(len(fm_waveform)):
-		t += PulseFilter['inner deviation'] * modulating_waveform[i] / PulseFilter['sample rate']
-		fm_waveform[i] = np.sin(2*np.pi*t)
+	fm_waveform = ModulateFM(modulating_waveform, PulseFilter['inner deviation'], PulseFilter['sample rate'])
 
 	plt.figure()
-
-	fft_n = len(fm_waveform)
-	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
-	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])
-	waveform_fft = fft(fm_waveform)
-	fft_max = max(abs(waveform_fft))
-	waveform_fft = waveform_fft / fft_max
-
-	# create power spectrum
-	waveform_psd = np.zeros(len(waveform_fft))
-	for i in range(len(waveform_fft)):
-		waveform_psd[i] = pow(abs(waveform_fft[i]),2)
-
-	# calculate 99% power bandwidth
-	# first determine total
-	total_power = 0
-	for sample in waveform_psd:
-		total_power += sample
-	# now sum from center of spectrum out
-	total_power = total_power / 2
-
-	power_sum = 0
-	i = -1
-	while (power_sum < 0.999) and (i < len(waveform_psd)):
-		i += 1
-		power_sum += waveform_psd[i] / total_power
-	obw = x_fft[i] * 2
-
-	obw_mask = np.zeros(4)
-	obw_x = np.zeros(4)
-	obw_mask[0] = 10*np.log10(np.abs(waveform_psd[i]))
-	obw_mask[1] = 0
-	obw_mask[2] = 0
-	obw_mask[3] = 10*np.log10(np.abs(waveform_psd[i]))
-	obw_x[0] = -x_fft[i]
-	obw_x[1] = -x_fft[i]
-	obw_x[2] = x_fft[i]
-	obw_x[3] = x_fft[i]
-
-
-	plt.plot(x_fft, 10*np.log10(np.abs(waveform_psd)), '.', markersize=1)
-	plt.plot(obw_x, obw_mask)
+	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
+	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
+	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
+	plt.plot(psd_999[2], psd_999[3])
+	plt.ylabel("dBFs")
+	plt.xlabel("Hz")
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(obw/1000,2)} kHz")
-
-
+	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
 	plt.show()
 
 	#generate a new directory for the reports
@@ -281,59 +289,18 @@ def ModulateGauss(state):
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.show()
 
-	# create an FM waveform
-	fm_waveform = np.zeros(len(waveform))
-	t = 0
-	for i in range(len(fm_waveform)):
-		t += PulseFilter['inner deviation'] * modulating_waveform[i] / PulseFilter['sample rate']
-		fm_waveform[i] = np.sin(2*np.pi*t)
+	fm_waveform = ModulateFM(modulating_waveform, PulseFilter['inner deviation'], PulseFilter['sample rate'])
 
 	plt.figure()
-
-	fft_n = len(fm_waveform)
-	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
-	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])
-	waveform_fft = fft(fm_waveform)
-	fft_max = max(abs(waveform_fft))
-	waveform_fft = waveform_fft / fft_max
-
-	# create power spectrum
-	waveform_psd = np.zeros(len(waveform_fft))
-	for i in range(len(waveform_fft)):
-		waveform_psd[i] = pow(abs(waveform_fft[i]),2)
-
-	# calculate 99% power bandwidth
-	# first determine total
-	total_power = 0
-	for sample in waveform_psd:
-		total_power += sample
-	# now sum from center of spectrum out
-	total_power = total_power / 2
-
-	power_sum = 0
-	i = -1
-	while (power_sum < 0.999) and (i < len(waveform_psd)):
-		i += 1
-		power_sum += waveform_psd[i] / total_power
-	obw = x_fft[i] * 2
-
-	obw_mask = np.zeros(4)
-	obw_x = np.zeros(4)
-	obw_mask[0] = 10*np.log10(np.abs(waveform_psd[i]))
-	obw_mask[1] = 0
-	obw_mask[2] = 0
-	obw_mask[3] = 10*np.log10(np.abs(waveform_psd[i]))
-	obw_x[0] = -x_fft[i]
-	obw_x[1] = -x_fft[i]
-	obw_x[2] = x_fft[i]
-	obw_x[3] = x_fft[i]
-
-
-	plt.plot(x_fft, 10*np.log10(np.abs(waveform_psd)), '.', markersize=1)
-	plt.plot(obw_x, obw_mask)
+	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
+	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
+	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
+	plt.plot(psd_999[2], psd_999[3])
+	plt.ylabel("dBFs")
+	plt.xlabel("Hz")
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(obw/1000,2)} kHz")
-
+	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
 	plt.show()
 
 	#generate a new directory for the reports
