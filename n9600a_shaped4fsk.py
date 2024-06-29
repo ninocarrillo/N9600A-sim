@@ -83,6 +83,7 @@ def ModulateRRC(state):
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	waveform = np.rint(np.convolve(PulseFilter['Taps'], symbol_stream, 'valid'))
+	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
 
 	#create phased filter oversample sections:
@@ -161,7 +162,7 @@ def ModulateRRC(state):
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.plot(psd_999[2], psd_999[3])
 	plt.ylabel("dBFS")
-	plt.xlabel("Deviation from Carrier, Hz")
+	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
 	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
 	plt.show()
@@ -251,22 +252,28 @@ def ModulateGauss(state):
 
 	# Create receive lpf
 	PulseFilter['LPFTaps'] = firwin(
-				PulseFilter['Oversample'] * 3,
-				[ PulseFilter['symbol rate'] * 0.8 ],
+				PulseFilter['Oversample'] * PulseFilter['symbol span'],
+				[ PulseFilter['symbol rate'] * 0.80 ],
 				pass_zero='lowpass',
 				fs=PulseFilter['sample rate']
 			)
 
+	PulseFilter['TotalResponse'] = np.convolve(PulseFilter['Taps'], PulseFilter['LPFTaps'], 'same')
+
+	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
 
 
 	plt.figure()
 	plt.suptitle(f"Gauss FSK BT:{PulseFilter['BT']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
-	plt.title("TX Filter Impulse Response")
+	plt.title("Filter Impulse Responses")
 	plt.xlabel("Symbol Index")
 	plt.ylabel("Amplitude")
 	plt.plot(PulseFilter['Time'], PulseFilter['Taps'] / max(PulseFilter['Taps']), 'b')
+	plt.plot(PulseFilter['Time'], PulseFilter['LPFTaps'] / max(PulseFilter['LPFTaps']), 'r')
+	#plt.plot(PulseFilter['Time'], PulseFilter['TotalResponse'] / max(PulseFilter['TotalResponse']), 'g')
+	plt.legend(["TX", "RX"])
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
@@ -295,7 +302,7 @@ def ModulateGauss(state):
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.grid(True)
 
-	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], 0)
+	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
 	plt.subplot(224)
 	plt.plot(rx_eye_data / PulseFilter['amplitude'], linewidth=1)
 	plt.title("RX Eye Diagram")
@@ -314,7 +321,7 @@ def ModulateGauss(state):
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.plot(psd_999[2], psd_999[3])
 	plt.ylabel("dBFS")
-	plt.xlabel("Deviation from Carrier, Hz")
+	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
 	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
 	plt.show()
