@@ -86,6 +86,15 @@ def ModulateRRC(state):
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
 
+	channel_filter = firwin(
+				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
+				20,
+				pass_zero='highpass',
+				fs=PulseFilter['sample rate']
+			)
+
+	#waveform_2 = np.convolve(waveform_2, channel_filter)
+
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
@@ -261,7 +270,15 @@ def ModulateGauss(state):
 	PulseFilter['TotalResponse'] = np.convolve(PulseFilter['Taps'], PulseFilter['LPFTaps'], 'same')
 
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
+	channel_filter = firwin(
+				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
+				20,
+				pass_zero='highpass',
+				fs=PulseFilter['sample rate']
+			)
+
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
+	#waveform_2 = np.convolve(channel_filter, waveform_2)
 
 
 	plt.figure()
