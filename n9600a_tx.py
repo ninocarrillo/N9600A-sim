@@ -40,12 +40,13 @@ state = {}
 state['argv'] = sys.argv
 state['config'] = config
 
-data_count = 10000
+data_count = 1000
 np.random.seed(0)
 state['InputData'] = np.random.randint(0,256, data_count)
-#for i in range(data_count):
-	#pass
-	#state['InputData'][i] = 0x5F
+for i in range(20):
+	pass
+	#state['InputData'][i] = 0x77
+	#state['InputData'][i+20] = 0x55
 # try:
 # 	with open(sys.argv[2], 'rb') as f:
 # 		file_size = os.path.getsize(sys.argv[2])
