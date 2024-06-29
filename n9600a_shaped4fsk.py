@@ -138,18 +138,14 @@ def ModulateRRC(state):
 
 	print("Max modulated waveform value: ", max(waveform))
 
-	fft_n = len(waveform)
-	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
-	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
-	waveform_fft = fft(waveform)
-	fft_max = max(abs(waveform_fft))
-	waveform_fft = waveform_fft / fft_max
 	plt.subplot(222)
-	plt.plot(x_fft, 20*np.log10(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
+	audio_psd = AnalyzeSpectrum(waveform, PulseFilter['sample rate'], 0.99)
+	plt.plot(audio_psd[0], audio_psd[1], '.', markersize=1)
+	plt.plot(audio_psd[2], audio_psd[3])
 	plt.grid(True)
 	plt.xlim(0,10000)
 	plt.ylim(-60,10)
-	plt.title("Baseband Power Spectrum")
+	plt.title(f"Audio Spectrum, 99% Power Bandwidth: {round(audio_psd[4] / 2000, 1)} kHz")
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 	plt.show()
@@ -168,12 +164,16 @@ def ModulateRRC(state):
 	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
 	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
 	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_99[2], psd_99[3],'green')
+	plt.plot(psd_999[2], psd_999[3], 'orange')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
-	plt.plot(psd_999[2], psd_999[3])
+	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
+	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
 	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
+	plt.title(f"RRC FSK Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, Rolloff Rate: {PulseFilter['rolloff rate']}, Inner Deviation: {PulseFilter['inner deviation']}")
 	plt.show()
 
 	#generate a new directory for the reports
@@ -295,20 +295,16 @@ def ModulateGauss(state):
 	plt.xticks(color='w')
 	plt.grid(True)
 
-	fft_n = len(waveform)
-	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
-	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
-	waveform_fft = fft(waveform)
-	fft_max = max(abs(waveform_fft))
-	waveform_fft = waveform_fft / fft_max
 	plt.subplot(222)
-	plt.title("Baseband Power Spectrum")
-	plt.plot(x_fft, 20*np.log10(np.abs(waveform_fft[0:fft_n//2])), linewidth=1)
-	plt.xlim(0,10000)
-	plt.xlabel("Hz")
-	plt.ylim(-60,10)
-	plt.ylabel("dBFS")
+	audio_psd = AnalyzeSpectrum(waveform, PulseFilter['sample rate'], 0.99)
+	plt.plot(audio_psd[0], audio_psd[1], '.', markersize=1)
+	plt.plot(audio_psd[2], audio_psd[3])
 	plt.grid(True)
+	plt.xlim(0,10000)
+	plt.ylim(-60,10)
+	plt.title(f"Audio Spectrum, 99% Power Bandwidth: {round(audio_psd[4] / 2000, 1)} kHz")
+	plt.xlabel("Hz")
+	plt.ylabel("dBFS")
 
 	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
 	plt.subplot(223)
@@ -335,12 +331,16 @@ def ModulateGauss(state):
 	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
 	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
 	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_99[2], psd_99[3],'green')
+	plt.plot(psd_999[2], psd_999[3], 'orange')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
-	plt.plot(psd_999[2], psd_999[3])
+	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
+	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
 	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
-	plt.title(f"FM Spectrum, 99.9% Power Bandwidth: {round(psd_999[4]/1000,1)} kHz")
+	plt.title(f"Gauss FSK Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, BT: {PulseFilter['BT']}, Inner Deviation: {PulseFilter['inner deviation']}")
 	plt.show()
 
 	#generate a new directory for the reports
