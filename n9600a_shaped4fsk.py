@@ -258,6 +258,8 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+	
+	print("Max modulated waveform: ", max(waveform))
 
 	# Create receive lpf
 	PulseFilter['LPFTaps'] = firwin(
@@ -402,6 +404,11 @@ def ModulateGauss(state):
 		report_file.write('\n\n# Gaussian Pulse Filter Phased Taps\n')
 		report_file.write('\n')
 		report_file.write(fo.GenInt16ArrayC(f'PhaseTaps', PulseFilter['PhaseTaps'], PulseFilter['symbol span']))
+		report_file.write('\n')
+
+		report_file.write('\n\n# Receive Low Pass Filter\n')
+		report_file.write('\n')
+		report_file.write(fo.GenInt16ArrayC(f'LowPassFilter', np.rint(PulseFilter['LPFTaps'] * 32768), PulseFilter['Oversample']))
 		report_file.write('\n')
 
 	return
