@@ -395,10 +395,46 @@ def ImpulseOversample2(data, filter):
 
 	return sample_stream
 
+def ExpandSampleStream2(data, filter):
+	bit_count = len(data) * 8
+	symbol_count = int(np.ceil(bit_count / filter['SymbolMap']['symbol bits']))
+	sample_count = symbol_count * filter['Oversample']
+	flush_count = filter['symbol span'] * filter['Oversample']
+	samples = np.zeros(sample_count + flush_count)
+	sample_index = 0
+	symbols_per_byte = 8 // filter['SymbolMap']['symbol bits']
+	accumulator = int(0)
+	accumulator_bits = 0
+	accumulator_width = 0
+	for byte in data:
+		byte = int(byte)
+		#print(f"New byte: {hex(byte)}, old accumulator: {hex(accumulator)}, width: {accumulator_width}, bits: {accumulator_bits}")
+		accumulator_width_adjust = 8 - (accumulator_width - accumulator_bits)
+		accumulator = np.left_shift(accumulator, accumulator_width_adjust)
+		accumulator_width += accumulator_width_adjust
+		accumulator_bits += 8
+		accumulator += byte
+		#print(f"New accumulator: {hex(accumulator)}, width: {accumulator_width}, bits: {accumulator_bits}")
+		while accumulator_bits >= filter['SymbolMap']['symbol bits']:
+			accumulator_bits -= filter['SymbolMap']['symbol bits']
+			symbol = np.right_shift(accumulator, (accumulator_width - filter['SymbolMap']['symbol bits']))
+			#print(f"Symbol index: {hex(symbol)}")
+			accumulator = np.left_shift(accumulator, filter['SymbolMap']['symbol bits'])
+			accumulator = np.bitwise_and(accumulator, pow(2,accumulator_width)-1)
+			samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
+			sample_index += 1
+			for extend_index in range(filter['Oversample'] - 1):
+				samples[sample_index] = 0
+				sample_index += 1
+	for flush_index in range(flush_count):
+		samples[sample_index] = 0
+		sample_index += 1
+	return samples
+
 def ExpandSampleStream(data, filter):
 	bit_count = len(data) * 8
 	#print('BitCount', bit_count)
-	symbol_count = bit_count // filter['SymbolMap']['symbol bits']
+	symbol_count = int(np.ceil(bit_count / filter['SymbolMap']['symbol bits']))
 	#print('SymbolCount', symbol_count)
 	sample_count = symbol_count * filter['Oversample']
 	#print('SampleCount', sample_count)
@@ -418,18 +454,6 @@ def ExpandSampleStream(data, filter):
 			for extend_index in range(filter['Oversample'] - 1):
 				samples[sample_index] = 0
 				sample_index += 1
-	# elif filter['SymbolMap']['expander'] == 'step':
-	# 	for byte in data:
-	# 		byte = int(byte)
-	# 		for byte_index in range(symbols_per_byte):
-	# 			symbol = np.right_shift(byte, (8 - filter['SymbolMap']['symbol bits']))
-	# 			byte = np.left_shift(byte, filter['SymbolMap']['symbol bits'])
-	# 			byte = np.bitwise_and(byte, 255)
-	# 			samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
-	# 			sample_index += 1
-	# 			for extend_index in range(filter['Oversample'] - 1):
-	# 				samples[sample_index] = filter['SymbolMap']['symbol map'][symbol]
-	# 				sample_index += 1
 	for flush_index in range(flush_count):
 		samples[sample_index] = 0
 		sample_index += 1

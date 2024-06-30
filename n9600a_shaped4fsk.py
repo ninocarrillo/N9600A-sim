@@ -77,7 +77,7 @@ def ModulateRRC(state):
 	#state['InputData'] = np.random.randint(0,256,2000)
 	#for index in range(20):
 	#	state['InputData'][index] = 0x77
-	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	symbol_stream = pulse_filter.ExpandSampleStream2(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
 
@@ -248,7 +248,7 @@ def ModulateGauss(state):
 	#state['InputData'] = np.random.randint(0,256,2000)
 	#for i in range (20):
 	#	state['InputData'][i] = 0x77
-	symbol_stream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
+	symbol_stream = pulse_filter.ExpandSampleStream2(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
 
