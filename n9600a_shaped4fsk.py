@@ -161,12 +161,14 @@ def ModulateRRC(state):
 	fm_waveform = ModulateFM(modulating_waveform, PulseFilter['inner deviation'], PulseFilter['sample rate'])
 
 	plt.figure()
+	psd_9999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.9999)
 	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
 	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
 	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
 	plt.plot(psd_99[2], psd_99[3],'green')
 	plt.plot(psd_999[2], psd_999[3], 'orange')
-	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz'])
+	plt.plot(psd_9999[2], psd_9999[3], 'gray')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
 	plt.ylim(-100,10)
@@ -258,7 +260,7 @@ def ModulateGauss(state):
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
 
 	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
-	
+
 	print("Max modulated waveform: ", max(waveform))
 
 	# Create receive lpf
@@ -343,12 +345,14 @@ def ModulateGauss(state):
 	fm_waveform = ModulateFM(modulating_waveform, PulseFilter['inner deviation'], PulseFilter['sample rate'])
 
 	plt.figure()
+	psd_9999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.9999)
 	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
 	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
 	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
 	plt.plot(psd_99[2], psd_99[3],'green')
 	plt.plot(psd_999[2], psd_999[3], 'orange')
-	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz'])
+	plt.plot(psd_9999[2], psd_9999[3], 'gray')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
 	plt.ylim(-100,10)
