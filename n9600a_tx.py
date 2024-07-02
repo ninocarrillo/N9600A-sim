@@ -40,7 +40,7 @@ state = {}
 state['argv'] = sys.argv
 state['config'] = config
 
-data_count = 10000
+data_count = 1000
 np.random.seed(0)
 state['InputData'] = np.random.randint(0,256, data_count)
 for i in range(20):
@@ -74,11 +74,11 @@ elif ModulatorType == 'gfsk':
 	gfsk.Modulate(state)
 
 elif ModulatorType == 'rrcfsk':
-	print('starting RRCFSK modulator')
+	print('starting RRC shaped FSK modulator')
 	shaped4fsk.ModulateRRC(state)
 
-elif ModulatorType == 'gauss4fsk':
-	print('starting Gauss4FSK modulator')
+elif ModulatorType == 'gaussfsk':
+	print('starting Gauss shaped FSK modulator')
 	shaped4fsk.ModulateGauss(state)
 
 elif ModulatorType == 'gaussfiltergen':

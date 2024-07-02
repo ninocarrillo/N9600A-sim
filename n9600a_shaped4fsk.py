@@ -88,7 +88,7 @@ def ModulateRRC(state):
 
 	channel_filter = firwin(
 				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				20,
+				10,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
@@ -252,38 +252,37 @@ def ModulateGauss(state):
 	#	state['InputData'][i] = 0x77
 	symbol_stream = pulse_filter.ExpandSampleStream2(state['InputData'], PulseFilter)
 
-	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
-
-	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
-
-	#create phased filter oversample sections:
-	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
-
-	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
-
-	print("Max modulated waveform: ", max(waveform))
-
 	# Create receive lpf
 	PulseFilter['LPFTaps'] = firwin(
 				PulseFilter['Oversample'] * PulseFilter['symbol span'],
-				[ PulseFilter['symbol rate'] * 0.80 ],
+				[ PulseFilter['symbol rate'] * PulseFilter['lpf cutoff'] ],
 				pass_zero='lowpass',
-				fs=PulseFilter['sample rate']
+				fs=PulseFilter['sample rate'],
+				window='hamming'
 			)
+
+
+	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
 
 	PulseFilter['TotalResponse'] = np.convolve(PulseFilter['Taps'], PulseFilter['LPFTaps'], 'same')
 
-	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	channel_filter = firwin(
 				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				20,
+				10,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
 
+	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
+	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+
+	#create phased filter oversample sections:
+	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
+	print("Max modulated waveform: ", max(waveform))
+
+	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
 	#waveform_2 = np.convolve(channel_filter, waveform_2)
-
 
 	plt.figure()
 	plt.suptitle(f"Gauss FSK BT:{PulseFilter['BT']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
@@ -300,13 +299,16 @@ def ModulateGauss(state):
 	plt.grid(True)
 
 	plt.subplot(222)
-	audio_psd = AnalyzeSpectrum(waveform, PulseFilter['sample rate'], 0.99)
-	plt.plot(audio_psd[0], audio_psd[1], '.', markersize=1)
-	plt.plot(audio_psd[2], audio_psd[3])
+	tx_audio_psd = AnalyzeSpectrum(waveform, PulseFilter['sample rate'], 0.99)
+	rx_audio_psd = AnalyzeSpectrum(waveform_2, PulseFilter['sample rate'], 0.99)
+	plt.plot(tx_audio_psd[0], tx_audio_psd[1], '.', markersize=1)
+	plt.plot(tx_audio_psd[2], tx_audio_psd[3])
+	#plt.plot(rx_audio_psd[0], rx_audio_psd[1], '.', markersize=1)
+	#plt.plot(rx_audio_psd[2], rx_audio_psd[3])
 	plt.grid(True)
-	plt.xlim(0,audio_psd[4])
+	plt.xlim(0,tx_audio_psd[4])
 	plt.ylim(-60,10)
-	plt.title(f"Audio Spectrum, 99% Power Bandwidth: {round(audio_psd[4] / 2000, 1)} kHz")
+	plt.title(f"TX Audio Spectrum, 99% Power Bandwidth: {round(tx_audio_psd[4] / 2000, 1)} kHz")
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 
