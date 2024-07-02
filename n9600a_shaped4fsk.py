@@ -263,6 +263,7 @@ def ModulateGauss(state):
 
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+	print("Max commanded deviation: ", round(max(modulating_waveform) * PulseFilter['inner deviation']))
 
 	PulseFilter['TotalResponse'] = np.convolve(PulseFilter['Taps'], PulseFilter['LPFTaps'], 'same')
 
@@ -312,7 +313,7 @@ def ModulateGauss(state):
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
 	plt.subplot(223)
 	plt.title("TX Eye Diagram")
 	plt.xlabel("Sample Phase Index")
@@ -321,7 +322,7 @@ def ModulateGauss(state):
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.grid(True)
 
-	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
 	plt.subplot(224)
 	plt.plot(rx_eye_data / PulseFilter['amplitude'], linewidth=1)
 	plt.title("RX Eye Diagram")

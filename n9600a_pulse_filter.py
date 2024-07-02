@@ -219,12 +219,14 @@ def InitGaussFilter(this):
 	this['TimeStep'] = 1 / this['sample rate']
 	this['SymbolTime'] = 1 / this['symbol rate']
 	# generate normalized time
-	this['Time'] = np.arange(0, this['symbol span'], 1 / this['Oversample']) - (this['symbol span'] / 2)
+	this['Time'] = np.arange(0, this['symbol span'], 1 / this['Oversample']) - ((this['symbol span'] - (1 / this['Oversample'])) / 2)
+	#this['Time'] = np.arange(0, this['symbol span'], 1 / this['Oversample'])
+	#print(this['Time'])
 	this['SymbolTicks'] = np.arange(-this['symbol span'] / 2, this['symbol span'] / 2, 1)
 	this['Taps'] = np.zeros(this['TapCount'])
 
 	alpha = pow(np.log(2) / 2, 0.5) / this['BT']
-	print('alpha ', alpha)
+	print('Gaussian alpha: ', round(alpha,2))
 	index = 0
 	for time in this['Time']:
 		#numerator = np.exp(-this['alpha'] * pow(time, 2))
