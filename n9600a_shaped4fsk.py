@@ -80,6 +80,7 @@ def ModulateRRC(state):
 	symbol_stream = pulse_filter.ExpandSampleStream2(state['InputData'], PulseFilter)
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+	print("Max commanded deviation: ", round(max(modulating_waveform) * PulseFilter['inner deviation']))
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	waveform = np.rint(np.convolve(PulseFilter['Taps'], symbol_stream, 'valid'))
@@ -88,7 +89,7 @@ def ModulateRRC(state):
 
 	channel_filter = firwin(
 				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				10,
+				16,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
@@ -269,7 +270,7 @@ def ModulateGauss(state):
 
 	channel_filter = firwin(
 				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				10,
+				16,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
