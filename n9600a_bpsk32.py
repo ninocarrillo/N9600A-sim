@@ -16,6 +16,8 @@ import n9600a_nco as nco
 import n9600a_progdemod as demod
 import n9600a_filters as filters
 import time
+from n9600a_fm import ModulateFM
+from n9600a_analysis import AnalyzeSpectrum
 
 
 def GetBPSKDemodConfig(config, num, id_string):
@@ -344,6 +346,7 @@ def FullProcess(state):
 	ReceivePulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	ReceivePulseFilter['sample rate'] = BPSKDemodulator['OutputSampleRate']
 	ReceivePulseFilter = pulse_filter.InitRRCFilter(ReceivePulseFilter)
+	ReceivePulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 
 	DataSlicer = {}
 	try:
@@ -683,9 +686,6 @@ def ModulateRRC(state):
 	NCO = nco.InitNCO(NCO)
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
-	#print(max(PulseFilter['FilterPatterns']))
-	#plt.plot(PulseFilter['FilterPatterns'])
-	#plt.show()
 
 	#BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 	BitStream = pulse_filter.BytesToSymbols(state['InputData'], PulseFilter)
@@ -757,6 +757,26 @@ def ModulateRRC(state):
 	plt.title("Half Bandwidth")
 	plt.grid(True)
 	plt.xticks(range(0,3000,500))
+	plt.show()
+
+	fm_waveform = ModulateFM(ModulatingWaveform / max(ModulatingWaveform), PulseFilter['inner deviation'], PulseFilter['sample rate'])
+
+	plt.figure()
+	psd_9999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.9999)
+	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
+	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
+	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_99[2], psd_99[3],'green')
+	plt.plot(psd_999[2], psd_999[3], 'orange')
+	plt.plot(psd_9999[2], psd_9999[3], 'gray')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
+	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
+	plt.xlim(-8*PulseFilter['symbol rate'],8*PulseFilter['symbol rate'])
+	plt.ylim(-100,10)
+	plt.ylabel("dBFS")
+	plt.xlabel("Deviation from Carrier Frequency, Hz")
+	plt.grid(True)
+	plt.title(f"Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, Inner Deviation: {PulseFilter['inner deviation']}")
 	plt.show()
 
 	#generate a new directory for the reports
