@@ -670,6 +670,7 @@ def ModulateRRC(state):
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
 
+
 	#plt.figure()
 	#plt.plot(PulseFilter['FilterWindow'])
 	#plt.title('Filter Window')
@@ -686,6 +687,16 @@ def ModulateRRC(state):
 	NCO['Amplitude'] = PulseFilter['amplitude']
 	NCO = nco.InitNCO(NCO)
 
+
+	channel_filter = firwin(
+				(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
+				350,
+				pass_zero='highpass',
+				fs=PulseFilter['sample rate']
+			)
+
+	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], channel_filter, 'same')
+
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
 
 	#BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
@@ -698,26 +709,18 @@ def ModulateRRC(state):
 	#ModAmplitude = 64
 	#ModulatingWaveform = np.rint(ModAmplitude * ModulatingWaveform / max(ModulatingWaveform))
 	ModulatingWaveform = np.zeros(len(BitStream) * PulseFilter['Oversample'] * PulseFilter['undersample'])
-	ModulatingWaveform_2 = np.zeros(len(BitStream) * PulseFilter['Oversample'] * PulseFilter['undersample'])
 
 	i = 0
 	shift_register = int(0)
-	shift_register_2 = int(0)
 	filter_mask = (2**PulseFilter['symbol span']) - 1
 	for bit in BitStream:
 		shift_register <<= 1
-		shift_register_2 <<= 1
 		if bit == 1:
 			shift_register |= 1
-		if np.random.random() > 0.5:
-			shift_register_2 |= 1
 		shift_register = shift_register & filter_mask
-		shift_register_2 = shift_register_2 & filter_mask
 		for phase in range(PulseFilter['Oversample']):
-			for subphase in range(PulseFilter['undersample']):
-				ModulatingWaveform[i] = PulseFilter['FilterPatterns'][(shift_register * PulseFilter['Oversample']) + phase]
-				ModulatingWaveform_2[i] = PulseFilter['FilterPatterns'][(shift_register_2 * PulseFilter['Oversample']) + phase]
-				i += 1
+			ModulatingWaveform[i] = PulseFilter['FilterPatterns'][(shift_register * PulseFilter['Oversample']) + phase]
+			i += 1
 
 
 	#plt.figure()
@@ -728,15 +731,12 @@ def ModulateRRC(state):
 	Baseband = np.zeros(len(ModulatingWaveform))
 	for i in range(len(ModulatingWaveform)):
 		NCO = nco.UpdateNCO(NCO)
-		Baseband[i] = ((ModulatingWaveform[i] * NCO['Sine']) + (ModulatingWaveform_2[i] * NCO['Cosine'])) // PulseFilter['amplitude']
+		Baseband[i] = ModulatingWaveform[i] * NCO['Sine']
 
-	channel_filter = firwin(
-				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				40,
-				pass_zero='highpass',
-				fs=PulseFilter['sample rate']
-			)
+
 	Baseband = np.convolve(Baseband, channel_filter)
+
+	Baseband = Baseband / max(Baseband)
 
 	plt.figure()
 	plt.subplot(221)
@@ -759,10 +759,7 @@ def ModulateRRC(state):
 
 
 	plt.subplot(222)
-	mod_psd = AnalyzeSpectrum(ModulatingWaveform, PulseFilter['sample rate'], 0.99)
 	baseband_psd = AnalyzeSpectrum(Baseband, PulseFilter['sample rate'], 0.99)
-	#plt.plot(mod_psd[0], mod_psd[1], '.', markersize=1)
-	#plt.plot(mod_psd[2], mod_psd[3])
 	plt.plot(baseband_psd[0], baseband_psd[1], '.', markersize=1)
 	plt.plot(baseband_psd[2], baseband_psd[3])
 	plt.grid(True)
@@ -788,6 +785,7 @@ def ModulateRRC(state):
 	plt.plot(psd_9999[2], psd_9999[3], 'gray')
 	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
+	#plt.plot(psd_999[0], psd_999[1])
 	plt.xlim(-6*PulseFilter['symbol rate'],6*PulseFilter['symbol rate'])
 	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
@@ -812,7 +810,7 @@ def ModulateRRC(state):
 	ModulatingWaveform = ModulatingWaveform / max(ModulatingWaveform)
 	ModulatingWaveform = ModulatingWaveform * 32767
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], ModulatingWaveform.astype(np.int16))
-	scipy.io.wavfile.write(dirname+"Baseband.wav", PulseFilter['sample rate'], Baseband.astype(np.int16))
+	scipy.io.wavfile.write(dirname+"Baseband.wav", PulseFilter['sample rate'], Baseband.astype(np.float))
 
 
 	# Generate and save report file
