@@ -695,6 +695,7 @@ def ModulateRRC(state):
 				fs=PulseFilter['sample rate']
 			)
 
+
 	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], channel_filter, 'same')
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
@@ -734,13 +735,14 @@ def ModulateRRC(state):
 		Baseband[i] = ModulatingWaveform[i] * NCO['Sine']
 
 
-	Baseband = np.convolve(Baseband, channel_filter)
+	#Baseband = np.convolve(Baseband, channel_filter)
 
 	Baseband = Baseband / max(Baseband)
 
 	plt.figure()
 	plt.subplot(221)
 	plt.plot(PulseFilter['Taps'], 'b')
+	plt.plot(channel_filter, 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
@@ -810,7 +812,7 @@ def ModulateRRC(state):
 	ModulatingWaveform = ModulatingWaveform / max(ModulatingWaveform)
 	ModulatingWaveform = ModulatingWaveform * 32767
 	scipy.io.wavfile.write(dirname+"ModSignal.wav", PulseFilter['sample rate'], ModulatingWaveform.astype(np.int16))
-	scipy.io.wavfile.write(dirname+"Baseband.wav", PulseFilter['sample rate'], Baseband.astype(np.float))
+	scipy.io.wavfile.write(dirname+"Baseband.wav", PulseFilter['sample rate'], Baseband.astype(np.float64))
 
 
 	# Generate and save report file
@@ -851,6 +853,10 @@ def ModulateRRC(state):
 		report_file.write('\n\n')
 
 		report_file.write(fo.GenInt16ArrayC(f'Filter Window', np.rint(PulseFilter['FilterWindow'] * 32767), PulseFilter['Oversample']))
+		report_file.write('\n\n')
+		report_file.write('\n\n')
+		
+		report_file.write(fo.GenInt16ArrayC(f'Channel Filter', np.rint(channel_filter * 32767), PulseFilter['Oversample']))
 
 
 		report_file.write('\n\n')
