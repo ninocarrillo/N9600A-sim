@@ -698,6 +698,14 @@ def ModulateRRC(state):
 
 	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], channel_filter, 'same')
 
+	#PulseFilter['Taps'] = firwin(
+	#			(PulseFilter['Oversample'] * PulseFilter['symbol span']),
+	#			995,
+	#			pass_zero='lowpass',
+	#			fs=PulseFilter['sample rate']
+	#		)
+	PulseFilter['Taps'] /= max(PulseFilter['Taps'])
+
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
 
 	#BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
@@ -742,7 +750,7 @@ def ModulateRRC(state):
 	plt.figure()
 	plt.subplot(221)
 	plt.plot(PulseFilter['Taps'], 'b')
-	plt.plot(channel_filter, 'r')
+	#plt.plot(channel_filter, 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
@@ -855,7 +863,7 @@ def ModulateRRC(state):
 		report_file.write(fo.GenInt16ArrayC(f'Filter Window', np.rint(PulseFilter['FilterWindow'] * 32767), PulseFilter['Oversample']))
 		report_file.write('\n\n')
 		report_file.write('\n\n')
-		
+
 		report_file.write(fo.GenInt16ArrayC(f'Channel Filter', np.rint(channel_filter * 32767), PulseFilter['Oversample']))
 
 
