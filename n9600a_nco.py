@@ -96,8 +96,10 @@ def UpdateNCO(this):
 
 
 	# scale by the normalization factor
-	inphase = int(inphase // this['NormalizationFactor'])
-	quadraturephase = int(quadraturephase // this['NormalizationFactor'])
+	#inphase = int(inphase // this['NormalizationFactor'])
+	#quadraturephase = int(quadraturephase // this['NormalizationFactor'])
+	inphase = int(np.rint(inphase / this['NormalizationFactor']))
+	quadraturephase = int(np.rint(quadraturephase / this['NormalizationFactor']))
 
 	# bound to the wavetable
 	while inphase < 0:
