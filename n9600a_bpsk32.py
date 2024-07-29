@@ -689,8 +689,8 @@ def ModulateRRC(state):
 
 
 	channel_filter = firwin(
-				(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
-				350,
+				(PulseFilter['Oversample'] * 8) + 1,
+				400,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
@@ -743,7 +743,7 @@ def ModulateRRC(state):
 		Baseband[i] = ModulatingWaveform[i] * NCO['Sine']
 
 
-	#Baseband = np.convolve(Baseband, channel_filter)
+	Baseband = np.convolve(Baseband, channel_filter)
 
 	Baseband = Baseband / max(Baseband)
 
@@ -794,7 +794,7 @@ def ModulateRRC(state):
 	plt.plot(psd_999[2], psd_999[3], 'orange')
 	plt.plot(psd_9999[2], psd_9999[3], 'gray')
 	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
-	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
+	plt.plot(psd_999[0], psd_999[1], '.', markersize=5)
 	#plt.plot(psd_999[0], psd_999[1])
 	plt.xlim(-6*PulseFilter['symbol rate'],6*PulseFilter['symbol rate'])
 	plt.ylim(-100,10)
