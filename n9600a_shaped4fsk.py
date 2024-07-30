@@ -37,7 +37,7 @@ def ModulateRRC(state):
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	waveform = np.rint(np.convolve(PulseFilter['Taps'], symbol_stream, 'valid'))
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
-	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 3,))
+	waveform_2 = np.rint(np.convolve(PulseFilter['Taps'], waveform, 'valid') // (PulseFilter['amplitude'] * 1.5))
 
 	channel_filter = firwin(
 				10*(PulseFilter['Oversample'] * PulseFilter['symbol span']) + 1,
@@ -71,7 +71,8 @@ def ModulateRRC(state):
 	plt.ylabel("Amplitude")
 	plt.grid(True)
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	#tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(tx_eye_data / PulseFilter['amplitude'], linewidth=1)
 	plt.title("TX Eye Diagram")
@@ -266,7 +267,8 @@ def ModulateGauss(state):
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
+	#tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.title("TX Eye Diagram")
 	plt.xlabel("Sample Phase Index")
