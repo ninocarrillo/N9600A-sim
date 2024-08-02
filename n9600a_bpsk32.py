@@ -748,6 +748,7 @@ def ModulateRRC(state):
 	Baseband = Baseband / max(Baseband)
 
 	plt.figure()
+	plt.suptitle(f"RRC Rolloff Rate:{PulseFilter['rolloff rate']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
 	plt.plot(PulseFilter['Taps'], 'b')
 	#plt.plot(channel_filter, 'r')
@@ -759,13 +760,15 @@ def ModulateRRC(state):
 
 	DemodulatedWaveform = np.convolve(PulseFilter['Taps'], ModulatingWaveform, 'valid')
 	mod_eye_data = pulse_filter.GenEyeData2(ModulatingWaveform / PulseFilter['amplitude'], PulseFilter['Oversample'], 0)
-	demod_eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform / PulseFilter['amplitude'], PulseFilter['Oversample'], 0)
+	demod_eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform / PulseFilter['amplitude'] * 16, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(mod_eye_data)
 	plt.title("Transmit Eye")
+	plt.xlabel("Sample Index")
 	plt.subplot(224)
 	plt.plot(demod_eye_data)
 	plt.title("Receive Eye")
+	plt.xlabel("Sample Index")
 
 
 	plt.subplot(222)
