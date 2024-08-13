@@ -11,7 +11,7 @@ import n9600a_pulse_filter as pulse_filter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftfreq
-from scipy.signal import firwin
+from scipy.signal import firwin, freqz
 import random
 from n9600a_fm import ModulateFM
 from n9600a_analysis import AnalyzeSpectrum
@@ -206,14 +206,7 @@ def ModulateGauss(state):
 	#	state['InputData'][i] = 0x77
 	symbol_stream = pulse_filter.ExpandSampleStream2(state['InputData'], PulseFilter)
 
-	# Create receive lpf
-	PulseFilter['LPFTaps'] = firwin(
-				PulseFilter['Oversample'] * PulseFilter['symbol span'],
-				[ PulseFilter['symbol rate'] * PulseFilter['lpf cutoff'] ],
-				pass_zero='lowpass',
-				fs=PulseFilter['sample rate'],
-				window='hamming'
-			)
+
 
 
 	modulating_waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
@@ -238,6 +231,21 @@ def ModulateGauss(state):
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
 	#waveform_2 = np.convolve(channel_filter, waveform_2)
+	
+	
+	plt.figure()
+	w, h = freqz(PulseFilter['TXEmphasisTaps'], a=1)
+	x = w * PulseFilter['sample rate'] * 1.0 / (2 * np.pi)
+	y = 20 * np.log10(abs(h))
+	y = y - min(y)
+	plt.figure(figsize=(10,5))
+	plt.semilogx(x, y)
+	plt.ylabel('Amplitude [dB]')
+	plt.xlabel('Frequency [Hz]')
+	plt.title('Frequency response')
+	plt.grid(which='both', linestyle='-', color='grey')
+	plt.xticks([20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000], ["20", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"])
+	plt.show()
 
 	plt.figure()
 	plt.suptitle(f"Gauss FSK BT:{PulseFilter['BT']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")

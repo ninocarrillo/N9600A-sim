@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import n9600a_strings as strings
 import math
+from scipy.signal import remez, firwin
 
 def GetSymbolMapConfig(state):
 	argv = state['argv']
@@ -194,7 +195,21 @@ def GetGaussFilterConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-
+		
+	key_string = "tx emphasis"
+	try:
+		this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
+	key_string = "rx emphasis"
+	try:
+		this[f'{key_string}'] = float(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+		
 	key_string = "expander"
 	try:
 		this[f'{key_string}'] = config[f'{id_string}'][f'{key_string}']
@@ -238,7 +253,41 @@ def InitGaussFilter(this):
 		index += 1
 	if this['expander'] == 'step':
 		this['Taps'] = np.convolve(this['Taps'], np.ones(this['Oversample']), 'same')
+
+
+	# Create receive lpf
+	this['LPFTaps'] = firwin(
+				this['Oversample'] * this['symbol span'],
+				[ this['symbol rate'] * this['lpf cutoff'] ],
+				pass_zero='lowpass',
+				fs=this['sample rate'],
+				window='hamming'
+			)
+
+	if this['tx emphasis'] > 0.01:
+		bands = [0, .1, 0.499, 0.5]
+		#print(bands)
+		amp = [1.0, 10**(this['tx emphasis']/20)]
+		print("tx emphasis amplitude", amp)
+		this['TXEmphasisTaps'] = remez(3, bands, amp)
+		this['Taps'] = np.convolve(this['Taps'], this['TXEmphasisTaps'], 'full')
+		this['Taps'] = this['Taps'][1:-1]
+	else:
+		this['TXEmphasisTaps'] = [1]
 	this['Taps'] = this['Taps'] / max(this['Taps'])
+	
+	if this['rx emphasis'] > 0.01:
+		bands = [0, .1, 0.499, 0.5]
+		#print(bands)
+		amp = [1.0, 10**(this['rx emphasis']/20)]
+		print("rx emphasis amplitude", amp)
+		this['RXEmphasisTaps'] = remez(3, bands, amp)
+		this['LPFTaps'] = np.convolve(this['LPFTaps'], this['RXEmphasisTaps'], 'full')
+		this['LPFTaps'] = this['LPFTaps'][1:-1]
+	else:
+		this['RXEmphasisTaps'] = [1]
+
+	this['LPFTaps'] = this['LPFTaps'] / max(this['LPFTaps'])
 	return this
 
 
