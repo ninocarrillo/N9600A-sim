@@ -231,7 +231,6 @@ def ModulateGauss(state):
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
 	#waveform_2 = np.convolve(channel_filter, waveform_2)
-	
 
 	w, h = freqz(PulseFilter['TXEmphasisTaps'], a=1)
 	x = w * PulseFilter['sample rate'] * 1.0 / (2 * np.pi)

@@ -287,7 +287,7 @@ def InitGaussFilter(this):
 	else:
 		this['RXEmphasisTaps'] = [1]
 
-	this['LPFTaps'] = this['LPFTaps'] / max(this['LPFTaps'])
+	this['LPFTaps'] = this['LPFTaps'] / sum(this['LPFTaps'])
 	return this
 
 
