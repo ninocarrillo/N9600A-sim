@@ -275,7 +275,7 @@ def ModulateGauss(state):
 	plt.grid(True)
 	plt.xlim(0,tx_audio_psd[4])
 	plt.ylim(-60,10)
-	plt.title(f"TX Audio Spectrum, 99% Power Bandwidth: {round(tx_audio_psd[4] / 2000, 1)} kHz")
+	plt.title(f"TX Audio Spectrum, 99% Power Bandwidth: {round(tx_audio_psd[4] / 2000, 3)} kHz")
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 
@@ -322,7 +322,7 @@ def ModulateGauss(state):
 	plt.plot(psd_99[2], psd_99[3],'green')
 	plt.plot(psd_999[2], psd_999[3], 'orange')
 	plt.plot(psd_9999[2], psd_9999[3], 'gray')
-	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
+	plt.legend([f'99%: {round(psd_99[4]/1000,3)} kHz', f'99.9%: {round(psd_999[4]/1000,3)} kHz', f'99.99%: {round(psd_9999[4]/1000,3)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
 	plt.ylim(-100,10)
