@@ -274,7 +274,11 @@ def InitGaussFilter(this):
 		this['Taps'] = this['Taps'][1:-1]
 	else:
 		this['TXEmphasisTaps'] = [1]
+		
 	this['Taps'] = this['Taps'] / max(this['Taps'])
+	#this['Taps'] = this['Taps'] / np.linalg.norm(this['Taps'])
+	print("Max tap value: ", max(this['Taps']))
+	print("Sum of taps: ", sum(this['Taps']))
 	
 	if this['rx emphasis'] > 0.01:
 		bands = [0, .1, 0.499, 0.5]

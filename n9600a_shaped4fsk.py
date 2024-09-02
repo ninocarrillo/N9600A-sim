@@ -223,6 +223,7 @@ def ModulateGauss(state):
 
 	PulseFilter['Taps'] = np.rint(PulseFilter['Taps'] * PulseFilter['amplitude'])
 	waveform = np.convolve(PulseFilter['Taps'], symbol_stream)
+	print("Max symbol stream: ", max(symbol_stream))
 
 	#create phased filter oversample sections:
 	PulseFilter = pulse_filter.GenFilterPhases(PulseFilter)
