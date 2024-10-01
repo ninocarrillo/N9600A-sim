@@ -325,7 +325,7 @@ def ModulateGauss(state):
 	plt.plot(psd_9999[2], psd_9999[3], 'gray')
 	plt.legend([f'99%: {round(psd_99[4]/1000,3)} kHz', f'99.9%: {round(psd_999[4]/1000,3)} kHz', f'99.99%: {round(psd_9999[4]/1000,3)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
-	plt.xlim(-4*PulseFilter['symbol rate'],4*PulseFilter['symbol rate'])
+	plt.xlim(-2*psd_99[4],2*psd_99[4])
 	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
 	plt.xlabel("Deviation from Carrier Frequency, Hz")
