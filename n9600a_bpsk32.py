@@ -706,9 +706,9 @@ def ModulateRRC(state):
 
 
 	channel_filter = firwin(
-				193,
-				400,
-				pass_zero='highpass',
+				PulseFilter['bpf tap count'],
+				[1650 - (PulseFilter['bpf width'] / 2), 1650 + (PulseFilter['bpf width'] / 2)],
+				pass_zero='bandpass',
 				fs=PulseFilter['sample rate']
 			)
 

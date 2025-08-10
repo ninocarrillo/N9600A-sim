@@ -131,6 +131,20 @@ def GetRRCFilterConfig(state):
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
+	key_string = "bpf tap count"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "bpf width"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
 	return this
 
 def GetGaussFilterConfig(state):
@@ -224,7 +238,7 @@ def GetGaussFilterConfig(state):
 	except:
 		print(f'{sys.argv[1]} [{id_string}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
-		
+
 	return this
 
 def InitFilterDecimator(filter_decimator):
