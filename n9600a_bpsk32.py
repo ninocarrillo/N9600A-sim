@@ -555,9 +555,6 @@ def ModulateGauss(state):
 				ModulatingWaveform[i] = PulseFilter['FilterPatterns'][(shift_register * PulseFilter['Oversample']) + phase]
 				i += 1
 
-	plt.figure()
-	plt.plot(ModulatingWaveform)
-	plt.show()
 
 	Baseband = np.zeros(len(ModulatingWaveform))
 	i = 0
@@ -566,38 +563,70 @@ def ModulateGauss(state):
 		Baseband[i] = Amplitude * NCO['Sine'] // PulseFilter['amplitude']
 		i += 1
 
-	plt.figure()
-	plt.plot(Baseband)
-	plt.show()
+
+
 
 	plt.figure()
+	plt.suptitle(f"Gauss BT:{PulseFilter['BT']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
 	plt.subplot(221)
-	plt.plot(PulseFilter['Time'], PulseFilter['Taps'], 'b')
-	#plt.plot(PulseFilter['Time'], PulseFilter['RC'], 'r')
+	plt.plot(PulseFilter['Taps'], 'b')
+	#plt.plot(channel_filter, 'r')
 	plt.xticks(PulseFilter['SymbolTicks'])
 	plt.xticks(color='w')
 	plt.grid(True)
+	plt.title("Gauss Filter Taps")
+
+
+	DemodulatedWaveform = np.convolve(PulseFilter['Taps'], ModulatingWaveform, 'valid')
+	mod_eye_data = pulse_filter.GenEyeData2(ModulatingWaveform / PulseFilter['amplitude'], PulseFilter['Oversample'], 0)
+	demod_eye_data = pulse_filter.GenEyeData2(DemodulatedWaveform / PulseFilter['amplitude'] * 16, PulseFilter['Oversample'], 0)
+	plt.subplot(223)
+	plt.plot(mod_eye_data)
+	plt.title("Transmit Eye")
+	plt.xlabel("Sample Index")
+	plt.subplot(224)
+	plt.plot(demod_eye_data)
+	plt.title("Receive Eye")
+	plt.xlabel("Sample Index")
+
 
 	plt.subplot(222)
-	plt.plot(ModulatingWaveform, 'b')
-
-	eye_data = pulse_filter.GenEyeData2(ModulatingWaveform, PulseFilter['Oversample'], 0)
-	plt.subplot(223)
-	plt.plot(eye_data)
-
-
-	fft_n = len(ModulatingWaveform)
-	x = np.linspace(0.0, fft_n * PulseFilter['TimeStep'], fft_n, endpoint = False)
-	x_fft = fftfreq(fft_n, PulseFilter['TimeStep'])[:fft_n//2]
-	ModulatingWaveform_fft = fft(ModulatingWaveform)
-	ModulatingWaveform_fft = fft(ModulatingWaveform)
-	fft_max = max(abs(ModulatingWaveform_fft))
-	ModulatingWaveform_fft = ModulatingWaveform_fft / fft_max
-	plt.subplot(224)
-	plt.plot(x_fft, 10*np.log(np.abs(ModulatingWaveform_fft[0:fft_n//2])))
-	plt.xlim(0,PulseFilter['symbol rate'] * 4)
-	plt.ylim(-100,10)
+	baseband_psd = AnalyzeSpectrum(Baseband, PulseFilter['sample rate'], 0.99)
+	plt.plot(baseband_psd[0], baseband_psd[1], '.', markersize=1)
+	plt.plot(baseband_psd[2], baseband_psd[3])
+	plt.grid(True)
+	plt.xlim(0,baseband_psd[4])
+	plt.ylim(-60,10)
+	plt.title(f"TX Audio Spectrum, 99% Power Bandwidth: {round(baseband_psd[4] / 2000, 1)} kHz")
+	plt.xlabel("Hz")
+	plt.ylabel("dBFS")
 	plt.show()
+
+
+
+	fm_waveform = ModulateFM(Baseband / max(Baseband), PulseFilter['inner deviation'], PulseFilter['sample rate'])
+	plt.figure()
+	plt.plot(fm_waveform)
+	plt.show()
+
+	plt.figure()
+	psd_9999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.9999)
+	psd_999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.999)
+	psd_99 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.99)
+	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
+	plt.plot(psd_99[2], psd_99[3],'green')
+	plt.plot(psd_999[2], psd_999[3], 'orange')
+	plt.plot(psd_9999[2], psd_9999[3], 'gray')
+	plt.legend([f'99%: {round(psd_99[4]/1000,1)} kHz', f'99.9%: {round(psd_999[4]/1000,1)} kHz', f'99.99%: {round(psd_9999[4]/1000,1)} kHz'])
+	plt.plot(psd_999[0], psd_999[1], '.', markersize=5)
+	#plt.plot(psd_999[0], psd_999[1])
+	plt.xlim(-6*PulseFilter['symbol rate'],6*PulseFilter['symbol rate'])
+	plt.ylim(-100,10)
+	plt.ylabel("dBFS")
+	plt.xlabel("Deviation from Carrier Frequency, Hz")
+	plt.grid(True)
+	plt.title(f"Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, Inner Deviation: {PulseFilter['inner deviation']}")
+	plt.show()	
 
 	#generate a new directory for the reports
 	run_number = 0
@@ -664,23 +693,11 @@ def ModulateRRC(state):
 	config = state['config']
 	print(f'Started Shaped BPSK Modulator process')
 	print(f'Reading settings for RRC Pulse Shaping Filter')
-	#PulseFilter = pulse_filter.GetGaussFilterConfig(state)
-	#PulseFilter = pulse_filter.InitGaussFilter(PulseFilter)
 	PulseFilter = pulse_filter.GetRRCFilterConfig(state)
 	PulseFilter = pulse_filter.InitRRCFilter(PulseFilter)
 
 
 
-	#plt.figure()
-	#plt.plot(PulseFilter['FilterWindow'])
-	#plt.title('Filter Window')
-	#plt.show()
-
-	#plt.figure()
-	#plt.plot(PulseFilter['Taps'])
-	#plt.plot(PulseFilter['WindowedRC'])
-	#plt.title('Windowed RRC')
-	#plt.show()
 
 	PulseFilter['SymbolMap'] = pulse_filter.GetSymbolMapConfig(state)
 	NCO = nco.GetNCOConfig(config, 1, "TX NCO ")
@@ -696,27 +713,12 @@ def ModulateRRC(state):
 			)
 
 
-	#PulseFilter['Taps'] = np.convolve(PulseFilter['Taps'], channel_filter, 'same')
-
-	#PulseFilter['Taps'] = firwin(
-	#			(PulseFilter['Oversample'] * PulseFilter['symbol span']),
-	#			995,
-	#			pass_zero='lowpass',
-	#			fs=PulseFilter['sample rate']
-	#		)
 	PulseFilter['Taps'] /= max(PulseFilter['Taps'])
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
 
-	#BitStream = pulse_filter.ExpandSampleStream(state['InputData'], PulseFilter)
 	BitStream = pulse_filter.BytesToSymbols(state['InputData'], PulseFilter)
-	#plt.figure()
-	#plt.plot(BitStream)
-	#plt.title('BitStream')
-	#plt.show()
-	#ModulatingWaveform = np.convolve(PulseFilter['Taps'], BitStream)
-	#ModAmplitude = 64
-	#ModulatingWaveform = np.rint(ModAmplitude * ModulatingWaveform / max(ModulatingWaveform))
+
 	ModulatingWaveform = np.zeros(len(BitStream) * PulseFilter['Oversample'] * PulseFilter['undersample'])
 
 	i = 0
@@ -731,11 +733,6 @@ def ModulateRRC(state):
 			ModulatingWaveform[i] = PulseFilter['FilterPatterns'][(shift_register * PulseFilter['Oversample']) + phase]
 			i += 1
 
-
-	#plt.figure()
-	#plt.plot(ModulatingWaveform)
-	#plt.title('Modulating Waveform')
-	#plt.show()
 
 	Baseband = np.zeros(len(ModulatingWaveform))
 	for i in range(len(ModulatingWaveform)):
@@ -784,9 +781,7 @@ def ModulateRRC(state):
 	plt.show()
 
 	fm_waveform = ModulateFM(Baseband / max(Baseband), PulseFilter['inner deviation'], PulseFilter['sample rate'])
-	plt.figure()
-	plt.plot(fm_waveform)
-	plt.show()
+
 
 	plt.figure()
 	psd_9999 = AnalyzeSpectrum(fm_waveform, PulseFilter['sample rate'], 0.9999)
