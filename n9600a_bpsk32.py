@@ -706,11 +706,18 @@ def ModulateRRC(state):
 
 
 	channel_filter = firwin(
-				(PulseFilter['Oversample'] * 8) + 1,
+				193,
 				400,
 				pass_zero='highpass',
 				fs=PulseFilter['sample rate']
 			)
+
+	plt.figure()
+
+	plt.title("Channel HPF")
+	plt.plot(channel_filter)
+	plt.show()
+
 
 
 	PulseFilter['Taps'] /= max(PulseFilter['Taps'])
