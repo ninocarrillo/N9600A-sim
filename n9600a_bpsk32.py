@@ -712,6 +712,9 @@ def ModulateRRC(state):
 				fs=PulseFilter['sample rate']
 			)
 
+
+	channel_filter /= max(channel_filter)
+
 	plt.figure()
 
 	plt.title("Channel HPF")
