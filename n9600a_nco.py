@@ -46,6 +46,41 @@ def GetNCOConfig(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+
+	key_string = "dac shift bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "dac bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "dac offset"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "dac low clip"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
+
+	key_string = "dac high clip"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 	return this
 
 def InitNCO(this):
@@ -57,7 +92,7 @@ def InitNCO(this):
 	try:
 		this['Amplitude'] = this['Amplitude']
 	except:
-		this['Amplitude'] = pow(2,this['nco amplitude bits']) - 1
+		this['Amplitude'] = pow(2,this['nco amplitude bits']-1) - 1
 		#print('NCO Amplitude:', this['Amplitude'])
 	this['WaveTable'] = np.zeros(this['nco wavetable size'])
 	this['InPhaseRollover'] = False
@@ -157,10 +192,19 @@ def Test(state):
 	AudioSine = np.zeros(samples)
 	AudioCosine = np.zeros(samples)
 	AudioDither = np.zeros(samples)
+	dac_mask = (1 << int(NCO[1]['dac bits'])) - 1
 	for i in range(samples):
 		NCO[1] = UpdateNCO(NCO[1])
-		AudioSine[i] = NCO[1]['Sine']
-		AudioCosine[i] = NCO[1]['Cosine']
+		AudioSine[i] = ((int(NCO[1]['Sine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']) & dac_mask
+		if AudioSine[i] < NCO[1]['dac low clip']:
+			AudioSine[i] = NCO[1]['dac low clip']
+		if AudioSine[i] > NCO[1]['dac high clip']:
+			AudioSine[i] = NCO[1]['dac high clip']
+		AudioCosine[i] = ((int(NCO[1]['Cosine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']) & dac_mask
+		if AudioCosine[i] < NCO[1]['dac low clip']:
+			AudioCosine[i] = NCO[1]['dac low clip']
+		if AudioCosine[i] > NCO[1]['dac high clip']:
+			AudioCosine[i] = NCO[1]['dac high clip']
 		AudioDither[i] = NCO[1]['Dither']
 
 	scipy.io.wavfile.write(dirname+"AudioSine.wav", NCO[1]['nco design sample rate'], AudioSine.astype(np.int16))
