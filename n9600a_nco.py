@@ -4,6 +4,7 @@ import struct
 import scipy.io.wavfile
 import numpy as np
 import os
+from math import log
 import n9600a_progdemod as demod
 import format_output as fo
 import n9600a_strings as strings
@@ -54,13 +55,6 @@ def GetNCOConfig(config, num, id_string):
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
 
-	key_string = "dac bits"
-	try:
-		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
-	except:
-		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
-		sys.exit(-2)
-
 	key_string = "dac offset"
 	try:
 		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
@@ -81,13 +75,18 @@ def GetNCOConfig(config, num, id_string):
 	except:
 		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
 		sys.exit(-2)
+	
+	key_string = "post shift bits"
+	try:
+		this[f'{key_string}'] = int(config[f'{id_string}{num}'][f'{key_string}'])
+	except:
+		print(f'{sys.argv[1]} [{id_string}{num}] \'{key_string}\' is missing or invalid')
+		sys.exit(-2)
 	return this
 
 def InitNCO(this):
-	this['NormalizationFactor'] = int(np.ceil(this['nco design sample rate'] / this['nco wavetable size']))
-	this['InPhase'] = 0
-	this['QuadraturePhaseOffset'] = int(np.rint(this['nco design sample rate'] / 4))
-	this['QuadraturePhase'] = this['QuadraturePhaseOffset']
+	this['PhaseAccumulator'] = 0
+	this['QuadraturePhaseOffset'] = int(np.rint(this['nco wavetable size'] / 4))
 	this['Control'] = 0
 	try:
 		this['Amplitude'] = this['Amplitude']
@@ -99,7 +98,8 @@ def InitNCO(this):
 	this['QuadraturePhaseRollover'] = False
 	for i in range(this['nco wavetable size']):
 		this['WaveTable'][i] = np.rint(this['Amplitude'] * np.sin((i + 0.0) * 2 * np.pi / this['nco wavetable size']))
-	#print('NCO WaveTable', this['WaveTable'])
+	this['NCOShiftBits'] = int(log(this['nco design sample rate'] / this['nco wavetable size']) / log(2))
+	print("NCO Shift Bits ", this['NCOShiftBits'])
 	return this
 
 def UpdateNCO(this):
@@ -110,31 +110,19 @@ def UpdateNCO(this):
 	else:
 		this['Dither'] = 0
 
-	this['InPhase'] += this['nco set frequency'] + this['Control']
-	if this['InPhase'] >= this['nco design sample rate']:
-		this['InPhase'] -= this['nco design sample rate']
+	this['PhaseAccumulator'] += this['nco set frequency'] + this['Control']
+	while this['PhaseAccumulator'] >= this['nco design sample rate']:
+		this['PhaseAccumulator'] -= this['nco design sample rate']
 		this['InPhaseRollover'] = True
 	else:
 		this['InPhaseRollover'] = False
 
-	# this['QuadraturePhase'] += this['nco set frequency'] + this['Control']
-	# if this['QuadraturePhase'] >= this['nco design sample rate']:
-	# 	this['QuadraturePhase'] -= this['nco design sample rate']
-	# 	this['QuadraturePhaseRollover'] = True
-	# else:
-	# 	this['QuadraturePhaseRollover'] = False
-
 	# now add dither and enter the lookup table
-	inphase = this['InPhase']
+	inphase = this['PhaseAccumulator']
 	inphase += this['Dither']
+
+	inphase = int(inphase) >> this['NCOShiftBits']
 	quadraturephase = inphase + this['QuadraturePhaseOffset']
-
-
-	# scale by the normalization factor
-	#inphase = int(inphase // this['NormalizationFactor'])
-	#quadraturephase = int(quadraturephase // this['NormalizationFactor'])
-	inphase = int(np.rint(inphase / this['NormalizationFactor']))
-	quadraturephase = int(np.rint(quadraturephase / this['NormalizationFactor']))
 
 	# bound to the wavetable
 	while inphase < 0:
@@ -192,19 +180,20 @@ def Test(state):
 	AudioSine = np.zeros(samples)
 	AudioCosine = np.zeros(samples)
 	AudioDither = np.zeros(samples)
-	dac_mask = (1 << int(NCO[1]['dac bits'])) - 1
 	for i in range(samples):
 		NCO[1] = UpdateNCO(NCO[1])
-		AudioSine[i] = ((int(NCO[1]['Sine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']) & dac_mask
+		AudioSine[i] = (int(NCO[1]['Sine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']
 		if AudioSine[i] < NCO[1]['dac low clip']:
 			AudioSine[i] = NCO[1]['dac low clip']
 		if AudioSine[i] > NCO[1]['dac high clip']:
 			AudioSine[i] = NCO[1]['dac high clip']
-		AudioCosine[i] = ((int(NCO[1]['Cosine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']) & dac_mask
+		AudioSine[i] = int(AudioSine[i]) << NCO[1]['post shift bits']
+		AudioCosine[i] = (int(NCO[1]['Cosine']) >> NCO[1]['dac shift bits']) + NCO[1]['dac offset']
 		if AudioCosine[i] < NCO[1]['dac low clip']:
 			AudioCosine[i] = NCO[1]['dac low clip']
 		if AudioCosine[i] > NCO[1]['dac high clip']:
 			AudioCosine[i] = NCO[1]['dac high clip']
+		AudioCosine[i] = int(AudioCosine[i]) << NCO[1]['post shift bits']
 		AudioDither[i] = NCO[1]['Dither']
 
 	scipy.io.wavfile.write(dirname+"AudioSine.wav", NCO[1]['nco design sample rate'], AudioSine.astype(np.int16))
