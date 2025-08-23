@@ -71,7 +71,7 @@ def ModulateRRC(state):
 	plt.ylabel("Amplitude")
 	plt.grid(True)
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2) + 1)
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
 	#tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
 	plt.subplot(223)
 	plt.plot(tx_eye_data / PulseFilter['amplitude'], linewidth=1)
@@ -230,7 +230,13 @@ def ModulateGauss(state):
 	print("Max modulated waveform: ", max(waveform))
 
 	#waveform = waveform + np.random.normal(0,PulseFilter['amplitude']/1.5,len(waveform))
+	moving_avg_filt = np.ones(PulseFilter['Oversample'])
 	waveform_2 = np.convolve(PulseFilter['LPFTaps'], waveform)
+	#waveform_2 = np.convolve(moving_avg_filt, waveform)
+	waveform_noise = np.add(waveform,np.random.normal(scale=(0.5 * PulseFilter['amplitude']), size=len(waveform)))
+	waveform_3 = np.convolve(PulseFilter['LPFTaps'], waveform_noise)
+	waveform_4 = np.convolve(moving_avg_filt, waveform_noise)
+	
 	#waveform_2 = np.convolve(channel_filter, waveform_2)
 
 	w, h = freqz(PulseFilter['TXEmphasisTaps'], a=1)
@@ -252,9 +258,10 @@ def ModulateGauss(state):
 	plt.xticks([20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000], ["20", "50", "100", "200", "500", "1K", "2K", "5K", "10K", "20K"])
 	plt.show()
 
-	plt.figure()
+	fig, ax = plt.subplots(2,3)
+	fig.tight_layout(pad=2)
 	plt.suptitle(f"Gauss FSK BT:{PulseFilter['BT']}, Span:{PulseFilter['symbol span']}, Sample Rate:{PulseFilter['sample rate']}")
-	plt.subplot(221)
+	plt.subplot(231)
 	plt.title("Filter Impulse Responses")
 	plt.xlabel("Symbol Index")
 	plt.ylabel("Amplitude")
@@ -266,7 +273,7 @@ def ModulateGauss(state):
 	plt.xticks(color='w')
 	plt.grid(True)
 
-	plt.subplot(222)
+	plt.subplot(232)
 	tx_audio_psd = AnalyzeSpectrum(waveform, PulseFilter['sample rate'], 0.99)
 	rx_audio_psd = AnalyzeSpectrum(waveform_2, PulseFilter['sample rate'], 0.99)
 	plt.plot(tx_audio_psd[0], tx_audio_psd[1], '.', markersize=1)
@@ -280,9 +287,9 @@ def ModulateGauss(state):
 	plt.xlabel("Hz")
 	plt.ylabel("dBFS")
 
-	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
-	#tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
-	plt.subplot(223)
+	#tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
+	tx_eye_data = pulse_filter.GenEyeData2(waveform, PulseFilter['Oversample'], 0)
+	plt.subplot(233)
 	plt.title("TX Eye Diagram")
 	plt.xlabel("Sample Phase Index")
 	plt.ylabel("x Inner Deviation")
@@ -290,15 +297,36 @@ def ModulateGauss(state):
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.grid(True)
 
-	rx_eye_data = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
-	plt.subplot(224)
-	plt.plot(rx_eye_data / PulseFilter['amplitude'], linewidth=1)
-	plt.title("RX Eye Diagram")
+	rx_eye_noise = pulse_filter.GenEyeData2(waveform_noise, PulseFilter['Oversample'], 0)
+	plt.subplot(235)
+	plt.plot(rx_eye_noise / PulseFilter['amplitude'], linewidth=1)
+	plt.title("RX Eye w/Noise")
+	plt.xlabel("Sample Phase Index")
+	plt.ylabel("x Inner Deviation")
+	plt.grid(True)
+	plt.xticks(range(PulseFilter['Oversample']))
+
+
+	rx_eye_filtered = pulse_filter.GenEyeData2(waveform_2, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
+	plt.subplot(234)
+	plt.plot(rx_eye_filtered / PulseFilter['amplitude'], linewidth=1)
+	plt.title("RX Eye, Filtered")
+	plt.xlabel("Sample Phase Index")
+	plt.ylabel("x Inner Deviation")
+	plt.grid(True)
+	plt.xticks(range(PulseFilter['Oversample']))
+
+
+	rx_eye_noise_filtered = pulse_filter.GenEyeData2(waveform_3, PulseFilter['Oversample'], (PulseFilter['Oversample'] // 2))
+	plt.subplot(236)
+	plt.plot(rx_eye_noise_filtered / PulseFilter['amplitude'], linewidth=1)
+	plt.title("RX Eye w/Noise, Filtered")
 	plt.xlabel("Sample Phase Index")
 	plt.ylabel("x Inner Deviation")
 	plt.grid(True)
 	plt.xticks(range(PulseFilter['Oversample']))
 	plt.show()
+
 
 	# sampled_data = pulse_filter.SampleSync4FSK(waveform_2, PulseFilter['Oversample'])
 	# plt.figure()
@@ -328,12 +356,13 @@ def ModulateGauss(state):
 	plt.legend([f'99%: {round(psd_99[4]/1000,3)} kHz', f'26dB: {round(psd_26dB[4]/1000,3)} kHz', f'99.9%: {round(psd_999[4]/1000,3)} kHz', f'99.99%: {round(psd_9999[4]/1000,3)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.xlim(-2*psd_99[4],2*psd_99[4])
-	plt.xlim(-1000,1000)
+	plt.xlim(-3000,3000)
 	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
 	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
 	plt.title(f"Gauss FSK Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, BT: {PulseFilter['BT']}, Inner Deviation: {PulseFilter['inner deviation']}")
+
 	plt.show()
 
 	#generate a new directory for the reports
