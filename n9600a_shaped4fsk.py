@@ -351,17 +351,18 @@ def ModulateGauss(state):
 	# returns [x_fft, waveform_psd, obw_x, obw_mask, obw]
 	plt.plot(psd_99[2], psd_99[3],'green')
 	plt.plot(psd_26dB[2], psd_26dB[3], 'blue')
-	plt.plot(psd_999[2], psd_999[3], 'orange')
-	plt.plot(psd_9999[2], psd_9999[3], 'gray')
+	#plt.plot(psd_999[2], psd_999[3], 'orange')
+	#plt.plot(psd_9999[2], psd_9999[3], 'gray')
 	plt.legend([f'99%: {round(psd_99[4]/1000,3)} kHz', f'26dB: {round(psd_26dB[4]/1000,3)} kHz', f'99.9%: {round(psd_999[4]/1000,3)} kHz', f'99.99%: {round(psd_9999[4]/1000,3)} kHz'])
 	plt.plot(psd_999[0], psd_999[1], '.', markersize=1)
 	plt.xlim(-2*psd_99[4],2*psd_99[4])
-	plt.xlim(-3000,3000)
+	plt.xlim(-1500,1500)
 	plt.ylim(-100,10)
 	plt.ylabel("dBFS")
 	plt.xlabel("Deviation from Carrier Frequency, Hz")
 	plt.grid(True)
-	plt.title(f"Gauss FSK Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, BT: {PulseFilter['BT']}, Inner Deviation: {PulseFilter['inner deviation']}")
+	#plt.title(f"Gauss FSK Power Spectrum, {len(state['InputData'])} Random Bytes\nSymbol Rate: {PulseFilter['symbol rate']}, BT: {PulseFilter['BT']}, Inner Deviation: {PulseFilter['inner deviation']}")
+	plt.title(f"Power Spectrum, {len(state['InputData'])} Random Bytes\nInit File: {argv[1]}")
 
 	plt.show()
 
