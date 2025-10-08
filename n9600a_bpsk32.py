@@ -704,25 +704,6 @@ def ModulateRRC(state):
 	NCO['Amplitude'] = PulseFilter['amplitude']
 	NCO = nco.InitNCO(NCO)
 
-
-	channel_filter = firwin(
-				PulseFilter['bpf tap count'],
-				[1650 - (PulseFilter['bpf width'] / 2), 1650 + (PulseFilter['bpf width'] / 2)],
-				pass_zero='bandpass',
-				fs=PulseFilter['sample rate']
-			)
-
-
-	channel_filter /= max(channel_filter)
-
-	plt.figure()
-
-	plt.title("Channel HPF")
-	plt.plot(channel_filter)
-	plt.show()
-
-
-
 	PulseFilter['Taps'] /= max(PulseFilter['Taps'])
 
 	PulseFilter = pulse_filter.GenPulseFilterPatterns(PulseFilter)
@@ -748,9 +729,6 @@ def ModulateRRC(state):
 	for i in range(len(ModulatingWaveform)):
 		NCO = nco.UpdateNCO(NCO)
 		Baseband[i] = ModulatingWaveform[i] * NCO['Sine']
-
-
-	Baseband = np.convolve(Baseband, channel_filter)
 
 	Baseband = Baseband / max(Baseband)
 
@@ -871,9 +849,6 @@ def ModulateRRC(state):
 		report_file.write(fo.GenInt16ArrayC(f'Filter Window', np.rint(PulseFilter['FilterWindow'] * 32767), PulseFilter['Oversample']))
 		report_file.write('\n\n')
 		report_file.write('\n\n')
-
-		report_file.write(fo.GenInt16ArrayC(f'Channel Filter', np.rint(channel_filter * 32767), PulseFilter['Oversample']))
-
 
 		report_file.write('\n\n')
 		report_file.write(fo.GenInt16ArrayC(f'SineTable', NCO['WaveTable'], 8))
